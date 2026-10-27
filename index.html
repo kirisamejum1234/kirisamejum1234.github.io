@@ -163,6 +163,7 @@
     <div class="row" id="presentRow"><label>出し方 <span class="note">2組以上の時</span></label>
       <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
         <label><input type="radio" name="presentMode" value="simul" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 同時に全部出す</label>
+        <label><input type="radio" name="presentMode" value="alt" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 左右と交互に出す</label>
         <label><input type="radio" name="presentMode" value="seq" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 順番に1組ずつ出す</label>
       </div></div>
     <div class="row" id="layoutRow"><label>配置 <span class="note">2組以上の時</span></label>
@@ -744,11 +745,16 @@ function flashNumbers(){
   fitFlashFont();   // この問題の数字の大きさを最大桁数に合わせて固定
   const mouth = currentSeries[0] ? currentSeries[0].length : 0;
   /* 出し方: 同時=各ステップで全組の同じ順番の数字を一緒に出す /
+             交互=1口ごとに組を交代しながら出す（組の順番に1つずつ） /
              順番=1組ずつ最後まで出してから次の組へ */
   let events, totalNumbers;
   if(cfg.present === "seq"){
     events = [];
     currentSeries.forEach((nums, s) => nums.forEach(n => events.push([[s, n]])));
+    totalNumbers = events.length;
+  } else if(cfg.present === "alt"){
+    events = [];
+    for(let k = 0; k < mouth; k++) currentSeries.forEach((nums, s) => events.push([[s, nums[k]]]));
     totalNumbers = events.length;
   } else {
     events = [];
