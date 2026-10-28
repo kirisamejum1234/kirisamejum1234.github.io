@@ -100,10 +100,12 @@
   /* 設定・解答・判定は、内容が画面の高さを超えると中央寄せのまま上下が切れて
      スクロールもできなくなる。スクロール可能にし、上下の auto マージンで
      「収まるときは中央寄せ、はみ出すときは上からスクロール」に切り替える */
-  #settingsScreen, #answerScreen, #judgeScreen { justify-content:flex-start; overflow-y:auto; }
-  #settingsScreen > :first-child, #answerScreen > :first-child, #judgeScreen > :first-child { margin-top:auto; }
-  #settingsScreen > :last-child, #answerScreen > :last-child { margin-bottom:auto; }
-  #judgeScreen > .judge-detail { margin-bottom:auto; }  /* 判定の下部ボタンは fixed なので詳細側で受ける */
+  /* 中央寄せを上下 auto マージンで行うと、内容がはみ出したときに
+     はみ出し分がスクロール範囲の外へ出て、下の行に届かなくなる（実機で確認）。
+     内側ラッパー（min-height:100%）で「収まれば中央寄せ、はみ出せば上からスクロール」にする */
+  #settingsScreen.active, #answerScreen.active, #judgeScreen.active { display:block; overflow-y:auto; padding:0; }
+  .screen-inner { min-height:100%; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
+  #judgeScreen .screen-inner { padding-bottom:150px; }  /* 下部の固定ボタンに最後の行が隠れないように */
   table { border-collapse:collapse; margin:14px 0; font-size:16px; }
   th, td { padding:7px 16px; text-align:center; }
   th { color:#999; font-size:13px; }
@@ -127,6 +129,7 @@
 
 <!-- 設定 -->
 <section id="settingsScreen" class="screen active">
+  <div class="screen-inner">
   <div id="jsWarn" style="background:#5a1a1a;color:#ffd7d7;border:1px solid #ff5252;border-radius:10px;padding:12px 14px;margin:0 0 16px;font-size:14px;line-height:1.7;width:min(92vw,420px);box-sizing:border-box">
     ⚠ この表示が出ている間は、この開き方（ファイルのプレビューなど）ではプログラムが動かず、スタートできません。Safariで開いてください。
   </div>
@@ -181,6 +184,7 @@
     </div>
     <p class="small">iPhone: 共有ボタン →「ホーム画面に追加」でアプリのように使えます<br>音が出ない場合は、音量が上がっているか確認してください</p>
   </div>
+  </div>
 </section>
 
 <!-- カウントダウン -->
@@ -195,16 +199,20 @@
 
 <!-- 解答入力 -->
 <section id="answerScreen" class="screen">
+  <div class="screen-inner">
   <div style="font-size:19px" id="answerTitle">第1問　答えを入力してください</div>
   <div id="answerGrid"></div>
   <button class="primary" id="answerBtn">解答</button>
+  </div>
 </section>
 
 <!-- 正誤判定 -->
 <section id="judgeScreen" class="screen">
+  <div class="screen-inner">
   <div class="mark" id="judgeMark">〇</div>
   <div style="font-size:28px;font-weight:bold" id="judgeText">正解！</div>
   <div class="judge-detail" id="judgeDetail"></div>
+  </div>
   <div class="bottom-area">
     <div class="result-row" id="resultRow"><button id="toResultBtn">次へ ▶</button></div>
     <div class="bottom-buttons">
