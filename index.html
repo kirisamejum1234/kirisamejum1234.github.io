@@ -37,13 +37,13 @@
   }
   .note { font-size:11px; color:#999; }
   /* 数値の上下ボタン（ステッパー） */
-  .stepper { display:flex; align-items:center; gap:6px; flex:none; }
-  .stepbtn { width:44px; height:44px; flex:none; font-size:22px; line-height:1;
+  .stepper { display:flex; align-items:center; gap:4px; flex:none; }
+  .stepbtn { width:44px; height:44px; flex:none; font-size:22px; line-height:1; padding:0;
     background:#263238; color:#fff; border:1px solid #455a64; border-radius:10px; cursor:pointer;
     touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
   .stepbtn:disabled { opacity:.3; cursor:default; }
-  .stepbtn.lbl { width:48px; font-size:13px; font-weight:bold; }
-  .row .stepper input { width:64px; }
+  .stepbtn.lbl { width:44px; font-size:12px; font-weight:bold; white-space:nowrap; padding:0; }
+  .row .stepper input { width:58px; }
   .check { display:flex; gap:10px; align-items:flex-start; margin:14px 0; font-size:13px; line-height:1.5; }
   .check input { width:22px; height:22px; margin-top:2px; accent-color:#00b84f; }
   button {
