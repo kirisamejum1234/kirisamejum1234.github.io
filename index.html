@@ -128,7 +128,47 @@
 <body>
 
 <!-- 設定 -->
-<section id="settingsScreen" class="screen active">
+<!-- モード選択（最初に表示） -->
+<section id="startScreen" class="screen active">
+  <h1 style="margin-bottom:34px">フラッシュ暗算</h1>
+  <div style="display:flex;flex-direction:column;gap:16px;width:min(92vw,340px)">
+    <button class="primary" id="gradeModeBtn" style="padding:20px 22px;font-size:19px">級・段位で選ぶ</button>
+    <button id="customModeBtn" style="padding:20px 22px;font-size:19px">自分で設定する</button>
+    <button id="fsBtnTop">全画面</button>
+  </div>
+</section>
+
+<!-- 級と段位のどちらかを選ぶ -->
+<section id="gradeKindScreen" class="screen">
+  <h2 style="margin-bottom:30px">級・段位で選ぶ</h2>
+  <div style="display:flex;flex-direction:column;gap:16px;width:min(92vw,340px)">
+    <button class="primary" id="kyuBtn" style="padding:20px 22px;font-size:19px">10級〜1級</button>
+    <button class="primary" id="danBtn" style="padding:20px 22px;font-size:19px">初段〜十段</button>
+    <button id="kindBackBtn">戻る</button>
+  </div>
+</section>
+
+<!-- 級・段位の一覧 -->
+<section id="gradeListScreen" class="screen">
+  <h2 id="gradeListTitle" style="margin-bottom:26px">級を選んでください</h2>
+  <div id="gradeList" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;width:min(92vw,400px)"></div>
+  <button id="listBackBtn" style="margin-top:26px">戻る</button>
+</section>
+
+<!-- 級・段位の開始画面（変えられるのは連続出題数だけ） -->
+<section id="gradeStartScreen" class="screen">
+  <h2 id="gradeTitle" style="font-size:34px;margin-bottom:14px">3級</h2>
+  <div id="gradeSpecText" style="font-size:18px;line-height:1.7;text-align:center"></div>
+  <div id="gradeRuleText" style="font-size:14px;color:#9e9e9e;line-height:1.6;text-align:center;margin-top:6px"></div>
+  <div class="row" style="margin-top:28px"><label>連続出題数 <span class="note">1〜15</span></label>
+    <select id="gradeQuestions"><option value="1">1問</option><option value="2">2問</option><option value="3">3問</option><option value="4">4問</option><option value="5">5問</option><option value="6">6問</option><option value="7">7問</option><option value="8">8問</option><option value="9">9問</option><option value="10">10問</option><option value="11">11問</option><option value="12">12問</option><option value="13">13問</option><option value="14">14問</option><option value="15">15問</option></select></div>
+  <div class="btnrow-settings">
+    <button id="gradeBackBtn">戻る</button>
+    <button class="primary" id="gradeStartBtn">スタート</button>
+  </div>
+</section>
+
+<section id="settingsScreen" class="screen">
   <div class="screen-inner">
   <div id="jsWarn" style="background:#5a1a1a;color:#ffd7d7;border:1px solid #ff5252;border-radius:10px;padding:12px 14px;margin:0 0 16px;font-size:14px;line-height:1.7;width:min(92vw,420px);box-sizing:border-box">
     ⚠ この表示が出ている間は、この開き方（ファイルのプレビューなど）ではプログラムが動かず、スタートできません。Safariで開いてください。
@@ -179,6 +219,7 @@
       <select id="questions"><option value="1">1問</option><option value="2">2問</option><option value="3">3問</option><option value="4">4問</option><option value="5">5問</option><option value="6">6問</option><option value="7">7問</option><option value="8">8問</option><option value="9">9問</option><option value="10">10問</option><option value="11">11問</option><option value="12">12問</option><option value="13">13問</option><option value="14">14問</option><option value="15">15問</option></select></div>
     <div id="startError" style="display:none;background:#5a1a1a;color:#ffd7d7;border:1px solid #ff5252;border-radius:10px;padding:10px 14px;margin:18px 0 0;font-size:14px;line-height:1.6"></div>
     <div class="btnrow-settings">
+      <button id="settingsBackBtn">戻る</button>
       <button class="primary" id="startBtn">スタート</button>
       <button id="fsBtn">全画面</button>
     </div>
@@ -240,7 +281,7 @@
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const screens = ["settingsScreen","countScreen","flashScreen","answerScreen","judgeScreen","resultScreen"];
+const screens = ["startScreen","gradeKindScreen","gradeListScreen","gradeStartScreen","settingsScreen","countScreen","flashScreen","answerScreen","judgeScreen","resultScreen"];
 function show(id){ screens.forEach(s => $(s).classList.toggle("active", s === id)); }
 /* ラジオの選択値（未選択の環境でも例外にせず既定値で返す） */
 function checkedVal(name, fallback){
@@ -478,6 +519,110 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerNegative){
   }
   return Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
 }
+/* ---------- 級・段位モード ---------- */
+/* 難易度は級・段位ごとに固定（並列計算なし1組だけ）。
+   秒数は「全体の秒数」。rule: none=通常 / pattern7=0の数・他の数・0の数の順 /
+   oneZero=0で終わる数がちょうど1つ / noZero=0で終わる数なし /
+   dan=3桁で0が2つある数（300など）なし・0が1つは有り */
+const GRADES = {
+  kyu: [
+    { name: "10級", digits: 1, mouth: 4, seconds: 4, rule: "none", note: "" },
+    { name: "9級", digits: 1, mouth: 5, seconds: 5, rule: "none", note: "" },
+    { name: "8級", digits: 1, mouth: 6, seconds: 6, rule: "none", note: "" },
+    { name: "7級", digits: 2, mouth: 3, seconds: 3, rule: "pattern7", note: "0のつく数 → その他の数 → 0のつく数 の順に出ます" },
+    { name: "6級", digits: 2, mouth: 3, seconds: 3, rule: "oneZero", note: "0のつく数がどこかに1つだけ出ます" },
+    { name: "5級", digits: 2, mouth: 4, seconds: 4, rule: "noZero", note: "0のつく数は出ません" },
+    { name: "4級", digits: 2, mouth: 5, seconds: 4, rule: "noZero", note: "0のつく数は出ません" },
+    { name: "3級", digits: 2, mouth: 6, seconds: 5, rule: "noZero", note: "0のつく数は出ません" },
+    { name: "2級", digits: 2, mouth: 8, seconds: 7, rule: "noZero", note: "0のつく数は出ません" },
+    { name: "1級", digits: 2, mouth: 10, seconds: 8, rule: "noZero", note: "0のつく数は出ません" }
+  ],
+  dan: [
+    { name: "初段", digits: 3, mouth: 4, seconds: 4, rule: "dan", note: "0が2つある数（300など）は出ません" },
+    { name: "弐段", digits: 3, mouth: 5, seconds: 4, rule: "dan", note: "0が2つある数（300など）は出ません" },
+    { name: "参段", digits: 3, mouth: 6, seconds: 4, rule: "dan", note: "0が2つある数（300など）は出ません" },
+    { name: "四段", digits: 3, mouth: 7, seconds: 4, rule: "dan", note: "0が2つある数（300など）は出ません" },
+    { name: "五段", digits: 3, mouth: 8, seconds: 4, rule: "dan", note: "0が2つある数（300など）は出ません" },
+    { name: "六段", digits: 3, mouth: 9, seconds: 4, rule: "dan", note: "0が2つある数（300など）は出ません" },
+    { name: "七段", digits: 3, mouth: 10, seconds: 4, rule: "dan", note: "0が2つある数（300など）は出ません" },
+    { name: "八段", digits: 3, mouth: 12, seconds: 4, rule: "dan", note: "0が2つある数（300など）は出ません" },
+    { name: "九段", digits: 3, mouth: 15, seconds: 4, rule: "dan", note: "0が2つある数（300など）は出ません" },
+    { name: "十段", digits: 3, mouth: 15, seconds: 3, rule: "dan", note: "0が2つある数（300など）は出ません" }
+  ]
+};
+function gradeNumber(digits, kind){
+  /* kind: "zero"=下1桁が0 / "nonzero"=下1桁が0でない / "dan"=100の倍数でない3桁 */
+  for(let t = 0; t < 500; t++){
+    const n = makeNumber(digits, digits, false);
+    if(kind === "zero" && n % 10 === 0) return n;
+    if(kind === "nonzero" && n % 10 !== 0) return n;
+    if(kind === "dan" && n % 100 !== 0) return n;
+  }
+  return makeNumber(digits, digits, false);
+}
+function makeGradeProblem(g){
+  if(g.rule === "pattern7")
+    return [gradeNumber(2, "zero"), gradeNumber(2, "nonzero"), gradeNumber(2, "zero")];
+  if(g.rule === "oneZero"){
+    const zp = rand(0, g.mouth - 1);
+    return Array.from({ length: g.mouth }, (_, i) => gradeNumber(2, i === zp ? "zero" : "nonzero"));
+  }
+  if(g.rule === "noZero")
+    return Array.from({ length: g.mouth }, () => gradeNumber(2, "nonzero"));
+  if(g.rule === "dan")
+    return Array.from({ length: g.mouth }, () => gradeNumber(3, "dan"));
+  return Array.from({ length: g.mouth }, () => makeNumber(g.digits, g.digits, false));
+}
+let gradeKind = "kyu", selectedGrade = null;
+function buildGradeList(kind){
+  gradeKind = kind;
+  $("gradeListTitle").textContent = kind === "kyu" ? "級を選んでください" : "段位を選んでください";
+  const list = $("gradeList");
+  list.innerHTML = "";
+  GRADES[kind].forEach(g => {
+    const b = document.createElement("button");
+    b.textContent = g.name;
+    b.style.cssText = "padding:16px 10px;font-size:19px;font-weight:bold";
+    b.addEventListener("click", () => selectGrade(g));
+    list.appendChild(b);
+  });
+  show("gradeListScreen");
+}
+function selectGrade(g){
+  selectedGrade = g;
+  $("gradeTitle").textContent = g.name;
+  $("gradeSpecText").textContent = `${g.digits}桁　${g.mouth}口　全体で${g.seconds}秒`;
+  $("gradeRuleText").textContent = g.note || "";
+  show("gradeStartScreen");
+}
+function startGrade(){
+  if(!selectedGrade) return;
+  try{
+    unlockAudio();
+    const g = selectedGrade;
+    cfg = { minD: g.digits, maxD: g.digits, mouth: g.mouth, seconds: g.seconds,
+            totalSeconds: g.seconds, timingMode: "total", vary: false, sub: false,
+            answerNegative: false, questions: parseInt($("gradeQuestions").value, 10) || 1,
+            series: 1, present: "simul", layout: "single", gradeSpec: g };
+    problemIndex = 0; records = {}; queuedSeries = null;
+    makeSeries();
+    sessionStart = Date.now();
+    countdownThenFlash();
+  }catch(e){
+    alert("スタートできませんでした。" + (e && e.message ? e.message : e));
+  }
+}
+$("gradeModeBtn").addEventListener("click", () => show("gradeKindScreen"));
+$("customModeBtn").addEventListener("click", () => show("settingsScreen"));
+$("kyuBtn").addEventListener("click", () => buildGradeList("kyu"));
+$("danBtn").addEventListener("click", () => buildGradeList("dan"));
+$("kindBackBtn").addEventListener("click", () => show("startScreen"));
+$("listBackBtn").addEventListener("click", () => show("gradeKindScreen"));
+$("gradeBackBtn").addEventListener("click", () => show("gradeListScreen"));
+$("gradeStartBtn").addEventListener("click", startGrade);
+$("settingsBackBtn").addEventListener("click", () => show("startScreen"));
+$("fsBtnTop").addEventListener("click", () => $("fsBtn").click());
+
 const fmt = n => (n === null || n === undefined || n === "") ? "" : Number(n).toLocaleString("ja-JP");
 
 /* ---------- 状態 ---------- */
@@ -1021,6 +1166,11 @@ document.addEventListener("keydown", e => {
 });
 /* 現在の設定で、組数ぶんの問題を生成する */
 function makeSeries(){
+  if(cfg.gradeSpec){   /* 級・段位モード: その級の決まった作り方で1組だけ作る */
+    currentSeries = [makeGradeProblem(cfg.gradeSpec)];
+    currentNumbers = currentSeries[0] || [];
+    return;
+  }
   currentSeries = [];
   for(let s = 0; s < cfg.series; s++)
     currentSeries.push(makeProblem(cfg.minD, cfg.maxD, cfg.mouth, cfg.vary, cfg.sub, cfg.answerNegative));
@@ -1053,7 +1203,7 @@ function restartAll(shuffle){
   currentNumbers = currentSeries[0] || [];
   countdownThenFlash();
 }
-function goHome(){ clearTimers(); show("settingsScreen"); }
+function goHome(){ clearTimers(); show("startScreen"); }
 
 /* ---------- リザルト ---------- */
 function showResult(){
