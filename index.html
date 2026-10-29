@@ -197,8 +197,9 @@
       </div></div>
     <div class="row" id="answerSignRow"><label>答え <span class="note">引き算オンの時</span></label>
       <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
-        <label><input type="radio" name="answerSignMode" value="positive" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> マイナスにならない</label>
-        <label><input type="radio" name="answerSignMode" value="negative" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> マイナスになる</label>
+        <label><input type="radio" name="answerSignMode" value="never" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> マイナスにならない</label>
+        <label><input type="radio" name="answerSignMode" value="mid" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 途中だけマイナス（答えはプラス）</label>
+        <label><input type="radio" name="answerSignMode" value="negative" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 答えがマイナスになる</label>
       </div></div>
     <div class="row"><label>並列計算数 <span class="note">組の数 1〜12</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="seriesCount" data-step="-1">−</button><input id="seriesCount" type="number" inputmode="numeric" min="1" max="12" value="1"><button type="button" class="stepbtn" data-target="seriesCount" data-step="1">＋</button></div></div>
     <p class="note" style="margin:-2px 0 10px">1=シングル、2=ダブル、3=トリプル、4=クワッド。5以上も入力できます</p>
@@ -497,24 +498,37 @@ function makeNumber(minD, maxD, vary){
   if(d <= 1) return rand(1, 9);
   return rand(Math.pow(10, d - 1), Math.pow(10, d) - 1);
 }
-function makeProblem(minD, maxD, mouth, vary, sub, answerNegative){
+function makeProblem(minD, maxD, mouth, vary, sub, answerMode){
   if(sub && mouth >= 2){
     // 2つ目以降の一部をマイナスにする（例: 500, -1,234, 300）。1つ目は必ずプラスで、
     // マイナスは最低1つ入る。数字も符号も引き直しながら条件に合う問題を探す。
-    // answerNegative=false: 答えはプラス / true: 答えはマイナス
-    let best = null;
+    // answerMode: "never"=途中も答えもマイナスにならない /
+    //             "mid"=途中はマイナスになるが答えはプラス（口数3以上） /
+    //             "negative"=答えがマイナスになる
+    let bestNeg = null, bestNever = null, bestMid = null;
     for(let attempt = 0; attempt < 1000; attempt++){
       const cand = Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
       for(let i = 1; i < cand.length; i++) if(Math.random() < 0.5) cand[i] = -cand[i];
       if(cand.every(n => n > 0)){ const idx = rand(1, cand.length - 1); cand[idx] = -cand[idx]; }
-      const total = cand.reduce((a, b) => a + b, 0);
-      if(answerNegative){
+      let run = 0; const prefs = cand.map(n => (run += n));
+      const total = prefs[prefs.length - 1];
+      const minPref = Math.min(...prefs);
+      const dipsMid = prefs.slice(0, -1).some(p => p < 0);
+      if(answerMode === "negative"){
         if(total < 0) return cand;
-        if(!best || total < best.reduce((a, b) => a + b, 0)) best = cand;
-      } else if(total > 0) return cand;
+        if(!bestNeg || total < bestNeg.total) bestNeg = { cand, total };
+      } else if(answerMode === "mid"){
+        if(total > 0 && dipsMid) return cand;
+        if(dipsMid && (!bestMid || total > bestMid.total)) bestMid = { cand, total };
+      } else {
+        if(total > 0 && minPref >= 0) return cand;
+        if(!bestNever || minPref > bestNever.minPref) bestNever = { cand, minPref };
+      }
     }
-    if(answerNegative && best) return best;
-    // 答えプラスの指定で万一見つからなければ全てプラスの問題にする
+    if(answerMode === "negative" && bestNeg) return bestNeg.cand;
+    if(answerMode === "mid" && bestMid) return bestMid.cand;
+    if(answerMode === "never" && bestNever) return bestNever.cand;
+    // 万一見つからなければ全てプラスの問題にする
   }
   return Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
 }
@@ -600,7 +614,7 @@ function startGrade(){
     const g = selectedGrade;
     cfg = { minD: g.digits, maxD: g.digits, mouth: g.mouth, seconds: g.seconds,
             totalSeconds: g.seconds, timingMode: "total", vary: false, sub: false,
-            answerNegative: false, questions: parseInt($("gradeQuestions").value, 10) || 1,
+            answerMode: "never", questions: parseInt($("gradeQuestions").value, 10) || 1,
             series: 1, present: "simul", layout: "single", gradeSpec: g };
     problemIndex = 0; records = {}; queuedSeries = null;
     makeSeries();
@@ -705,9 +719,15 @@ if(qSel.options.length === 0)
 /* 「答え（マイナスになる／ならない）」の選択は引き算オンの時だけ有効にする */
 function refreshAnswerSignState(){
   const on = checkedVal("subMode", "off") === "on";
-  document.querySelectorAll('input[name="answerSignMode"]').forEach(r => { r.disabled = !on; });
+  const mouth = parseInt(zenNum($("mouth").value), 10);
+  document.querySelectorAll('input[name="answerSignMode"]').forEach(r => {
+    /* 「途中だけマイナス」は、途中でマイナスになる余地がある口数3以上でないと作れない */
+    r.disabled = !on || (r.value === "mid" && !(mouth >= 3));
+  });
   $("answerSignRow").style.opacity = on ? "1" : "0.4";
 }
+$("mouth").addEventListener("input", refreshAnswerSignState);
+$("mouth").addEventListener("change", refreshAnswerSignState);
 document.querySelectorAll('input[name="subMode"]').forEach(r => r.addEventListener("change", refreshAnswerSignState));
 document.querySelectorAll('input[name="layoutMode"]').forEach(r => r.addEventListener("click", () => { layoutPref = r.value; }));
 refreshAnswerSignState();
@@ -754,7 +774,7 @@ function readConfig(){
     timingMode: checkedVal("timingMode", "total"),
     vary: checkedVal("digitMode", "maxonly") === "random",
     sub: checkedVal("subMode", "off") === "on",
-    answerNegative: checkedVal("answerSignMode", "positive") === "negative",
+    answerMode: checkedVal("answerSignMode", "never"),
     questions: parseInt(qSel.value, 10),
     series: intOf("seriesCount"),
     present: checkedVal("presentMode", "simul"),
@@ -774,6 +794,7 @@ function readConfig(){
   if(c.vary && (c.minD < 1 || c.minD > c.maxD)) return startError(`桁数の設定を確認してください。最小桁数は最大桁数以下にしてください（今は最小${c.minD}・最大${c.maxD}です）。`);
   if(!c.vary) c.minD = c.maxD;   // 最大桁数のみ: 最小桁数は使わない
   if(c.mouth < 1) return startError("口数は1以上にしてください。");
+  if(c.sub && c.answerMode === "mid" && c.mouth < 3) return startError("「途中だけマイナス（答えはプラス）」は口数3以上で設定してください。");
   // 時間設定は選んだ決め方の方だけを検証する
   if(c.timingMode === "per" && !(c.seconds > 0)) return startError("数字表示秒数には0より大きい数値を入力してください。");
   if(c.timingMode === "total" && !(c.totalSeconds > 0)) return startError("全体の秒数には0より大きい数値を入力してください。");
@@ -1171,7 +1192,7 @@ function makeSeries(){
   }
   currentSeries = [];
   for(let s = 0; s < cfg.series; s++)
-    currentSeries.push(makeProblem(cfg.minD, cfg.maxD, cfg.mouth, cfg.vary, cfg.sub, cfg.answerNegative));
+    currentSeries.push(makeProblem(cfg.minD, cfg.maxD, cfg.mouth, cfg.vary, cfg.sub, cfg.answerMode));
   currentNumbers = currentSeries[0] || [];
 }
 function nextProblem(){
