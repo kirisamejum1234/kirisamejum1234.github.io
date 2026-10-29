@@ -42,6 +42,7 @@
     background:#263238; color:#fff; border:1px solid #455a64; border-radius:10px; cursor:pointer;
     touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
   .stepbtn:disabled { opacity:.3; cursor:default; }
+  .stepbtn.lbl { width:48px; font-size:13px; font-weight:bold; }
   .row .stepper input { width:64px; }
   .check { display:flex; gap:10px; align-items:flex-start; margin:14px 0; font-size:13px; line-height:1.5; }
   .check input { width:22px; height:22px; margin-top:2px; accent-color:#00b84f; }
@@ -52,6 +53,8 @@
   button.primary { background:#00b84f; color:#fff; font-weight:bold; font-size:18px; padding:14px 40px; }
   button:active { opacity:.75; }
   .btnrow-settings { display:flex; gap:12px; justify-content:center; margin-top:26px; }
+  #resultScreen .btnrow-settings { flex-wrap:nowrap; gap:8px; }
+  #resultScreen .btnrow-settings button { padding:12px 8px; font-size:13px; white-space:nowrap; }
   /* 数字表示 */
   #flashScreen, #countScreen { padding:0; }
   .circle-wrap { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
@@ -93,7 +96,7 @@
     display:flex; gap:8px;
     padding:12px 12px calc(12px + env(safe-area-inset-bottom)); background:#000;
   }
-  .bottom-buttons button { flex:1; padding:14px 4px; font-size:14px; }
+  .bottom-buttons button { flex:1; padding:12px 2px; font-size:12px; white-space:nowrap; }
   #toResultBtn { background:#00b84f; font-weight:bold; padding:14px 30px; }
   /* リザルト */
   #resultScreen { justify-content:flex-start; overflow-y:auto; padding-top:34px; }
@@ -156,14 +159,14 @@
 </section>
 
 <!-- 級・段位の開始画面（変えられるのは連続出題数だけ） -->
-<section id="gradeStartScreen" class="screen">
-  <h2 id="gradeTitle" style="font-size:34px;margin-bottom:14px">3級</h2>
-  <div id="gradeSpecText" style="font-size:18px;line-height:1.7;text-align:center"></div>
+<section id="confirmScreen" class="screen">
+  <h2 id="confirmTitle" style="font-size:34px;margin-bottom:14px">3級</h2>
+  <div id="confirmSpec" style="font-size:19px;line-height:1.7;text-align:center"></div>
   <div class="row" style="margin-top:28px"><label>連続出題数 <span class="note">1〜15</span></label>
-    <select id="gradeQuestions"><option value="1">1問</option><option value="2">2問</option><option value="3">3問</option><option value="4">4問</option><option value="5">5問</option><option value="6">6問</option><option value="7">7問</option><option value="8">8問</option><option value="9">9問</option><option value="10">10問</option><option value="11">11問</option><option value="12">12問</option><option value="13">13問</option><option value="14">14問</option><option value="15">15問</option></select></div>
+    <select id="confirmQuestions"><option value="1">1問</option><option value="2">2問</option><option value="3">3問</option><option value="4">4問</option><option value="5">5問</option><option value="6">6問</option><option value="7">7問</option><option value="8">8問</option><option value="9">9問</option><option value="10">10問</option><option value="11">11問</option><option value="12">12問</option><option value="13">13問</option><option value="14">14問</option><option value="15">15問</option></select></div>
   <div class="btnrow-settings">
-    <button id="gradeBackBtn">戻る</button>
-    <button class="primary" id="gradeStartBtn">スタート</button>
+    <button id="confirmBackBtn">戻る</button>
+    <button class="primary" id="confirmStartBtn">スタート</button>
   </div>
 </section>
 
@@ -182,8 +185,8 @@
         <label><input type="radio" name="timingMode" value="total" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 全体の秒数で決める</label>
         <label><input type="radio" name="timingMode" value="per" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 1つの数字の秒数で決める</label>
       </div></div>
-    <div class="row"><label>全体の秒数 <span class="note">小数可</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="totalSeconds" data-step="-0.1">−</button><input id="totalSeconds" type="text" inputmode="decimal" value="5.0"><button type="button" class="stepbtn" data-target="totalSeconds" data-step="0.1">＋</button></div></div>
-    <div class="row"><label>数字表示秒数 <span class="note">小数可</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="seconds" data-step="-0.1">−</button><input id="seconds" type="text" inputmode="decimal" value="1.0"><button type="button" class="stepbtn" data-target="seconds" data-step="0.1">＋</button></div></div>
+    <div class="row"><label>全体の秒数 <span class="note">小数可</span></label><div class="stepper"><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="-0.1">−0.1</button><input id="totalSeconds" type="text" inputmode="decimal" value="5.0"><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="1">＋1</button></div></div>
+    <div class="row"><label>数字表示秒数 <span class="note">小数可</span></label><div class="stepper"><button type="button" class="stepbtn lbl" data-target="seconds" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="seconds" data-step="-0.1">−0.1</button><input id="seconds" type="text" inputmode="decimal" value="1.0"><button type="button" class="stepbtn lbl" data-target="seconds" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="seconds" data-step="1">＋1</button></div></div>
     <p class="note" style="margin:-2px 0 10px">全体の秒数 = カウントダウンが終わってから、最後の数字が終わるまでの時間です</p>
     <div class="row"><label>桁数の出し方</label>
       <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
@@ -215,12 +218,10 @@
         <label><input type="radio" name="layoutMode" value="col" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 縦並び</label>
         <label><input type="radio" name="layoutMode" value="shape" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> <span id="layoutShapeLabel">三角</span></label>
       </div></div>
-    <div class="row"><label>連続出題数 <span class="note">1〜15</span></label>
-      <select id="questions"><option value="1">1問</option><option value="2">2問</option><option value="3">3問</option><option value="4">4問</option><option value="5">5問</option><option value="6">6問</option><option value="7">7問</option><option value="8">8問</option><option value="9">9問</option><option value="10">10問</option><option value="11">11問</option><option value="12">12問</option><option value="13">13問</option><option value="14">14問</option><option value="15">15問</option></select></div>
     <div id="startError" style="display:none;background:#5a1a1a;color:#ffd7d7;border:1px solid #ff5252;border-radius:10px;padding:10px 14px;margin:18px 0 0;font-size:14px;line-height:1.6"></div>
     <div class="btnrow-settings">
       <button id="settingsBackBtn">戻る</button>
-      <button class="primary" id="startBtn">スタート</button>
+      <button class="primary" id="startBtn">次へ</button>
       <button id="fsBtn">全画面</button>
     </div>
     <p class="small">iPhone: 共有ボタン →「ホーム画面に追加」でアプリのように使えます<br>音が出ない場合は、音量が上がっているか確認してください</p>
@@ -259,6 +260,7 @@
     <div class="bottom-buttons">
       <button id="sameBtn">同じ問題</button>
       <button id="shuffleBtn">順番を変える</button>
+      <button id="reverseBtn">逆順でやる</button>
       <button id="nextBtn">次の問題へ</button>
       <button id="homeBtn1">最初に戻る</button>
     </div>
@@ -274,6 +276,7 @@
   <div class="btnrow-settings">
     <button id="resultSameBtn">同じ問題</button>
     <button id="resultShuffleBtn">順番を変える</button>
+    <button id="resultReverseBtn">逆順でやる</button>
     <button id="homeBtn2">最初に戻る</button>
   </div>
 </section>
@@ -281,7 +284,7 @@
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const screens = ["startScreen","gradeKindScreen","gradeListScreen","gradeStartScreen","settingsScreen","countScreen","flashScreen","answerScreen","judgeScreen","resultScreen"];
+const screens = ["startScreen","gradeKindScreen","gradeListScreen","confirmScreen","settingsScreen","countScreen","flashScreen","answerScreen","judgeScreen","resultScreen"];
 function show(id){ screens.forEach(s => $(s).classList.toggle("active", s === id)); }
 /* ラジオの選択値（未選択の環境でも例外にせず既定値で返す） */
 function checkedVal(name, fallback){
@@ -601,11 +604,37 @@ function buildGradeList(kind){
   });
   show("gradeListScreen");
 }
+let confirmMode = "grade", pendingCfg = null;
 function selectGrade(g){
   selectedGrade = g;
-  $("gradeTitle").textContent = g.name;
-  $("gradeSpecText").textContent = `${g.digits}桁　${g.mouth}口　全体で${g.seconds}秒`;
-  show("gradeStartScreen");
+  confirmMode = "grade";
+  $("confirmTitle").textContent = g.name;
+  $("confirmSpec").textContent = `${g.digits}桁　${g.mouth}口　全体で${g.seconds}秒`;
+  show("confirmScreen");
+}
+function customSummary(c){
+  const digits = c.vary ? `${c.minD}〜${c.maxD}桁` : `${c.maxD}桁`;
+  const timing = c.timingMode === "total" ? `全体で${c.totalSeconds}秒` : `1つ${c.seconds}秒`;
+  let s = `${digits}　${c.mouth}口　${timing}`;
+  if(c.series > 1) s += `　${c.series}組`;
+  if(c.sub){
+    const mode = c.answerMode === "mid" ? "途中だけマイナス" : c.answerMode === "negative" ? "答えがマイナス" : "マイナスにならない";
+    s += `　引き算オン（${mode}）`;
+  }
+  return s;
+}
+function startCustom(){
+  if(!pendingCfg) return;
+  try{
+    unlockAudio();
+    pendingCfg.questions = parseInt(qSel.value, 10) || 1;   // 連続出題数は確認画面で選んだ値を使う
+    cfg = pendingCfg; problemIndex = 0; records = {}; queuedSeries = null;
+    makeSeries();
+    sessionStart = Date.now();
+    countdownThenFlash();
+  }catch(e){
+    alert("スタートできませんでした。" + (e && e.message ? e.message : e));
+  }
 }
 function startGrade(){
   if(!selectedGrade) return;
@@ -614,7 +643,7 @@ function startGrade(){
     const g = selectedGrade;
     cfg = { minD: g.digits, maxD: g.digits, mouth: g.mouth, seconds: g.seconds,
             totalSeconds: g.seconds, timingMode: "total", vary: false, sub: false,
-            answerMode: "never", questions: parseInt($("gradeQuestions").value, 10) || 1,
+            answerMode: "never", questions: parseInt($("confirmQuestions").value, 10) || 1,
             series: 1, present: "simul", layout: "single", gradeSpec: g };
     problemIndex = 0; records = {}; queuedSeries = null;
     makeSeries();
@@ -630,8 +659,8 @@ $("kyuBtn").addEventListener("click", () => buildGradeList("kyu"));
 $("danBtn").addEventListener("click", () => buildGradeList("dan"));
 $("kindBackBtn").addEventListener("click", () => show("startScreen"));
 $("listBackBtn").addEventListener("click", () => show("gradeKindScreen"));
-$("gradeBackBtn").addEventListener("click", () => show("gradeListScreen"));
-$("gradeStartBtn").addEventListener("click", startGrade);
+$("confirmBackBtn").addEventListener("click", () => { if(confirmMode === "grade") show("gradeListScreen"); else show("settingsScreen"); });
+$("confirmStartBtn").addEventListener("click", () => { saveSettings(); if(confirmMode === "grade") startGrade(); else startCustom(); });
 $("settingsBackBtn").addEventListener("click", () => show("startScreen"));
 $("fsBtnTop").addEventListener("click", () => $("fsBtn").click());
 
@@ -712,7 +741,7 @@ let timers = [];
 const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
 
-const qSel = $("questions");
+const qSel = $("confirmQuestions");
 if(qSel.options.length === 0)
   for(let i = 1; i <= 15; i++){ const o = document.createElement("option"); o.value = i; o.textContent = i + "問"; qSel.appendChild(o); }
 
@@ -801,6 +830,44 @@ function readConfig(){
   return c;
 }
 
+/* ---------- 設定の記憶（同じブラウザでは前回の設定を引き継ぐ） ---------- */
+const SETTINGS_KEY = "flashAnzanSettingsV1";
+function saveSettings(){
+  try{
+    const data = {
+      minDigits: $("minDigits").value, maxDigits: $("maxDigits").value,
+      mouth: $("mouth").value, seconds: $("seconds").value, totalSeconds: $("totalSeconds").value,
+      seriesCount: $("seriesCount").value,
+      timingMode: checkedVal("timingMode", "total"), digitMode: checkedVal("digitMode", "maxonly"),
+      subMode: checkedVal("subMode", "off"), answerSignMode: checkedVal("answerSignMode", "never"),
+      presentMode: checkedVal("presentMode", "simul"), layoutPref,
+      confirmQuestions: $("confirmQuestions").value
+    };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+  }catch(e){ /* 保存できない環境では何もしない */ }
+}
+function loadSettings(){
+  let data = null;
+  try{ data = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null"); }catch(e){ data = null; }
+  if(!data) return;
+  const setVal = (id, v) => { if(v !== undefined && v !== null) $(id).value = v; };
+  const setRadio = (name, v) => { if(!v) return; const r = document.querySelector(`input[name="${name}"][value="${v}"]`); if(r) r.checked = true; };
+  setVal("minDigits", data.minDigits); setVal("maxDigits", data.maxDigits);
+  setVal("mouth", data.mouth); setVal("seconds", data.seconds); setVal("totalSeconds", data.totalSeconds);
+  setVal("seriesCount", data.seriesCount);
+  setRadio("timingMode", data.timingMode); setRadio("digitMode", data.digitMode);
+  setRadio("subMode", data.subMode); setRadio("answerSignMode", data.answerSignMode);
+  setRadio("presentMode", data.presentMode);
+  if(data.layoutPref){ layoutPref = data.layoutPref; setRadio("layoutMode", data.layoutPref); }
+  setVal("confirmQuestions", data.confirmQuestions);
+  refreshSeriesState(); refreshTimingState(); refreshDigitModeState(); refreshAnswerSignState();
+}
+loadSettings();
+["settingsScreen", "confirmScreen"].forEach(id => {
+  $(id).addEventListener("input", saveSettings);
+  $(id).addEventListener("change", saveSettings);
+});
+
 $("startBtn").addEventListener("pointerdown", unlockAudio);  // 触れた瞬間に音を解放
 $("startBtn").addEventListener("click", () => {
   /* 万一どこかで例外が出ても「無反応」で終わらせず、理由を表示する */
@@ -808,12 +875,14 @@ $("startBtn").addEventListener("click", () => {
     clearStartError();
     const c = readConfig(); if(!c) return;
     unlockAudio(); // ユーザー操作の中でAudioContextを解放（iPhone対策）
-    cfg = c; problemIndex = 0; records = {}; queuedSeries = null;
-    makeSeries();
-    sessionStart = Date.now();
-    countdownThenFlash();
+    saveSettings();
+    pendingCfg = c;
+    confirmMode = "custom";
+    $("confirmTitle").textContent = "自分で設定";
+    $("confirmSpec").textContent = customSummary(c);
+    show("confirmScreen");
   }catch(e){
-    const msg = "スタートできませんでした。" + (e && e.message ? e.message : e);
+    const msg = "次へ進めませんでした。" + (e && e.message ? e.message : e);
     startError(msg);          // 画面内にも出す（alertが出ない環境でも見えるように）
     alert(msg);
   }
@@ -1175,8 +1244,18 @@ $("nextBtn").addEventListener("click", nextProblem);
 $("toResultBtn").addEventListener("click", showResult);
 $("homeBtn1").addEventListener("click", goHome);
 $("homeBtn2").addEventListener("click", goHome);
-$("resultSameBtn").addEventListener("click", () => restartAll(false));
-$("resultShuffleBtn").addEventListener("click", () => restartAll(true));
+$("reverseBtn").addEventListener("click", () => {
+  // 記録済みの数字を逆順にする（新しい数字は作らない）。並列計算では組ごとに逆順
+  const rec = records[problemIndex];
+  if(rec && rec.series){
+    currentSeries = rec.series.map(r => [...r.numbers].reverse());
+    currentNumbers = currentSeries[0] || [];
+  }
+  countdownThenFlash();
+});
+$("resultSameBtn").addEventListener("click", () => restartAll("same"));
+$("resultShuffleBtn").addEventListener("click", () => restartAll("shuffle"));
+$("resultReverseBtn").addEventListener("click", () => restartAll("reverse"));
 document.addEventListener("keydown", e => {
   if(e.key !== "Enter") return;
   if(e.target && e.target.closest && e.target.closest("input, button, select, textarea")) return;  // 入力欄・ボタン上のEnterは要素本来の動作に任せる
@@ -1205,13 +1284,15 @@ function nextProblem(){
 }
 /* リザルトから全問やり直す: 同じ問題（記録どおり）／順番を変える（記録の数字を並べ替え）。
    どちらも新しい数字は作らない */
-function restartAll(shuffle){
+function restartAll(mode){
   const total = cfg ? cfg.questions : 0;
   const queue = [];
   for(let i = 0; i < total; i++){
     const rec = records[i];
     if(!rec || !rec.series) return;   // 記録がそろっていない場合は何もしない
-    queue.push(rec.series.map(r => shuffle ? shuffleDifferent(r.numbers, r.numbers) : [...r.numbers]));
+    queue.push(rec.series.map(r => mode === "shuffle" ? shuffleDifferent(r.numbers, r.numbers)
+                                 : mode === "reverse" ? [...r.numbers].reverse()
+                                 : [...r.numbers]));
   }
   if(!queue.length) return;
   queuedSeries = queue;
