@@ -159,7 +159,6 @@
 <section id="gradeStartScreen" class="screen">
   <h2 id="gradeTitle" style="font-size:34px;margin-bottom:14px">3級</h2>
   <div id="gradeSpecText" style="font-size:18px;line-height:1.7;text-align:center"></div>
-  <div id="gradeRuleText" style="font-size:14px;color:#9e9e9e;line-height:1.6;text-align:center;margin-top:6px"></div>
   <div class="row" style="margin-top:28px"><label>連続出題数 <span class="note">1〜15</span></label>
     <select id="gradeQuestions"><option value="1">1問</option><option value="2">2問</option><option value="3">3問</option><option value="4">4問</option><option value="5">5問</option><option value="6">6問</option><option value="7">7問</option><option value="8">8問</option><option value="9">9問</option><option value="10">10問</option><option value="11">11問</option><option value="12">12問</option><option value="13">13問</option><option value="14">14問</option><option value="15">15問</option></select></div>
   <div class="btnrow-settings">
@@ -592,7 +591,6 @@ function selectGrade(g){
   selectedGrade = g;
   $("gradeTitle").textContent = g.name;
   $("gradeSpecText").textContent = `${g.digits}桁　${g.mouth}口　全体で${g.seconds}秒`;
-  $("gradeRuleText").textContent = g.note || "";
   show("gradeStartScreen");
 }
 function startGrade(){
