@@ -169,7 +169,7 @@
         <label><input type="radio" name="presentMode" value="alt" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 左右と交互に出す</label>
         <label><input type="radio" name="presentMode" value="seq" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 順番に1組ずつ出す</label>
       </div></div>
-    <div class="row" id="layoutRow"><label>配置 <span class="note">2組以上の時</span></label>
+    <div class="row" id="layoutRow"><label>配置 <span class="note">2組以上の時（横並びは10組まで）</span></label>
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
         <label><input type="radio" name="layoutMode" value="row" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 横並び</label>
         <label><input type="radio" name="layoutMode" value="col" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 縦並び</label>
@@ -537,11 +537,12 @@ function refreshSeriesState(){
   lastSeries = n;
   /* 選んだ配置は記憶し、組数が変わっても使える間は維持する。
      「形」は3組未満では使えないので、その間だけ横並びで代用し、3組以上に戻れば復活する */
-  const effLayout = (layoutPref === "shape" && n < 3) ? "row" : layoutPref;
+  const effLayout = (layoutPref === "shape" && n < 3) ? "row"
+    : (layoutPref === "row" && n >= 11) ? "col" : layoutPref;   /* 横並びは10組まで（11組以上は数字が小さすぎて重なるため縦並びで代用し、設定は記憶する） */
   (effLayout === "col" ? colR : effLayout === "shape" ? shapeR : rowR).checked = true;
   document.querySelectorAll('input[name="presentMode"]').forEach(r => { r.disabled = n < 2; });
   $("presentRow").style.opacity = n < 2 ? "0.4" : "1";
-  rowR.disabled = n < 2;
+  rowR.disabled = n < 2 || n >= 11;
   colR.disabled = n < 2;
   shapeR.disabled = n < 3;
   $("layoutRow").style.opacity = n < 2 ? "0.4" : "1";
@@ -746,6 +747,43 @@ function fitFlashFont(){
   const maxW = cfg.series <= 1 ? window.innerWidth * 0.92 : cellW * 0.92;
   flashFontSize = fitSizePx(flashCells[0], referenceText(), base, maxW);
   flashCells.forEach(d => { d.style.fontSize = flashFontSize + "px"; });
+  if(cfg.series > 1) clampFlashSizeToLayout();
+}
+/* 並列表示では、セルの中心同士の距離に対して数字が大きいと隣と重なる。
+   一番幅の広い数字を全セルに入れて実測し、重なりと画面端へのはみ出しが
+   消える大きさまで縮める（fitSizePx の下限20pxのままだと、組数・桁数が
+   多いパターンで重なってしまうため、その場合は20px未満まで下げる） */
+function clampFlashSizeToLayout(){
+  const stage = $("flashStage");
+  if(!stage || !flashCells.length) return;
+  const ref = referenceText();
+  const saved = flashCells.map(d => [d.textContent, d.style.visibility]);
+  const sr0 = stage.getBoundingClientRect();
+  if(sr0.width < 10 || sr0.height < 10) return;   // 測れない環境では従来の大きさのまま
+  flashCells.forEach(d => { d.textContent = ref; });
+  const GAP = 4;   // 数字同士・画面端との最小間隔(px)
+  let size = flashFontSize;
+  for(let guard = 0; guard < 3; guard++){
+    flashCells.forEach(d => { d.style.fontSize = size + "px"; });
+    const sr = stage.getBoundingClientRect();
+    const rs = flashCells.map(d => d.getBoundingClientRect());
+    const cx = i => (rs[i].left + rs[i].right) / 2, cy = i => (rs[i].top + rs[i].bottom) / 2;
+    let k = 1;
+    for(let i = 0; i < rs.length; i++){
+      k = Math.min(k, 2 * (cx(i) - sr.left - GAP) / rs[i].width, 2 * (sr.right - cx(i) - GAP) / rs[i].width);
+      k = Math.min(k, 2 * (cy(i) - sr.top - GAP) / rs[i].height, 2 * (sr.bottom - cy(i) - GAP) / rs[i].height);
+      for(let j = i + 1; j < rs.length; j++){
+        const kx = 2 * Math.max(Math.abs(cx(i) - cx(j)) - GAP, 0) / (rs[i].width + rs[j].width);
+        const ky = 2 * Math.max(Math.abs(cy(i) - cy(j)) - GAP, 0) / (rs[i].height + rs[j].height);
+        k = Math.min(k, Math.max(kx, ky));   // 横か縦のどちらかで離れれば重ならない
+      }
+    }
+    if(k >= 0.999) break;
+    size = Math.max(6, Math.floor(size * k * 100) / 100);
+    if(size <= 6) break;
+  }
+  flashFontSize = size;
+  flashCells.forEach((d, i) => { d.style.fontSize = size + "px"; d.textContent = saved[i][0]; d.style.visibility = saved[i][1]; });
 }
 function flashNumbers(){
   clearTimers(); show("flashScreen");
