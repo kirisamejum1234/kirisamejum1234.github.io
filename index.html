@@ -415,7 +415,7 @@ function tone(freq, sec, {type="sine", vol=0.5, delay=0} = {}){
   }catch(e){}
 }
 document.addEventListener("pointerdown", unlockAudio);  // どのボタンを触っても音を有効化しておく
-const beepCountdown = () => { if(!playClip("count", COUNT_WAV_B64)) tone(1000, 0.15, {vol:0.55}); };  // 少し高め・ピー（カウントの切り替わりと同時）
+const beepCountdown = () => { playClip("count", COUNT_WAV_B64, () => tone(1000, 0.15, {vol:0.55})); };  // 少し高め・ピー（カウントの切り替わりと同時）
 /* 数字表示の音はユーザー指定のWAV（このHTMLに埋め込み）を使う。
    デコード前・失敗時は従来の合成音で代替する */
 const FLASH_WAV_B64 = "UklGRnQEAABXQVZFZm10IBAAAAABAAEAESsAABErAAABAAgAZGF0YU8EAACAgICAgICAgICAgICAgICAgICAgICAvrChk4R2Z1lKPDRCUV9ufIuZqLbFxrepmox9b2BSQzU7SVhmdYOSoK69y7+xopSFd2haSz0zQVBebXuKmKe1xMe4qpuNfnBhU0Q2OkhXZXSCkZ+tvMrAsqOVhnhpW0w+MkBPXWx6iZemtMPIuaucjn9xYlRFNzlHVmRzgZCerbvJwbKklYd4alxNPzE/TlxreYiWpbPCybqsnY+AcmNVRjg4RlVjcoCPnay6yMKzpZaIeWtdTkAxPk1baniHlaSywcq7rZ6QgXNkVkc5N0VUYnF/jpyrucjDtKaXiXpsXU9BMj5MWml3hpSjscDLvK6fkYJ0ZVdIOjZEU2Fwfo2bqrjHxLWnmIp7bV5QQjM9S1lod4WTorC/zL2voJKDdWZYSTs1Q1Jgb32Mmqm3xsW2qJmLfG5fUUI0PEpZZ3aEk6Gvvsy+sKGThHZnWUo8NEJRX258i5motsXGt6majH1vYFJDNTtJWGZ1g5Kgrr3Lv7GilIV3aFpLPTNBUF5te4qYp7XEx7iqm41+cGFTRDY6SFdldIKRn668ysCxo5WGd2lbTD4yQE9dbHqJl6a0w8i5q5yOf3FiVEU3OUdWZHOBkJ6tu8nBsqSVh3hqXE0/MT9OXGt5iJals8LJuqydj4ByY1VGODhGVWNygI+drLrJwrOlloh5a1xOQDE/TVtqeIeVpLLByrutnpCBc2RWRzk3RVRicX+OnKu5yMO0ppeJemxdT0EyPkxaaXeGlKOxwMu8rp+RgnRlV0g6NkRTYXB+jZuquMfEtaeYinttXlBBMz1LWmh3hZSisL/Lva+gkoN1ZlhJOzVDUmBvfYyaqbfGxbaomYt8bl9RQjQ8SllndoSToa++zL6woZOEdmdZSjw0QlFfboCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAA=";
@@ -440,15 +440,16 @@ function clipPool(key, b64){
   }
   return CLIP_POOLS[key];
 }
-function playClip(key, b64){
+function playClip(key, b64, onFail){
   try{
     const pool = clipPool(key, b64);
     const a = pool[pool.i++ % pool.length];
-    try{ a.pause(); a.currentTime = 0; }catch(e){}
+    delete a.dataset.priming;   // 本番再生がこの要素を引き継いだ印（プライミング側の後始末と競合させない）
+    try{ a.muted = false; a.pause(); a.currentTime = 0; }catch(e){}
     const p = a.play();
-    if(p && p.catch) p.catch(() => {});
+    if(p && p.catch) p.catch(() => { if(onFail) onFail(); });   // 再生が拒否されたら予備の音（Web Audio）に切り替える
     return true;
-  }catch(e){ return false; }
+  }catch(e){ if(onFail) onFail(); return false; }
 }
 let clipsPrimed = false;
 function primeClips(){
@@ -457,12 +458,17 @@ function primeClips(){
     [["count", COUNT_WAV_B64], ["correct", CORRECT_WAV_B64], ["wrong", WRONG_WAV_B64], ["flash", FLASH_WAV_B64]].forEach(([key, b64]) => {
       clipPool(key, b64).forEach(a => {
         try{
+          a.dataset.priming = "1";
           a.muted = true;
           const p = a.play();
-          const done = () => { try{ a.pause(); a.currentTime = 0; a.muted = false; }catch(e){} };
-          if(p && p.then) p.then(done).catch(() => { try{ a.muted = false; }catch(e){} });
+          const done = () => {
+            // 本番の再生がこの要素を先に使っていたら、そちらを止めない（音が消える競合の防止）
+            if(a.dataset.priming){ delete a.dataset.priming; try{ a.pause(); a.currentTime = 0; }catch(e){} }
+            try{ a.muted = false; }catch(e){}
+          };
+          if(p && p.then) p.then(done).catch(done);
           else done();
-        }catch(e){ try{ a.muted = false; }catch(e2){} }
+        }catch(e){ delete a.dataset.priming; try{ a.muted = false; }catch(e2){} }
       });
     });
   }catch(e){}
@@ -478,8 +484,7 @@ function loadFlashSound(){
     ctx.decodeAudioData(bytes.buffer.slice(0), b => { flashBuffer = b; }, () => {});
   }catch(e){}
 }
-function beepFlash(){
-  if(playClip("flash", FLASH_WAV_B64)) return;
+function webAudioFlash(){
   try{
     if(flashBuffer){
       const ctx = audio();
@@ -491,8 +496,12 @@ function beepFlash(){
   }catch(e){}
   tone(880, 0.1, {vol:0.55});   // フォールバック: 低め・ピッ
 }
-const beepCorrect   = () => { if(!playClip("correct", CORRECT_WAV_B64)){ tone(1568, 0.14); tone(1175, 0.34, {delay:0.15}); } };  // ピンポーン
-const beepIncorrect = () => { if(!playClip("wrong", WRONG_WAV_B64)){ tone(170, 0.7, {type:"square", vol:0.34}); tone(173, 0.7, {type:"square", vol:0.3}); } }; // ブー（1回）
+function beepFlash(){
+  /* メディア要素の再生が拒否されたら、Web Audio側で必ず鳴らす */
+  playClip("flash", FLASH_WAV_B64, webAudioFlash);
+}
+const beepCorrect   = () => { playClip("correct", CORRECT_WAV_B64, () => { tone(1568, 0.14); tone(1175, 0.34, {delay:0.15}); }); };  // ピンポーン
+const beepIncorrect = () => { playClip("wrong", WRONG_WAV_B64, () => { tone(170, 0.7, {type:"square", vol:0.34}); tone(173, 0.7, {type:"square", vol:0.3}); }); }; // ブー（1回）
 
 /* ---------- 問題生成 ---------- */
 const rand = (a,b) => Math.floor(Math.random() * (b - a + 1)) + a;
@@ -1187,28 +1196,41 @@ function submitAnswer(){
 }
 
 /* ---------- 正誤判定 ---------- */
+function fitJudgeVals(){
+  document.querySelectorAll("#judgeDetail .val").forEach(el => {
+    el.style.fontSize = fitSizePx(el, el.textContent, 30, window.innerWidth * 0.58) + "px";
+  });
+}
 function showJudge(results){
   clearTimers(); show("judgeScreen");
   const allCorrect = results.every(r => r.correct);
-  if(allCorrect){ beepCorrect(); $("judgeMark").textContent = "〇"; $("judgeMark").className = "mark ok"; $("judgeText").textContent = "正解！"; $("judgeDetail").innerHTML = ""; }
-  else {
-    beepIncorrect(); $("judgeMark").textContent = "×"; $("judgeMark").className = "mark ng"; $("judgeText").textContent = "不正解";
-    if(results.length === 1){
-      const r = results[0];
-      $("judgeDetail").innerHTML =
-        `あなたの答え： <span class="val numfont">${r.user === null ? "（未入力）" : fmt(r.user)}</span><br>` +
-        `正解： <span class="val numfont" style="color:#00b84f">${fmt(r.answer)}</span>`;
-    } else {
-      /* 並列計算: 組ごとに〇×を表示し、間違えた組は答えも出す */
-      const positions = layoutPositions(cfg.series, cfg.layout);
-      $("judgeDetail").innerHTML = results.map((r, s) =>
-        `<div>${positions[s][4]}： <span style="color:${r.correct ? "#00b84f" : "#ff5252"};font-weight:bold">${r.correct ? "〇" : "×"}</span>` +
-        (r.correct ? "" : `　あなたの答え <span class="val numfont">${r.user === null ? "（未入力）" : fmt(r.user)}</span>　正解 <span class="val numfont" style="color:#00b84f">${fmt(r.answer)}</span>`) + `</div>`
-      ).join("");
-    }
+  if(allCorrect){ beepCorrect(); $("judgeMark").textContent = "〇"; $("judgeMark").className = "mark ok"; $("judgeText").textContent = "正解！"; }
+  else { beepIncorrect(); $("judgeMark").textContent = "×"; $("judgeMark").className = "mark ng"; $("judgeText").textContent = "不正解"; }
+  /* 答え（正解の数字）は自動では出さない。正解した組も含め、「答えを見る」を押したときだけ出す */
+  let hiddenHtml, shownHtml;
+  if(results.length === 1){
+    const r = results[0];
+    const yourLine = r.correct ? "" :
+      `あなたの答え： <span class="val numfont">${r.user === null ? "（未入力）" : fmt(r.user)}</span><br>`;
+    hiddenHtml = yourLine;
+    shownHtml = yourLine + `正解： <span class="val numfont" style="color:#00b84f">${fmt(r.answer)}</span>`;
+  } else {
+    /* 並列計算: 組ごとに〇×と（間違えた組は）あなたの答えを出し、正解はボタンで出す */
+    const positions = layoutPositions(cfg.series, cfg.layout);
+    const rowHtml = withAns => results.map((r, s) =>
+      `<div>${positions[s][4]}： <span style="color:${r.correct ? "#00b84f" : "#ff5252"};font-weight:bold">${r.correct ? "〇" : "×"}</span>` +
+      (r.correct ? "" : `　あなたの答え <span class="val numfont">${r.user === null ? "（未入力）" : fmt(r.user)}</span>`) +
+      (withAns ? `　正解 <span class="val numfont" style="color:#00b84f">${fmt(r.answer)}</span>` : "") + `</div>`
+    ).join("");
+    hiddenHtml = rowHtml(false);
+    shownHtml = rowHtml(true);
   }
-  document.querySelectorAll("#judgeDetail .val").forEach(el => {
-    el.style.fontSize = fitSizePx(el, el.textContent, 30, window.innerWidth * 0.58) + "px";
+  $("judgeDetail").innerHTML = hiddenHtml +
+    `<div style="margin-top:16px;text-align:center"><button type="button" class="primary" id="showAnswerBtn">答えを見る</button></div>`;
+  fitJudgeVals();
+  $("showAnswerBtn").addEventListener("click", () => {
+    $("judgeDetail").innerHTML = shownHtml;
+    fitJudgeVals();
   });
   const isLast = problemIndex >= cfg.questions - 1;
   $("nextBtn").style.display = isLast ? "none" : "";        // 次の問題へは最終問題以外
