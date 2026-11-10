@@ -52,6 +52,10 @@
   }
   button.primary { background:#00b84f; color:#fff; font-weight:bold; font-size:18px; padding:14px 40px; }
   button:active { opacity:.75; }
+  /* 並列の選択肢ボタン（モード選択・級種別）: 片方だけ緑だと、選ぶ前から
+     「そちらが推奨」に見えて誘導のようになるので同色にそろえ、押した瞬間だけ緑にする */
+  button.choice { font-weight:bold; font-size:18px; }
+  button.choice:active { background:#00b84f; opacity:1; }
   .btnrow-settings { display:flex; gap:12px; justify-content:center; margin-top:26px; }
   #resultScreen .btnrow-settings { flex-wrap:nowrap; gap:8px; }
   #resultScreen .btnrow-settings button { padding:12px 8px; font-size:13px; white-space:nowrap; }
@@ -138,8 +142,8 @@
 <section id="startScreen" class="screen active">
   <h1 style="margin-bottom:34px">フラッシュ暗算</h1>
   <div style="display:flex;flex-direction:column;gap:16px;width:min(92vw,340px)">
-    <button class="primary" id="gradeModeBtn" style="padding:20px 22px;font-size:19px">級・段位で選ぶ</button>
-    <button id="customModeBtn" style="padding:20px 22px;font-size:19px">自分で設定する</button>
+    <button class="choice" id="gradeModeBtn" style="padding:20px 22px;font-size:19px">級・段位で選ぶ</button>
+    <button class="choice" id="customModeBtn" style="padding:20px 22px;font-size:19px">自分で設定する</button>
     <button id="fsBtnTop">全画面</button>
   </div>
 </section>
@@ -148,8 +152,8 @@
 <section id="gradeKindScreen" class="screen">
   <h2 style="margin-bottom:30px">級・段位で選ぶ</h2>
   <div style="display:flex;flex-direction:column;gap:16px;width:min(92vw,340px)">
-    <button class="primary" id="kyuBtn" style="padding:20px 22px;font-size:19px">10級〜1級</button>
-    <button class="primary" id="danBtn" style="padding:20px 22px;font-size:19px">初段〜十段</button>
+    <button class="choice" id="kyuBtn" style="padding:20px 22px;font-size:19px">10級〜1級</button>
+    <button class="choice" id="danBtn" style="padding:20px 22px;font-size:19px">初段〜十段</button>
     <button id="kindBackBtn">戻る</button>
   </div>
 </section>
