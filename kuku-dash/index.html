@@ -110,6 +110,7 @@ button:active{filter:brightness(1.25);}
 .list-title{color:#2020a0;font-weight:bold;font-size:clamp(18px,5vw,23px);}
 .list-sub{color:var(--red);font-weight:bold;font-size:clamp(15px,4.4vw,19px);padding:2px 0 8px;}
 .list-line{font-size:clamp(20px,5.8vw,28px);line-height:1.35;white-space:nowrap;}
+#resultList{overflow-y:auto;max-height:calc(100dvh - 320px);-webkit-overflow-scrolling:touch;}
 .list-line .sym{font-weight:bold;font-size:.9em;}
 .list-line.wrong{color:var(--red);}
 .list-sep{color:#888;font-size:15px;padding:2px 0;}
@@ -129,7 +130,7 @@ button:active{filter:brightness(1.25);}
     <button class="main-btn" style="background:var(--pink)" id="btnExam">しけん</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-11</span>
+    <span class="ver">ver. 20261110-12</span>
   </div>
 </div>
 
@@ -139,7 +140,7 @@ button:active{filter:brightness(1.25);}
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-11</span>
+    <span class="ver">ver. 20261110-12</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -160,11 +161,21 @@ button:active{filter:brightness(1.25);}
     </div>
     <div class="order-cell">
       <button class="order-btn" style="background:var(--greencat)" data-order="random">ランダム</button>
-      <div class="order-desc">バラバラの順</div>
+      <div class="order-desc" id="descRandom">バラバラの順</div>
+    </div>
+  </div>
+  <div class="step-row" id="countRow" style="display:none">
+    <span class="step-unit" style="font-weight:bold;color:#2020a0;font-size:19px">もんだい数</span>
+    <div class="step-group">
+      <button class="step-btn" data-count="-10">−10</button>
+      <button class="step-btn" data-count="-1">−1</button>
+      <span class="step-val num" id="qCountVal">20</span><span class="step-unit">問</span>
+      <button class="step-btn" data-count="1">＋1</button>
+      <button class="step-btn" data-count="10">＋10</button>
     </div>
   </div>
   <div class="time-label">タイム計測</div>
-  <div class="exam-time" id="examTimeRow"><span class="fixed">カウントダウン 1分</span><span class="note">しけんは1分固定です</span></div>
+  <div class="exam-time" id="examTimeRow"><span class="fixed" id="examTimeTxt">カウントダウン 1分</span><span class="note" id="examNoteTxt">しけんは1分固定です</span></div>
   <div class="time-modes" id="tmModes">
     <button class="tm-btn" id="tmUp">カウントアップ</button>
     <button class="tm-btn" id="tmDown">カウントダウン</button>
@@ -185,7 +196,7 @@ button:active{filter:brightness(1.25);}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-11</span>
+    <span class="ver">ver. 20261110-12</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -253,7 +264,7 @@ var S = {
   naoshiCleared: new Set(), naoshiDrafts: {},
   resultItems: [], resultAnswers: [], resultScore: 0, resultWrong: [],
   selOrder: "junban", timeMode: "up", cdMin: 1, cdSec: 0,
-  playMode: "practice",
+  playMode: "practice", qCount: 20,
   timeLimit: null, timeUp: false, timerId: null
 };
 function $(id){ return document.getElementById(id); }
@@ -277,12 +288,27 @@ function formatElapsed(sec){
     (function(dan){ b.addEventListener("click", function(){ selectDan(dan); }); })(d);
     panel.appendChild(b);
   }
+  var zb = document.createElement("button");
+  zb.className = "dan-btn"; zb.textContent = "ぜんぶ";
+  zb.style.gridColumn = "1 / -1"; zb.style.background = "var(--orange)";
+  zb.style.color = "#fff";
+  zb.addEventListener("click", function(){ selectDan("all"); });
+  panel.appendChild(zb);
 })();
 function selectDan(d){
   S.dan = d;
-  $("orderTitle").textContent = d + " のだん";
-  $("descJunban").textContent = d + "×1 から " + d + "×9 の順";
-  $("descGyaku").textContent = d + "×9 から " + d + "×1 の順";
+  if (d === "all"){
+    $("orderTitle").textContent = "ぜんぶ";
+    $("descJunban").textContent = "1×1 から 9×9 の順（81問）";
+    $("descGyaku").textContent = "9×9 から 1×1 の順（81問）";
+    $("descRandom").textContent = "バラバラの順（問題数を選べます）";
+  } else {
+    $("orderTitle").textContent = d + " のだん";
+    $("descJunban").textContent = d + "×1 から " + d + "×9 の順";
+    $("descGyaku").textContent = d + "×9 から " + d + "×1 の順";
+    $("descRandom").textContent = "バラバラの順";
+  }
+  refreshOrderUI();
   show("scr-order");
 }
 $("btnOrderBack").addEventListener("click", function(){ show("scr-dan"); });
@@ -304,9 +330,30 @@ document.querySelectorAll("[data-order]").forEach(function(b){
 });
 $("tmUp").addEventListener("click", function(){ S.timeMode = "up"; refreshOrderUI(); });
 $("tmDown").addEventListener("click", function(){ S.timeMode = "down"; refreshOrderUI(); });
+function examLimit(){
+  if (S.dan === "all"){
+    return S.selOrder === "random" ? S.qCount * 6 : 8 * 60;
+  }
+  return 60;
+}
 function refreshOrderUI(){
   var exam = S.playMode === "exam";
   $("examTimeRow").style.display = exam ? "block" : "none";
+  $("countRow").style.display =
+    (S.dan === "all" && S.selOrder === "random") ? "flex" : "none";
+  $("qCountVal").textContent = S.qCount;
+  if (S.dan === "all" && S.selOrder === "random"){
+    var sec = S.qCount * 6;
+    $("examTimeTxt").textContent =
+      "カウントダウン " + Math.floor(sec / 60) + "分" + (sec % 60) + "秒";
+    $("examNoteTxt").textContent = S.qCount + "問 × 6秒 で計算しています";
+  } else if (S.dan === "all"){
+    $("examTimeTxt").textContent = "カウントダウン 8分";
+    $("examNoteTxt").textContent = "81問・しけんは8分固定です";
+  } else {
+    $("examTimeTxt").textContent = "カウントダウン 1分";
+    $("examNoteTxt").textContent = "しけんは1分固定です";
+  }
   $("tmModes").style.display = exam ? "none" : "flex";
   $("stepRow").style.display = exam ? "none" : "flex";
   document.querySelectorAll("[data-order]").forEach(function(b){
@@ -320,6 +367,24 @@ function refreshOrderUI(){
   document.querySelectorAll("[data-step]").forEach(function(b){ b.disabled = !en; });
   $("timeWarn").textContent = "";
 }
+function stepCount(delta){
+  S.qCount = Math.min(100, Math.max(10, S.qCount + delta));
+  refreshOrderUI();
+}
+document.querySelectorAll("[data-count]").forEach(function(b){
+  var delta = parseInt(b.getAttribute("data-count"), 10);
+  var t1 = null, t2 = null;
+  function clearTimers(){ if (t1){ clearTimeout(t1); t1 = null; } if (t2){ clearInterval(t2); t2 = null; } }
+  b.addEventListener("pointerdown", function(e){
+    e.preventDefault();
+    stepCount(delta);
+    t1 = setTimeout(function(){ t2 = setInterval(function(){ stepCount(delta); }, 90); }, 450);
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(function(ev){
+    b.addEventListener(ev, clearTimers);
+  });
+  b.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+});
 function stepCd(which, delta){
   if (which === "min") S.cdMin = Math.min(99, Math.max(0, S.cdMin + delta));
   else S.cdSec = Math.min(59, Math.max(0, S.cdSec + delta));
@@ -350,22 +415,41 @@ $("btnStart").addEventListener("click", function(){
 });
 refreshOrderUI();
 /* ---------- セッション ---------- */
+function shuffleArr(a){
+  for (var i = a.length - 1; i > 0; i--){
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
 function startSession(order){
   S.order = order;
-  var ks = [1,2,3,4,5,6,7,8,9];
-  if (order === "gyaku") ks.reverse();
-  if (order === "random"){
-    for (var i = ks.length - 1; i > 0; i--){
-      var j = Math.floor(Math.random() * (i + 1));
-      var t = ks[i]; ks[i] = ks[j]; ks[j] = t;
+  var combos = [];
+  if (S.dan === "all"){
+    for (var d = 1; d <= 9; d++)
+      for (var k = 1; k <= 9; k++) combos.push([d, k]);
+    if (order === "gyaku") combos.reverse();
+    else if (order === "random"){
+      var picked = [];
+      while (picked.length < S.qCount){
+        picked = picked.concat(shuffleArr(combos.slice()));
+      }
+      combos = picked.slice(0, S.qCount);
     }
+  } else {
+    var ks = [1,2,3,4,5,6,7,8,9];
+    if (order === "gyaku") ks.reverse();
+    if (order === "random") shuffleArr(ks);
+    combos = ks.map(function(k){ return [S.dan, k]; });
   }
-  S.items = ks.map(function(k, pos){ return { orig: pos + 1, k: k }; });
+  S.items = combos.map(function(c, pos){
+    return { orig: pos + 1, dan: c[0], k: c[1] };
+  });
   S.answers = S.items.map(function(){ return null; });
   S.mode = "normal"; S.idx = 0; S.input = "";
   S.acCount = 0; S.topVisible = false; S.finished = false;
   S.elapsed = null; S.naoshiCompleted = false;
-  S.timeLimit = S.playMode === "exam" ? 60
+  S.timeLimit = S.playMode === "exam" ? examLimit()
     : (S.timeMode === "down" ? S.cdMin * 60 + S.cdSec : null);
   S.timeUp = false;
   S.startTime = Date.now();
@@ -408,7 +492,7 @@ function startNaoshi(){
   S.idx = 0; S.input = ""; S.acCount = 0; S.topVisible = false; S.finished = false;
   show("scr-calc"); renderCalc();
 }
-function currentAnswer(){ return S.dan * S.items[S.idx].k; }
+function currentAnswer(){ var it = S.items[S.idx]; return it.dan * it.k; }
 function renderCalc(){
   var tabs = $("tabs"); tabs.innerHTML = "";
   S.items.forEach(function(it, i){
@@ -424,7 +508,7 @@ function renderCalc(){
     tag.className = "naoshi-tag"; tag.textContent = "なおし";
     tabs.appendChild(tag);
   }
-  $("probDan").textContent = S.dan;
+  $("probDan").textContent = S.items[S.idx].dan;
   $("probK").textContent = S.items[S.idx].k;
   $("inputBox").textContent = S.input;
   $("btnTop").classList.toggle("show", S.topVisible);
@@ -525,7 +609,7 @@ function showResult(){
     var wrong = [], score = 0;
     S.resultItems.forEach(function(it, i){
       var ans = S.resultAnswers[i];
-      if (ans !== null && ans === S.dan * it.k) score++;
+      if (ans !== null && ans === it.dan * it.k) score++;
       else wrong.push(it);
     });
     S.resultScore = score; S.resultWrong = wrong;
@@ -541,9 +625,20 @@ function showResult(){
     verdict.className = "verdict"; verdict.textContent = "";
   }
   var orderNames = { junban: "じゅんばん", gyaku: "ぎゃくじゅん", random: "ランダム" };
-  var timeName = S.playMode === "exam" ? "カウントダウン 1分"
-    : (S.timeMode === "down" ? "カウントダウン " + S.cdMin + "分" + S.cdSec + "秒" : "カウントアップ");
-  $("settingsText").innerHTML = S.dan + " のだん（" + (S.playMode === "exam" ? "しけん" : "れんしゅう") + "）<br>"
+  var timeName;
+  if (S.playMode === "exam"){
+    if (S.dan === "all" && S.order === "random"){
+      var esec = S.qCount * 6;
+      timeName = "カウントダウン " + Math.floor(esec / 60) + "分" + (esec % 60) + "秒";
+    } else if (S.dan === "all") timeName = "カウントダウン 8分";
+    else timeName = "カウントダウン 1分";
+  } else {
+    timeName = S.timeMode === "down" ? "カウントダウン " + S.cdMin + "分" + S.cdSec + "秒" : "カウントアップ";
+  }
+  var danText = S.dan === "all"
+    ? "ぜんぶ" + (S.order === "random" ? " " + S.qCount + "問" : "")
+    : S.dan + " のだん";
+  $("settingsText").innerHTML = danText + "（" + (S.playMode === "exam" ? "しけん" : "れんしゅう") + "）<br>"
     + (orderNames[S.order] || "") + "／" + timeName;
   $("scoreText").textContent = S.resultScore + "点／" + S.resultItems.length + "点";
   $("elapsedText").textContent = formatElapsed(S.elapsed || 0);
@@ -553,7 +648,7 @@ function showResult(){
   $("btnNaoshi").style.display = showNaoshi ? "" : "none";
   $("doneNote").style.display = S.naoshiCompleted ? "" : "none";
   var list = $("resultList"); list.innerHTML = "";
-  var wrongSet = new Set(S.resultWrong.map(function(it){ return it.orig + ":" + it.k; }));
+  var wrongSet = new Set(S.resultWrong.map(function(it){ return it.orig + ":" + it.dan + ":" + it.k; }));
   var half = Math.ceil(S.resultItems.length / 2);
   S.resultItems.forEach(function(it, i){
     if (i === half){
@@ -562,10 +657,10 @@ function showResult(){
       list.appendChild(sep);
     }
     var line = document.createElement("div");
-    line.className = "list-line" + (wrongSet.has(it.orig + ":" + it.k) ? " wrong" : "");
+    line.className = "list-line" + (wrongSet.has(it.orig + ":" + it.dan + ":" + it.k) ? " wrong" : "");
     var ans = S.resultAnswers[i];
     line.innerHTML = "";
-    var s1 = document.createElement("span"); s1.className = "num"; s1.textContent = S.dan;
+    var s1 = document.createElement("span"); s1.className = "num"; s1.textContent = it.dan;
     var s2 = document.createElement("span"); s2.className = "sym"; s2.textContent = " × ";
     var s3 = document.createElement("span"); s3.className = "num"; s3.textContent = it.k;
     var s4 = document.createElement("span"); s4.className = "sym"; s4.textContent = " = ";
