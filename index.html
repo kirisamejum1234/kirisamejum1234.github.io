@@ -207,6 +207,12 @@
         <label><input type="radio" name="answerSignMode" value="mid" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 途中だけマイナス（答えはプラス）</label>
         <label><input type="radio" name="answerSignMode" value="negative" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 答えがマイナスになる</label>
       </div></div>
+    <div class="row"><label>同じ数字の連続</label>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+        <label><input type="radio" name="repeatMode" value="on" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オン（連続して出る）</label>
+        <label><input type="radio" name="repeatMode" value="off" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オフ（連続させない）</label>
+      </div></div>
+    <p class="note" style="margin:-2px 0 10px">オフにすると、同じ数字は続けて出ません。前の数字と同じ桁の数字も、なるべく出ないようにします</p>
     <div class="row"><label>並列計算数 <span class="note">組の数 1〜12</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="seriesCount" data-step="-1">−</button><input id="seriesCount" type="number" inputmode="numeric" min="1" max="12" value="1"><button type="button" class="stepbtn" data-target="seriesCount" data-step="1">＋</button></div></div>
     <p class="note" style="margin:-2px 0 10px">1=シングル、2=ダブル、3=トリプル、4=クワッド。5以上も入力できます</p>
     <div class="row" id="presentRow"><label>出し方 <span class="note">2組以上の時</span></label>
@@ -513,7 +519,23 @@ function makeNumber(minD, maxD, vary){
   if(d <= 1) return rand(1, 9);
   return rand(Math.pow(10, d - 1), Math.pow(10, d) - 1);
 }
-function makeProblem(minD, maxD, mouth, vary, sub, answerMode){
+/* 「同じ数字の連続オフ」用: 数字の桁の集合と、重なりの判定。
+   符号違い（5 と -5）も「同じ数字」として扱う */
+const digitSetOf = n => new Set(String(Math.abs(n)).split(""));
+function hasInternalDup(n){ const s = String(Math.abs(n)); return new Set(s).size !== s.length; }
+function isHardRepeat(arr){
+  for(let i = 1; i < arr.length; i++) if(Math.abs(arr[i]) === Math.abs(arr[i - 1])) return true;
+  return false;
+}
+function isCleanRepeat(arr){
+  if(isHardRepeat(arr)) return false;
+  for(let i = 0; i < arr.length; i++){
+    if(hasInternalDup(arr[i])) return false;
+    if(i > 0){ const prev = digitSetOf(arr[i - 1]); for(const d of digitSetOf(arr[i])) if(prev.has(d)) return false; }
+  }
+  return true;
+}
+function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat){
   if(sub && mouth >= 2){
     // 2つ目以降の一部をマイナスにする（例: 500, -1,234, 300）。1つ目は必ずプラスで、
     // マイナスは最低1つ入る。数字も符号も引き直しながら条件に合う問題を探す。
@@ -521,6 +543,7 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode){
     //             "mid"=途中はマイナスになるが答えはプラス（口数3以上） /
     //             "negative"=答えがマイナスになる
     let bestNeg = null, bestNever = null, bestMid = null;
+    let bestNegH = null, bestNeverH = null, bestMidH = null, firstHard = null;
     for(let attempt = 0; attempt < 1000; attempt++){
       const cand = Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
       for(let i = 1; i < cand.length; i++) if(Math.random() < 0.5) cand[i] = -cand[i];
@@ -529,23 +552,57 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode){
       const total = prefs[prefs.length - 1];
       const minPref = Math.min(...prefs);
       const dipsMid = prefs.slice(0, -1).some(p => p < 0);
+      const modeOk = answerMode === "negative" ? total < 0
+                   : answerMode === "mid" ? (total > 0 && dipsMid)
+                   : (total > 0 && minPref >= 0);
+      const hardOk = !noRepeat || !isHardRepeat(cand);
+      // 条件を満たし、（オフ時は）同じ数字の連続がなく桁の重なりもない候補は即採用
+      if(modeOk && hardOk && (!noRepeat || isCleanRepeat(cand))) return cand;
+      if(noRepeat && modeOk && hardOk && !firstHard) firstHard = cand;
+      if(noRepeat && hardOk){
+        if(answerMode === "negative"){ if(!bestNegH || total < bestNegH.total) bestNegH = { cand, total }; }
+        else if(answerMode === "mid"){ if(dipsMid && (!bestMidH || total > bestMidH.total)) bestMidH = { cand, total }; }
+        else { if(!bestNeverH || minPref > bestNeverH.minPref) bestNeverH = { cand, minPref }; }
+      }
       if(answerMode === "negative"){
-        if(total < 0) return cand;
         if(!bestNeg || total < bestNeg.total) bestNeg = { cand, total };
       } else if(answerMode === "mid"){
-        if(total > 0 && dipsMid) return cand;
         if(dipsMid && (!bestMid || total > bestMid.total)) bestMid = { cand, total };
       } else {
-        if(total > 0 && minPref >= 0) return cand;
         if(!bestNever || minPref > bestNever.minPref) bestNever = { cand, minPref };
       }
     }
+    if(firstHard) return firstHard;
+    if(answerMode === "negative" && bestNegH) return bestNegH.cand;
+    if(answerMode === "mid" && bestMidH) return bestMidH.cand;
+    if(answerMode === "never" && bestNeverH) return bestNeverH.cand;
     if(answerMode === "negative" && bestNeg) return bestNeg.cand;
     if(answerMode === "mid" && bestMid) return bestMid.cand;
     if(answerMode === "never" && bestNever) return bestNever.cand;
     // 万一見つからなければ全てプラスの問題にする
   }
-  return Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
+  if(!noRepeat) return Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
+  /* 同じ数字を続けて出さない: 前の数字と違うものを必ず選び、
+     前の数字と同じ桁の数字を使わないもの・数字の中の桁が重ならないものを優先する */
+  const out = [];
+  for(let i = 0; i < mouth; i++){
+    const prev = i > 0 ? out[i - 1] : null;
+    let picked = null, tierDisjoint = null, tierDiff = null;
+    for(let t = 0; t < 80 && picked === null; t++){
+      const n = makeNumber(minD, maxD, vary);
+      if(prev !== null && n === prev) continue;   // 同じ数字の連続は絶対に選ばない
+      if(tierDiff === null) tierDiff = n;
+      const disjoint = prev === null || ![...digitSetOf(n)].some(d => digitSetOf(prev).has(d));
+      if(disjoint && !hasInternalDup(n)) picked = n;
+      else if(disjoint && tierDisjoint === null) tierDisjoint = n;
+    }
+    let chosen = picked !== null ? picked : (tierDisjoint !== null ? tierDisjoint : tierDiff);
+    if(chosen === null || chosen === undefined){   // 万一の保険（引き直し続ければ必ず違う数字になる）
+      do { chosen = makeNumber(minD, maxD, vary); } while(prev !== null && chosen === prev);
+    }
+    out.push(chosen);
+  }
+  return out;
 }
 /* ---------- 級・段位モード ---------- */
 /* 難易度は級・段位ごとに固定（並列計算なし1組だけ）。
@@ -633,6 +690,7 @@ function customSummary(c){
     const mode = c.answerMode === "mid" ? "途中だけマイナス" : c.answerMode === "negative" ? "答えがマイナス" : "マイナスにならない";
     s += `　引き算オン（${mode}）`;
   }
+  if(!c.allowRepeat) s += "　同じ数字の連続オフ";
   return s;
 }
 function startCustom(){
@@ -655,7 +713,7 @@ function startGrade(){
     const g = selectedGrade;
     cfg = { minD: g.digits, maxD: g.digits, mouth: g.mouth, seconds: g.seconds,
             totalSeconds: g.seconds, timingMode: "total", vary: false, sub: false,
-            answerMode: "never", questions: parseInt($("confirmQuestions").value, 10) || 1,
+            answerMode: "never", allowRepeat: true, questions: parseInt($("confirmQuestions").value, 10) || 1,
             series: 1, present: "simul", layout: "single", gradeSpec: g };
     problemIndex = 0; records = {}; queuedSeries = null;
     makeSeries();
@@ -816,6 +874,7 @@ function readConfig(){
     vary: checkedVal("digitMode", "maxonly") === "random",
     sub: checkedVal("subMode", "off") === "on",
     answerMode: checkedVal("answerSignMode", "never"),
+    allowRepeat: checkedVal("repeatMode", "on") === "on",
     questions: parseInt(qSel.value, 10),
     series: intOf("seriesCount"),
     present: checkedVal("presentMode", "simul"),
@@ -852,6 +911,7 @@ function saveSettings(){
       seriesCount: $("seriesCount").value,
       timingMode: checkedVal("timingMode", "total"), digitMode: checkedVal("digitMode", "maxonly"),
       subMode: checkedVal("subMode", "off"), answerSignMode: checkedVal("answerSignMode", "never"),
+      repeatMode: checkedVal("repeatMode", "on"),
       presentMode: checkedVal("presentMode", "simul"), layoutPref,
       confirmQuestions: $("confirmQuestions").value
     };
@@ -869,6 +929,7 @@ function loadSettings(){
   setVal("seriesCount", data.seriesCount);
   setRadio("timingMode", data.timingMode); setRadio("digitMode", data.digitMode);
   setRadio("subMode", data.subMode); setRadio("answerSignMode", data.answerSignMode);
+  setRadio("repeatMode", data.repeatMode);
   setRadio("presentMode", data.presentMode);
   if(data.layoutPref){ layoutPref = data.layoutPref; setRadio("layoutMode", data.layoutPref); }
   setVal("confirmQuestions", data.confirmQuestions);
@@ -1296,7 +1357,7 @@ function makeSeries(){
   }
   currentSeries = [];
   for(let s = 0; s < cfg.series; s++)
-    currentSeries.push(makeProblem(cfg.minD, cfg.maxD, cfg.mouth, cfg.vary, cfg.sub, cfg.answerMode));
+    currentSeries.push(makeProblem(cfg.minD, cfg.maxD, cfg.mouth, cfg.vary, cfg.sub, cfg.answerMode, cfg.allowRepeat === false));
   currentNumbers = currentSeries[0] || [];
 }
 function nextProblem(){
