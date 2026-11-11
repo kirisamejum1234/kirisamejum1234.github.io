@@ -253,7 +253,7 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
 
 <script>
 "use strict";
-const APP_VERSION = "20261112-6";
+const APP_VERSION = "20261112-7";
 /* ===== YOMIAGE CORE (portable: 超多機能版へ移植する区画) =====
    yomiage_core.py と同一仕様。共有テストベクトルで一致を検証する。 */
 const MAX_DIGITS = 12;
@@ -280,7 +280,7 @@ function numberToYomi(n){
   parts.reverse();
   let yomi = parts.join(" ");
   /* 読上の言い方: 数の最後（一の位）の4は「よん」でなく「よ」（例: 904 → きゅうひゃく よ） */
-  if(n % 10 === 4 && yomi.endsWith("よん")) yomi = yomi.slice(0, -2) + "よ";
+  /* 最後の4は「よん」と読む（「よ」は「ご」と聞き間違えやすいため） */
   return yomi;
 }
 function read4Parts(v, higher){
@@ -304,7 +304,7 @@ function numberToSegments(n){
     m = Math.floor(m / 10000); g++;
   }
   const segs = groups.reverse().flat();
-  if(n % 10 === 4 && segs[segs.length-1] === "よん") segs[segs.length-1] = "よ";
+  /* 最後の4も「よん」のまま（聞き間違え防止） */
   return segs;
 }
 const CLIP_KEYS = ["せん","にせん","さんぜん","よんせん","ごせん","ろくせん","ななせん","はっせん","きゅうせん","いっせん","ひゃく","にひゃく","さんびゃく","よんひゃく","ごひゃく","ろっぴゃく","ななひゃく","はっぴゃく","きゅうひゃく","じゅう","にじゅう","さんじゅう","よんじゅう","ごじゅう","ろくじゅう","ななじゅう","はちじゅう","きゅうじゅう","いち","に","さん","よ","よん","ご","ろく","なな","はち","きゅう","まん","ぜろ","まいなす","えんなり","えんでは","ねがいましては","ひいては","くわえて","ごめいさん","おく"];
