@@ -135,6 +135,44 @@ button:active{filter:brightness(1.25);}
 </style>
 </head>
 <body>
+<div id="kukuGate" style="position:fixed;inset:0;z-index:99999;background:#10201a;color:#f2f2f2;display:flex;align-items:center;justify-content:center;font-family:'Hiragino Sans','Yu Gothic UI','Meiryo',sans-serif;">
+  <div style="text-align:center;max-width:88vw;padding:24px;">
+    <div style="font-size:26px;font-weight:bold;margin-bottom:14px;">くくダッシュ</div>
+    <p style="font-size:15px;line-height:1.8;margin-bottom:18px;">このページは限定公開です。<br>合言葉を入力してください。</p>
+    <input id="kukuGateInput" type="password" autocomplete="off" placeholder="合言葉" style="font-size:17px;padding:12px 14px;width:240px;max-width:80vw;border-radius:8px;border:1px solid #3a5a4c;background:#1c2f28;color:#fff;text-align:center;">
+    <div style="margin-top:16px;">
+      <button id="kukuGateBtn" style="font-size:17px;font-weight:bold;padding:12px 42px;border:none;border-radius:8px;background:#00b84f;color:#fff;cursor:pointer;">開く</button>
+    </div>
+    <p id="kukuGateErr" style="color:#ff5a52;font-size:14px;min-height:20px;margin-top:12px;"></p>
+  </div>
+</div>
+<script>
+(function(){
+  var EXPECTED = "70f3203cea3115503f90a25289bd40e93fa8023680f7f3b4b825600002f03af2";
+  var KEY = "kukuDashUnlock";
+  function hide(){ var g = document.getElementById("kukuGate"); if (g) g.remove(); }
+  try { if (localStorage.getItem(KEY) === EXPECTED) { hide(); return; } } catch (e) {}
+  function sha256hex(text){
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ("0" + b.toString(16)).slice(-2); }).join("");
+    });
+  }
+  function tryUnlock(){
+    var v = document.getElementById("kukuGateInput").value.trim();
+    sha256hex(v).then(function(h){
+      if (h === EXPECTED) {
+        try { localStorage.setItem(KEY, EXPECTED); } catch (e) {}
+        hide();
+      } else {
+        document.getElementById("kukuGateErr").textContent = "合言葉が違います。";
+      }
+    });
+  }
+  document.getElementById("kukuGateBtn").addEventListener("click", tryUnlock);
+  document.getElementById("kukuGateInput").addEventListener("keydown", function(e){ if (e.key === "Enter") tryUnlock(); });
+})();
+</script>
+
 
 <!-- 0) メイン画面 -->
 <div id="scr-main" class="screen beige active">
