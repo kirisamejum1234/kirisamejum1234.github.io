@@ -1048,7 +1048,9 @@ if(document.fonts && document.fonts.load){
 function referenceText(){
   const d = Math.max(1, cfg ? cfg.maxD : 3);
   let s = "8".repeat(d).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  if(cfg && cfg.sub) s = "-" + s;
+  /* 並列1のときは引き算オンでも大きさを級・段位モードとそろえるため
+     基準にマイナスを含めない（並列時は重なり防止のため含める） */
+  if(cfg && cfg.sub && cfg.series > 1) s = "-" + s;
   return s;
 }
 let flashFontSize = null;
