@@ -29,6 +29,8 @@ h1.app{font-size:40px;text-align:center;margin:18px 0 2px;color:var(--green);let
 .stepper button{width:44px;height:44px;font-size:20px;border-radius:10px;border:2px solid #bbb;background:#f7f7f7}
 .stepper .val{min-width:64px;text-align:center;font-size:20px;font-weight:700}
 .stepper.secstep button{width:auto;padding:0 10px;font-size:15px}
+button{touch-action:manipulation}
+.stepper button{user-select:none;-webkit-user-select:none}
 .row.secline{flex-direction:column;align-items:stretch;gap:6px}
 .row.secline .stepper{width:100%}
 .row.secline .stepper button{flex:1 1 0;white-space:nowrap;min-width:0;padding:0 4px}
@@ -251,7 +253,7 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
 
 <script>
 "use strict";
-const APP_VERSION = "20261112-2";
+const APP_VERSION = "20261112-3";
 /* ===== YOMIAGE CORE (portable: 超多機能版へ移植する区画) =====
    yomiage_core.py と同一仕様。共有テストベクトルで一致を検証する。 */
 const MAX_DIGITS = 8;
@@ -470,13 +472,25 @@ function drawVals(){
 }
 const STEP_RANGES = {minD:[1,8], maxD:[1,8], kuchi:[1,20], qcount:[1,15], level:[1,LEVEL_MAX]};
 document.querySelectorAll("[data-step]").forEach(b => {
-  b.addEventListener("click", () => {
+  const stepOnce = () => {
     const [key, d] = b.dataset.step.split(","); const delta = parseInt(d, 10);
     const [lo, hi] = STEP_RANGES[key]; S[key] = Math.min(hi, Math.max(lo, S[key] + delta));
     if(key === "minD" && S.minD > S.maxD) S.maxD = S.minD;
     if(key === "maxD" && S.maxD < S.minD) S.minD = S.maxD;
     saveSettings(); segRefresh();
+  };
+  /* 長押しで押しっぱなしになる（少し待ってから連続ステップ）。
+     スマホで連打すると画面が拡大してしまう対策も兼ねる。 */
+  let delayT = null, repeatT = null, lastPtr = 0;
+  const stop = () => { clearTimeout(delayT); clearInterval(repeatT); delayT = repeatT = null; };
+  b.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    lastPtr = Date.now();
+    stepOnce(); stop();
+    delayT = setTimeout(() => { repeatT = setInterval(stepOnce, 90); }, 380);
   });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(ev => b.addEventListener(ev, stop));
+  b.addEventListener("click", () => { if(Date.now() - lastPtr > 600) stepOnce(); });
 });
 $("vvUrl").addEventListener("change", e => { S.vvUrl = e.target.value.trim() || DEF.vvUrl; saveSettings(); });
 
