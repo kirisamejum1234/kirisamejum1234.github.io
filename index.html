@@ -1017,9 +1017,25 @@ $("fsBtn").addEventListener("click", () => {
 /* ---------- カウントダウン → 出題 ---------- */
 function countdownThenFlash(){
   clearTimers(); show("countScreen");
-  const steps = [3, 2, 1];
-  steps.forEach((n, i) => later(() => { $("countNum").textContent = n; beepCountdown(); }, i * 1000));
-  later(flashNumbers, steps.length * 1000);
+  /* 絶対時刻ベースで1秒ごとの境界にそろえる（タイマーの遅れが累積して
+     3・2・1 の間隔がずれないように。マス計算と同じ方式） */
+  const t0 = performance.now();
+  let shown = 3;
+  $("countNum").textContent = shown;
+  beepCountdown();
+  const tick = () => {
+    const elapsed = performance.now() - t0;
+    const remain = 3 - Math.floor(elapsed / 1000);
+    if(remain <= 0){ flashNumbers(); return; }
+    if(remain !== shown){
+      shown = remain;
+      $("countNum").textContent = remain;
+      beepCountdown();
+    }
+    const nextBoundary = (Math.floor(elapsed / 1000) + 1) * 1000;
+    later(tick, Math.max(10, nextBoundary - elapsed));
+  };
+  later(tick, 1000);
 }
 /* 文字の実際の幅を測って、画面に収まるフォントサイズを返す。
    abacus2 は数字1文字が約0.88em幅と広いため、文字数×0.62em のような
