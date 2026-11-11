@@ -60,7 +60,11 @@ button:active{filter:brightness(1.25);}
 .btn-start{background:var(--red);color:#fff;font-weight:bold;font-size:clamp(17px,4.8vw,20px);padding:10px 30px;}
 .timer-label{margin-left:auto;color:#2020a0;font-weight:bold;font-size:clamp(15px,4.4vw,19px);}
 .main-area{flex:1;display:flex;gap:10px;padding:6px 14px 14px;}
-.main-btn{flex:1;color:#fff;font-weight:bold;font-size:clamp(28px,8vw,42px);}
+.main-btn{flex:1 1 0;min-width:0;min-height:0;color:#fff;font-weight:bold;font-size:clamp(28px,8vw,42px);}
+.quit-row{display:flex;justify-content:center;padding:2px 0 14px;}
+.btn-quit{background:var(--dark);color:#fff;font-weight:bold;font-size:18px;padding:10px 38px;}
+.end-msg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px;text-align:center;}
+.end-big{font-size:clamp(26px,7vw,40px);font-weight:bold;}
 .main-btn:active{background:var(--yellow);color:#000;}
 .mode-tag{margin-left:14px;}
 .verdict{display:none;text-align:center;font-weight:bold;font-size:clamp(24px,6.4vw,34px);line-height:1.4;padding:16px 8px 0;}
@@ -132,8 +136,21 @@ button:active{filter:brightness(1.25);}
     <button class="main-btn" style="background:var(--greencat)" id="btnPractice">れんしゅう</button>
     <button class="main-btn" style="background:var(--pink)" id="btnExam">しけん</button>
   </div>
+  <div class="quit-row">
+    <button class="btn-quit" id="btnQuit">おわる</button>
+  </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-17</span>
+    <span class="ver">ver. 20261110-18</span>
+  </div>
+</div>
+
+<!-- 0.5) 終了画面（Web版: タブを閉じる案内） -->
+<div id="scr-end" class="screen beige">
+  <div class="header">くくダッシュ</div>
+  <div class="end-msg">
+    <div class="end-big">おつかれさまでした</div>
+    <div>このタブ（またはウィンドウ）を閉じてください</div>
+    <button class="btn-dark" id="btnEndBack">もどる</button>
   </div>
 </div>
 
@@ -143,7 +160,7 @@ button:active{filter:brightness(1.25);}
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-17</span>
+    <span class="ver">ver. 20261110-18</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -199,7 +216,7 @@ button:active{filter:brightness(1.25);}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-17</span>
+    <span class="ver">ver. 20261110-18</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -324,6 +341,12 @@ function enterMode(m){
   refreshOrderUI();
   show("scr-dan");
 }
+$("btnQuit").addEventListener("click", function(){
+  if (document.fullscreenElement) document.exitFullscreen();
+  window.close();
+  show("scr-end");
+});
+$("btnEndBack").addEventListener("click", function(){ show("scr-main"); });
 $("btnPractice").addEventListener("click", function(){ enterMode("practice"); });
 $("btnExam").addEventListener("click", function(){ enterMode("exam"); });
 document.querySelectorAll("[data-order]").forEach(function(b){
