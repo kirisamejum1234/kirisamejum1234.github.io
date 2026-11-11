@@ -120,7 +120,8 @@
      閉じる操作（チェック）をせずにそのまま押して確定できるようにするため */
   .answer-bar { display:flex; justify-content:center; margin-top:22px; }
   /* 解答画面の画面内キーパッド（タブレットPC等、キーボードが出ない環境用） */
-  .pad-grid { display:grid; grid-template-columns:repeat(3,76px); gap:8px; justify-content:center; }
+  .pad-grid { display:grid; grid-template-columns:repeat(3,76px) 64px; gap:8px; justify-content:center; }
+  .pad-grid [data-key="next"] { grid-row: span 4; }
   .pad-grid button { padding:14px 0; font-size:20px; font-weight:bold; touch-action:manipulation; }
   table { border-collapse:collapse; margin:14px 0; font-size:16px; }
   th, td { padding:7px 16px; text-align:center; }
@@ -271,7 +272,7 @@
       <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button>
       <button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button>
       <button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button>
-      <button type="button" data-key="back">⌫</button><button type="button" data-key="0">0</button><button type="button" data-key="next">次へ</button>
+      <button type="button" data-key="minus">−</button><button type="button" data-key="0">0</button><button type="button" data-key="back">⌫</button><button type="button" data-key="next">次へ</button>
     </div>
   </div>
   </div>
@@ -1302,6 +1303,12 @@ document.querySelectorAll("#keypad [data-key]").forEach(btn => {
     if(key === "next"){
       if(idx >= 0 && idx + 1 < answerBlocks.length) answerBlocks[idx + 1].input.focus();
       else submitAnswer();
+      return;
+    }
+    if(key === "minus"){
+      const raw0 = inp.value.replace(/[^0-9]/g, "");
+      inp.value = (inp.value.includes("-") ? "" : "-") + raw0;
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
       return;
     }
     const neg = inp.value.includes("-");
