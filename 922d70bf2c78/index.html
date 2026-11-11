@@ -200,6 +200,7 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
   </div>
   <button class="subbtn" id="btnReplay">もう一度聞く</button>
   <button class="bigbtn" id="btnToAnswer">答えを入力する</button>
+  <button class="subbtn" id="btnQuitListen">トップに戻る</button>
   <p class="credit" id="listenCredit"></p>
  </div>
 </div>
@@ -224,6 +225,7 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
    <button class="bigbtn" id="btnNext"></button>
   </div>
   <button class="subbtn" id="btnHearAgain">もう一度聞く</button>
+  <button class="subbtn" id="btnQuitAnswer">トップに戻る</button>
  </div>
 </div>
 
@@ -255,7 +257,7 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
 
 <script>
 "use strict";
-const APP_VERSION = "20261111-7";
+const APP_VERSION = "20261112-1";
 /* ===== YOMIAGE CORE (portable: 超多機能版へ移植する区画) =====
    yomiage_core.py と同一仕様。共有テストベクトルで一致を検証する。 */
 const MAX_DIGITS = 8;
@@ -938,9 +940,9 @@ $("ansInput").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preven
 function judge(){
   if(judged) return;
   const raw = ansRaw();
-  if(raw === "" || raw === "-"){ toast("答えを入力してください"); return; }
   judged = true;
-  const p = problems[qIndex], mine = parseInt(raw, 10), ok = mine === p.answer;
+  /* 未入力でも判定できる（分からない時は答えを見て次へ進める） */
+  const p = problems[qIndex], mine = (raw === "" || raw === "-") ? null : parseInt(raw, 10), ok = mine === p.answer;
   results.push({problem:p, mine, ok});
   $("judgeBox").style.display = "block";
   const jm = $("judgeMsg");
@@ -960,12 +962,14 @@ function showResult(){
   const okCount = results.filter(r => r.ok).length;
   $("scoreLine").textContent = okCount + " 問正解 ／ " + results.length + " 問";
   $("resTable").innerHTML = "<tr><th>問題</th><th>あなたの答え</th><th></th></tr>" + results.map((r, i) =>
-    "<tr><td>" + (i + 1) + ". " + scriptText(r.problem) + "<br><span class='scriptline'>" + r.problem._script.map(e => e.display).join("、") + "</span></td><td style='color:" + (r.ok ? "#222" : "#e60012") + "'>" + formatYen(r.mine) + "</td><td>" + (r.ok ? "○" : "×") + "</td></tr>").join("");
+    "<tr><td>" + (i + 1) + ". " + scriptText(r.problem) + "<br><span class='scriptline'>" + r.problem._script.map(e => e.display).join("、") + "</span></td><td style='color:" + (r.ok ? "#222" : "#e60012") + "'>" + (r.mine === null ? "未入力" : formatYen(r.mine)) + "</td><td>" + (r.ok ? "○" : "×") + "</td></tr>").join("");
 }
 $("btnStart").addEventListener("click", () => startRun(false));
 $("btnSame").addEventListener("click", () => startRun(true));
 $("btnNew").addEventListener("click", () => startRun(false));
 $("btnBackSettings").addEventListener("click", () => { stopSpeech(); showScreen("scr-settings"); });
+$("btnQuitListen").addEventListener("click", () => { stopSpeech(); showScreen("scr-settings"); });
+$("btnQuitAnswer").addEventListener("click", () => { stopSpeech(); showScreen("scr-settings"); });
 $("btnReplay").addEventListener("click", () => { const p = problems[qIndex]; stopSpeech(); startQuestion(); });
 $("btnHearAgain").addEventListener("click", () => { stopSpeech(); startQuestion(); });
 $("btnToAnswer").addEventListener("click", goAnswer);
