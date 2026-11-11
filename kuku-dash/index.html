@@ -65,6 +65,13 @@ button:active{filter:brightness(1.25);}
 .btn-quit{background:var(--dark);color:#fff;font-weight:bold;font-size:18px;padding:10px 38px;}
 .end-msg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px;text-align:center;}
 .end-big{font-size:clamp(26px,7vw,40px);font-weight:bold;}
+.modal{position:absolute;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:60;}
+.modal.show{display:flex;}
+.modal-box{background:#fff;border-radius:14px;padding:28px 30px;text-align:center;max-width:82vw;}
+.modal-msg{font-size:clamp(20px,5.6vw,26px);font-weight:bold;margin-bottom:20px;}
+.modal-btns{display:flex;gap:14px;justify-content:center;}
+.btn-yes{background:var(--red);color:#fff;font-weight:bold;font-size:18px;padding:10px 30px;}
+.btn-no{background:var(--dark);color:#fff;font-weight:bold;font-size:18px;padding:10px 30px;}
 .main-btn:active{background:var(--yellow);color:#000;}
 .mode-tag{margin-left:14px;}
 .verdict{display:none;text-align:center;font-weight:bold;font-size:clamp(24px,6.4vw,34px);line-height:1.4;padding:16px 8px 0;}
@@ -140,16 +147,26 @@ button:active{filter:brightness(1.25);}
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-18</span>
+    <span class="ver">ver. 20261110-19</span>
   </div>
 </div>
 
-<!-- 0.5) 終了画面（Web版: タブを閉じる案内） -->
+<!-- 終了確認モーダル -->
+<div id="quitModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-msg">おわりますか？</div>
+    <div class="modal-btns">
+      <button class="btn-yes" id="btnQuitYes">はい</button>
+      <button class="btn-no" id="btnQuitNo">やめる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 0.5) 終了画面 -->
 <div id="scr-end" class="screen beige">
   <div class="header">くくダッシュ</div>
   <div class="end-msg">
     <div class="end-big">おつかれさまでした</div>
-    <div>このタブ（またはウィンドウ）を閉じてください</div>
     <button class="btn-dark" id="btnEndBack">もどる</button>
   </div>
 </div>
@@ -160,7 +177,7 @@ button:active{filter:brightness(1.25);}
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-18</span>
+    <span class="ver">ver. 20261110-19</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -216,7 +233,7 @@ button:active{filter:brightness(1.25);}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-18</span>
+    <span class="ver">ver. 20261110-19</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -342,9 +359,20 @@ function enterMode(m){
   show("scr-dan");
 }
 $("btnQuit").addEventListener("click", function(){
+  $("quitModal").classList.add("show");
+});
+$("btnQuitNo").addEventListener("click", function(){
+  $("quitModal").classList.remove("show");
+});
+$("btnQuitYes").addEventListener("click", function(){
+  $("quitModal").classList.remove("show");
   if (document.fullscreenElement) document.exitFullscreen();
+  // ブラウザが許可する場合は実際にタブ／ウィンドウを閉じる
+  var w = window.open("", "_self");
+  if (w) w.close();
   window.close();
-  show("scr-end");
+  // 閉じられなかった場合だけ、最小限の終了画面にする
+  setTimeout(function(){ show("scr-end"); }, 350);
 });
 $("btnEndBack").addEventListener("click", function(){ show("scr-main"); });
 $("btnPractice").addEventListener("click", function(){ enterMode("practice"); });
