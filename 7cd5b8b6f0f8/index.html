@@ -78,9 +78,9 @@
     color:#00b84f; font-weight:bold; line-height:1.05; white-space:nowrap;
   }
   #flashNum { font-size:26vw; }
-  #countNum { font-size:32vmin; }
+  #countNum { font-size:20vmin; }
   /* カウントダウンの丸は幅=高さの真円にする（楕円にしない） */
-  #countOval { width:66vmin; height:66vmin; padding:0; flex:none; }
+  #countOval { width:44vmin; height:44vmin; padding:0; flex:none; }
   /* 解答入力 */
   #answerInput {
     width:100%; min-width:0; padding:14px; font-size:40px; text-align:center;
@@ -120,7 +120,7 @@
      閉じる操作（チェック）をせずにそのまま押して確定できるようにするため */
   .answer-bar { display:flex; justify-content:center; margin-top:22px; }
   /* 解答画面の画面内キーパッド（タブレットPC等、キーボードが出ない環境用） */
-  .pad-grid { display:grid; grid-template-columns:repeat(3,76px) 64px; gap:8px; justify-content:center; }
+  .pad-grid { display:grid; grid-template-columns:repeat(3,76px) 88px; gap:8px; justify-content:center; }
   .pad-grid [data-key="next"] { grid-row: span 4; }
   .pad-grid button { padding:14px 0; font-size:20px; font-weight:bold; touch-action:manipulation; }
   table { border-collapse:collapse; margin:14px 0; font-size:16px; }
@@ -1117,12 +1117,30 @@ function fitFlashFont(){
   const cellW = Math.min(...positions.map(p => p[2])) * sw;
   const cellH = Math.min(...positions.map(p => p[3])) * sh;
   const base = cfg.series <= 1
-    ? Math.min(window.innerWidth * 0.36, window.innerHeight * 0.46, 340)
+    ? Math.min(window.innerWidth * 0.36, window.innerHeight * 0.46, 560)
     : Math.min(cellW * 0.36, cellH * 0.46, 340);
   const maxW = cfg.series <= 1 ? window.innerWidth * 0.92 : cellW * 0.92;
   flashFontSize = fitSizePx(flashCells[0], referenceText(), base, maxW);
   flashCells.forEach(d => { d.style.fontSize = flashFontSize + "px"; });
   if(cfg.series > 1) clampFlashSizeToLayout();
+  applyFlashAlign();
+}
+/* 一の位がそろうよう、セルの幅を一番広い数字に固定して右揃えにする
+   （中央揃えだと引き算のマイナス付き数字と位がずれて読みにくい） */
+function applyFlashAlign(){
+  if(!flashCells.length || !flashFontSize) return;
+  let wpx = null;
+  if(_measureCtx){
+    try{
+      const cs = getComputedStyle(flashCells[0]);
+      _measureCtx.font = cs.fontWeight + " " + flashFontSize + "px " + cs.fontFamily;
+      wpx = _measureCtx.measureText(referenceText()).width;
+    }catch(e){}
+  }
+  flashCells.forEach(d => {
+    if(wpx) d.style.width = Math.ceil(wpx) + "px";
+    d.style.textAlign = "right";
+  });
 }
 /* 並列表示では、セルの中心同士の距離に対して数字が大きいと隣と重なる。
    一番幅の広い数字を全セルに入れて実測し、重なりと画面端へのはみ出しが
