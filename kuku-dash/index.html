@@ -147,7 +147,7 @@ button:active{filter:brightness(1.25);}
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-20</span>
+    <span class="ver">ver. 20261110-21</span>
   </div>
 </div>
 
@@ -162,13 +162,22 @@ button:active{filter:brightness(1.25);}
   </div>
 </div>
 
+<!-- 0.5) 終了画面（スマホ版: ブラウザを閉じられないため） -->
+<div id="scr-end" class="screen beige">
+  <div class="header">くくダッシュ</div>
+  <div class="end-msg">
+    <div class="end-big">おつかれさまでした</div>
+    <button class="btn-dark" id="btnEndBack">もどる</button>
+  </div>
+</div>
+
 <!-- 1) 段選択 -->
 <div id="scr-dan" class="screen beige">
   <div class="header">くくダッシュ</div>
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-20</span>
+    <span class="ver">ver. 20261110-21</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -224,7 +233,7 @@ button:active{filter:brightness(1.25);}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-20</span>
+    <span class="ver">ver. 20261110-21</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -349,6 +358,7 @@ function enterMode(m){
   refreshOrderUI();
   show("scr-dan");
 }
+$("btnEndBack").addEventListener("click", function(){ show("scr-main"); });
 $("btnQuit").addEventListener("click", function(){
   $("quitModal").classList.add("show");
 });
@@ -363,8 +373,8 @@ $("btnQuitYes").addEventListener("click", function(){
   if (w) w.close();
   window.close();
   try { window.top.close(); } catch (e) {}
-  // ブラウザに閉じさせてもらえない環境では、アプリを消して白紙にする
-  setTimeout(function(){ try { location.replace("about:blank"); } catch (e) {} }, 250);
+  // ブラウザに閉じさせてもらえない環境（スマホなど）では終了画面にする
+  setTimeout(function(){ show("scr-end"); }, 250);
 });
 $("btnPractice").addEventListener("click", function(){ enterMode("practice"); });
 $("btnExam").addEventListener("click", function(){ enterMode("exam"); });
