@@ -169,16 +169,10 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
    <div class="row"><span class="lab">問題数（連続出題）</span><span class="stepper"><button data-step="qcount,-1">−</button><span class="val" id="valQ"></span><button data-step="qcount,1">＋</button></span></div>
   </div>
 
-  <div class="card"><h2>時間の決め方</h2>
-   <div class="seg" id="segTiming">
-    <button data-v="total">全体の秒数で決める</button><button data-v="per">1つの数字の秒数で決める</button>
-   </div>
-   <div class="row secline"><span class="lab">全体の読み上げ秒数</span><span class="stepper secstep" data-sec="totalSec"><button data-d="-1">−1</button><button data-d="-0.1">−0.1</button><span class="val" id="valTotalSec"></span><button data-d="0.1">＋0.1</button><button data-d="1">＋1</button></span></div>
-   <div class="row secline"><span class="lab">1つの数字の読み上げ秒数</span><span class="stepper secstep" data-sec="perSec"><button data-d="-1">−1</button><button data-d="-0.1">−0.1</button><span class="val" id="valPerSec"></span><button data-d="0.1">＋0.1</button><button data-d="1">＋1</button></span></div>
-   <p class="note">読み上げ秒数は「数字を読み始めてから、次の数字を読み始めるまで」の目安です。声そのものの長さに合わせて、数字の後の間を調整します（声が目安より長いときは、間が一番短くなります）。</p>
-   <h2 style="margin-top:12px">声の速さ</h2>
-   <div class="row"><span class="lab">速さ</span><span class="val" id="valSpeed" style="font-size:20px;font-weight:700"></span></div>
-   <input type="range" id="rngSpeed" min="0.70" max="1.40" step="0.05" value="1">
+  <div class="card"><h2>難易度（読み上げの速さ）</h2>
+   <div class="row"><span class="lab">レベル</span><span class="stepper"><button data-step="level,-1">−</button><span class="val" id="valLevel"></span><button data-step="level,1">＋</button></span></div>
+   <div class="row"><span class="lab">声の速さ</span><span class="val" id="valTempo" style="font-size:20px;font-weight:700"></span></div>
+   <p class="note">レベル1が今の速さです。レベルが1つ上がるごとに、声が0.1倍ずつ早口になります（レベル2＝1.1倍、レベル3＝1.2倍…）。声の高さは変わりません。一番速いレベル21は3.0倍で、これ以上は速く再生できません。</p>
   </div>
 
   <button class="bigbtn" id="btnStart">はじめる</button>
@@ -257,7 +251,7 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
 
 <script>
 "use strict";
-const APP_VERSION = "20261112-1";
+const APP_VERSION = "20261112-2";
 /* ===== YOMIAGE CORE (portable: 超多機能版へ移植する区画) =====
    yomiage_core.py と同一仕様。共有テストベクトルで一致を検証する。 */
 const MAX_DIGITS = 8;
@@ -430,7 +424,9 @@ const $ = id => document.getElementById(id);
 const LS_KEY = "yomiageZanSettingsV1";
 const DEF = {persona:"female", engine:"device", vvUrl:"http://127.0.0.1:50021",
   minD:2, maxD:3, digitMode:"max", sub:"off", ansMode:"never", repeat:"off",
-  kuchi:5, qcount:1, timing:"total", totalSec:10.0, perSec:2.0, speed:1.0};
+  kuchi:5, qcount:1, level:1};
+const LEVEL_MAX = 21;
+function levelTempo(){ return 1 + 0.1 * (S.level - 1); }
 let S = {...DEF};
 try{ const raw = localStorage.getItem(LS_KEY); if(raw) S = {...DEF, ...JSON.parse(raw)}; }catch(e){}
 function saveSettings(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
@@ -449,7 +445,7 @@ function segSetup(id, key, onchange){
   });
 }
 function segRefresh(){
-  [["segPersona","persona"],["segEngine","engine"],["segDigitMode","digitMode"],["segSub","sub"],["segAnsMode","ansMode"],["segRepeat","repeat"],["segTiming","timing"]].forEach(([id, key]) => {
+  [["segPersona","persona"],["segEngine","engine"],["segDigitMode","digitMode"],["segSub","sub"],["segAnsMode","ansMode"],["segRepeat","repeat"]].forEach(([id, key]) => {
     $(id).querySelectorAll("button").forEach(b => b.classList.toggle("sel", b.dataset.v === String(S[key])));
   });
   $("vvBox").style.display = S.engine === "voicevox" ? "block" : "none";
@@ -463,21 +459,16 @@ function segRefresh(){
   const subOff = S.sub !== "on";
   $("segAnsMode").querySelectorAll("button").forEach(b => { b.disabled = subOff || (b.dataset.v === "mid" && S.kuchi < 3); });
   $("segAnsMode").style.opacity = subOff ? .45 : 1;
-  // 秒数は選択中のモードだけ有効
-  document.querySelectorAll(".secstep").forEach(sp => {
-    const active = (sp.dataset.sec === "totalSec" && S.timing === "total") || (sp.dataset.sec === "perSec" && S.timing === "per");
-    sp.classList.toggle("disabled", !active);
-  });
   drawVals();
 }
 function drawVals(){
   $("valMinD").textContent = S.minD; $("valMaxD").textContent = S.maxD;
   $("valKuchi").textContent = S.kuchi; $("valQ").textContent = S.qcount;
-  $("valTotalSec").textContent = S.totalSec.toFixed(1); $("valPerSec").textContent = S.perSec.toFixed(1);
-  $("valSpeed").textContent = "×" + S.speed.toFixed(2);
-  $("rngSpeed").value = S.speed; $("vvUrl").value = S.vvUrl;
+  $("valLevel").textContent = S.level;
+  $("valTempo").textContent = levelTempo().toFixed(1) + "倍";
+  $("vvUrl").value = S.vvUrl;
 }
-const STEP_RANGES = {minD:[1,8], maxD:[1,8], kuchi:[1,20], qcount:[1,15]};
+const STEP_RANGES = {minD:[1,8], maxD:[1,8], kuchi:[1,20], qcount:[1,15], level:[1,LEVEL_MAX]};
 document.querySelectorAll("[data-step]").forEach(b => {
   b.addEventListener("click", () => {
     const [key, d] = b.dataset.step.split(","); const delta = parseInt(d, 10);
@@ -487,23 +478,10 @@ document.querySelectorAll("[data-step]").forEach(b => {
     saveSettings(); segRefresh();
   });
 });
-document.querySelectorAll(".secstep button").forEach(b => {
-  let hold = null;
-  const step = () => {
-    const key = b.closest(".secstep").dataset.sec; const d = parseFloat(b.dataset.d);
-    S[key] = Math.round(Math.min(99.9, Math.max(0.5, S[key] + d)) * 10) / 10;
-    saveSettings(); drawVals();
-  };
-  b.addEventListener("pointerdown", e => { e.preventDefault(); step(); hold = setInterval(step, 130); });
-  ["pointerup","pointerleave","pointercancel"].forEach(ev => b.addEventListener(ev, () => { clearInterval(hold); }));
-});
-$("rngSpeed").addEventListener("input", e => { S.speed = parseFloat(e.target.value); saveSettings(); drawVals(); });
 $("vvUrl").addEventListener("change", e => { S.vvUrl = e.target.value.trim() || DEF.vvUrl; saveSettings(); });
 
 function validateSettings(){
   const msgs = [];
-  if(S.timing === "total" && S.totalSec < S.kuchi * 0.5) msgs.push("全体の読み上げ秒数が口数に対して短すぎます（最低でも口数×0.5秒）");
-  if(S.timing === "per" && S.perSec < 0.5) msgs.push("1つの数字の読み上げ秒数は0.5秒以上にしてください");
   if(S.sub === "on" && S.ansMode === "mid" && S.kuchi < 3) msgs.push("途中だけマイナスは口数3以上で選んでください");
   const box = $("validMsg");
   if(msgs.length){ box.textContent = msgs.join("／"); box.style.display = "block"; box.scrollIntoView({behavior:"smooth"}); return false; }
@@ -540,7 +518,7 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 let lastCancelAt = 0, deviceBusyUntil = 0;
 function estimateUnitMs(unit){
   const mora = unit.speech.replace(/\s/g, "").length;
-  const rate = clamp(unit.prosody.rate * S.speed, 0.5, 2);
+  const rate = clamp(unit.prosody.rate * levelTempo(), 0.5, 3.5);
   return Math.max(350, mora / (8 * rate) * 1000);
 }
 function speakDeviceUnit(unit, persona, track){
@@ -555,7 +533,7 @@ function speakDeviceUnit(unit, persona, track){
        「ひゃく」が「ひぃゃく」と伸びたりする機種があるため）。
        合う声が無い時だけペルソナの音程倍率で寄せる。 */
     u.pitch = clamp((gendered ? 1 : persona.device_pitch) * unit.prosody.pitch, 0.5, 2);
-    u.rate = clamp(unit.prosody.rate * S.speed, 0.5, 2);
+    u.rate = clamp(unit.prosody.rate * levelTempo(), 0.5, 3.5);
     let started = false;
     u.onstart = () => { started = true; if(track) track.note(true, false); };
     u.onerror = () => { if(track) track.note(false, !started); };
@@ -593,6 +571,47 @@ function clipsForUnit(u, entry){
   if(u.kind === "success") return ["ごめいさん"];
   return null;
 }
+/* 音程を保ったまま長さを変える時間伸縮（WSOLA法）。
+   rate > 1 で短く（早口）、rate < 1 で長く（ゆっくり）。 */
+function timeStretchPcm(input, rate){
+  if(Math.abs(rate - 1) < 0.03 || input.length < 2048) return input;
+  const W = 1024, Hs = 256, SEARCH = 160, CMP = 192;
+  const outLen = Math.max(1, Math.floor(input.length / rate));
+  const padded = new Float32Array(input.length + W * 2);
+  padded.set(input);
+  const out = new Float32Array(outLen + W);
+  const env = new Float32Array(outLen + W);
+  const win = new Float32Array(W);
+  for(let i = 0; i < W; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (W - 1));
+  for(let i = 0; i < W; i++){ out[i] = padded[i] * win[i]; env[i] = win[i]; }
+  let outPos = Hs;
+  while(outPos + W <= out.length){
+    const expected = Math.round(outPos * rate);
+    let bestDelta = 0, bestScore = -Infinity;
+    for(let d = -SEARCH; d <= SEARCH; d++){
+      const start = expected + d;
+      if(start < 0 || start + CMP >= padded.length) continue;
+      let dot = 0, na = 0, nb = 0;
+      for(let j = 0; j < CMP; j += 2){
+        const a = out[outPos + j], b = padded[start + j];
+        dot += a * b; na += a * a; nb += b * b;
+      }
+      const score = dot / (Math.sqrt(na * nb) + 1e-9);
+      if(score > bestScore){ bestScore = score; bestDelta = d; }
+    }
+    const start = expected + bestDelta;
+    for(let j = 0; j < W; j++){
+      const v = (start + j < padded.length) ? padded[start + j] * win[j] : 0;
+      out[outPos + j] += v;
+      env[outPos + j] += win[j];
+    }
+    outPos += Hs;
+  }
+  /* 重ね合わせの包絡で割って音量を元に戻す */
+  const res = out.slice(0, outLen);
+  for(let i = 0; i < outLen; i++) if(env[i] > 0.6) res[i] /= env[i];
+  return res;
+}
 /* 内蔵再生は「台本全体を1本のWAVに組み立てて <audio> で流す」方式。
    短い音を Web Audio で並べる方式は iPhone（特にアプリ内ブラウザ）で
    割り込み・無音化・頭欠けが起きやすいため。メディア再生なら
@@ -616,51 +635,56 @@ function wavBlobFromBuffer(buffer){
   for(let i = 0; i < n; i++){ const v = Math.max(-1, Math.min(1, samples[i])); out.setInt16(44 + i * 2, v * 0x7FFF, true); }
   return new Blob([out.buffer], {type: "audio/wav"});
 }
-function buildTimeline(script){
-  const placements = [], events = [];
+async function renderEmbeddedWav(script){
+  /* 台本全体を1本のWAVに組み立てる。声のテンポは読み上げ秒数から
+     決め、各クリップを音程を保ったまま伸縮して並べる。 */
+  if(!await ensureClips()) return null;
+  const sr = audioCtx.sampleRate;
+  const entries = script.map(entry => ({
+    entry,
+    units: expandSpeechUnits([entry]).map(u => ({kind: u.kind, clips: clipsForUnit(u, entry) || []})),
+  }));
   const totalNums = script.filter(e => e.kind === "num").length;
+  const natOf = clips => clips.reduce((s, k) => s + (clipBuffers[k] ? clipBuffers[k].duration : 0), 0);
+  const totalNatural = entries.reduce((s, e) => s + e.units.reduce((a, u) => a + natOf(u.clips), 0), 0);
+  const tempo = levelTempo();
+  window.__lastTempo = tempo;
+  const cache = new Map();
+  const stretched = key => {
+    const ck = key + "@" + tempo.toFixed(2);
+    if(!cache.has(ck)){
+      const b = clipBuffers[key];
+      cache.set(ck, b ? timeStretchPcm(b.getChannelData(0), tempo) : null);
+    }
+    return cache.get(ck);
+  };
+  const placements = [], events = [];
   let t = 0.05, numIndex = 0;
-  for(const entry of script){
-    const units = expandSpeechUnits([entry]);
+  for(const {entry, units} of entries){
     const isNum = entry.kind === "num", entryStart = t;
     events.push({at: t, entry, numIndex: isNum ? numIndex : -1, total: totalNums});
     for(const u of units){
-      const clips = clipsForUnit(u, entry); if(!clips) continue;
-      for(const k of clips){
-        const b = clipBuffers[k]; if(!b) continue;
-        placements.push({key: k, at: t, dur: b.duration / S.speed});
-        t += b.duration / S.speed + 0.025;
+      for(const k of u.clips){
+        const pcm = stretched(k); if(!pcm) continue;
+        placements.push({pcm, at: t});
+        t += pcm.length / sr + 0.025;
       }
-      t -= 0.025;
-      if(u.kind === "switch") t += 0.150 / S.speed;
+      if(u.clips.length) t -= 0.025;
+      if(u.kind === "switch") t += Math.max(0.06, 0.15 / tempo);
     }
     if(isNum){
       numIndex++;
       if(entry.is_last) t += 0.3;
-      else { const target = (S.timing === "total" ? S.totalSec / totalNums : S.perSec); t = Math.max(t, entryStart + target); }
-    } else t += (entry.prosody ? entry.prosody.pause_ms : 300) / 1000 / S.speed;
+      else t += Math.max(0.12, 0.35 / tempo);
+    } else t += (entry.prosody ? entry.prosody.pause_ms : 300) / 1000 / tempo;
   }
-  return {placements, events, dur: t + 0.15};
-}
-async function renderEmbeddedWav(script){
-  /* クリップの波形をそのまま並べて1本にする（サンプル単位で長さが
-     決まるので、末尾が切れることはない）。OfflineAudioContext の
-     描画は iOS で遅く、不安定なため使わない。速度はリサンプルで
-     調整する（声の高さは少し変わるが、言葉の明瞭さは保たれる）。 */
-  if(!await ensureClips()) return null;
-  const tl = buildTimeline(script);
-  const sr = audioCtx.sampleRate;
-  const n = Math.ceil(tl.dur * sr), mix = new Float32Array(n);
-  for(const p of tl.placements){
-    const b = clipBuffers[p.key]; if(!b) continue;
-    const ch = b.getChannelData(0), start = Math.floor(p.at * sr);
-    const outLen = Math.floor(ch.length / S.speed);
-    for(let i = 0; i < outLen && start + i < n; i++){
-      const pos = i * S.speed, f = Math.floor(pos), fr = pos - f;
-      mix[start + i] += ch[f] * (1 - fr) + ch[Math.min(ch.length - 1, f + 1)] * fr;
-    }
+  const dur = t + 0.15;
+  const n = Math.ceil(dur * sr), mix = new Float32Array(n);
+  for(const p of placements){
+    const start = Math.floor(p.at * sr);
+    for(let i = 0; i < p.pcm.length && start + i < n; i++) mix[start + i] += p.pcm[i];
   }
-  return {blob: wavBlobFromBuffer({getChannelData: () => mix, numberOfChannels: 1, sampleRate: sr}), events: tl.events, dur: tl.dur};
+  return {blob: wavBlobFromBuffer({getChannelData: () => mix, numberOfChannels: 1, sampleRate: sr}), events, dur};
 }
 function stopEmbTimers(){ embTimers.forEach(clearTimeout); embTimers = []; }
 function ensureEmbAudio(){
@@ -709,7 +733,7 @@ function playEmbedded(blob, events, dur, token, hooks){
 }
 /* VOICEVOX: モーラ単位の音程調整 */
 function tuneVoicevoxQuery(q, persona, unit){
-  q.speedScale = clamp(unit.prosody.rate * S.speed, 0.5, 2);
+  q.speedScale = clamp(unit.prosody.rate * levelTempo(), 0.5, 2.5);
   q.pitchScale = clamp(persona.voicevox_pitch + (unit.prosody.pitch - 1) * 0.5, -1, 1);
   let intonation = persona.voicevox_intonation;
   if(unit.kind === "switch") intonation *= 1.12;
@@ -731,7 +755,7 @@ function tuneVoicevoxQuery(q, persona, unit){
 }
 const vvCache = new Map();
 async function fetchVoicevoxWav(unit, persona){
-  const key = [persona.voicevox_style, unit.speech, unit.kind, unit._final ? "F" : "", S.speed.toFixed(2)].join("|");
+  const key = [persona.voicevox_style, unit.speech, unit.kind, unit._final ? "F" : "", levelTempo().toFixed(2)].join("|");
   if(vvCache.has(key)) return vvCache.get(key);
   const base = S.vvUrl.replace(/\/+$/, "");
   const promise = (async () => {
@@ -824,19 +848,17 @@ async function speakScript(script, hooks){
         await sleep(estimateUnitMs(u) + 120);
       }
       if(token !== speechToken) return finish(false);
-      if(u.kind === "switch") await sleep(150 / S.speed);
+      if(u.kind === "switch") await sleep(Math.max(60, 150 / levelTempo()));
     }
     if(isNum){
       numIndex++;
       if(entry.is_last){ await sleep(300); }
       else {
-        /* 読み上げ秒数: 読み始め→次の読み始め を目安に間を作る */
-        const targetMs = (S.timing === "total" ? (S.totalSec / totalNums) : S.perSec) * 1000;
-        const rest = targetMs - (performance.now() - entryStart);
-        if(rest > 60) await sleep(rest);
+        /* 数字の後の間（レベルが上がると少し詰まる） */
+        await sleep(Math.max(120, Math.round(350 / levelTempo())));
       }
     } else {
-      await sleep((entry.prosody ? entry.prosody.pause_ms : 300) / S.speed);
+      await sleep((entry.prosody ? entry.prosody.pause_ms : 300) / levelTempo());
     }
   }
   if(eng === "device" && startedCount > 0 && "speechSynthesis" in window){
@@ -863,7 +885,7 @@ async function speakOne(speech, kind){
       for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       if(embUrl) URL.revokeObjectURL(embUrl);
       embUrl = URL.createObjectURL(new Blob([bytes], {type: "audio/mpeg"}));
-      a.playbackRate = S.speed; a.src = embUrl;
+      a.playbackRate = levelTempo(); a.src = embUrl;
       embShouldPlay = true;
       a.addEventListener("ended", () => { embShouldPlay = false; }, {once: true});
       a.play().catch(() => {});
@@ -997,8 +1019,8 @@ segSetup("segPersona", "persona", () => {
   if(S.persona === "zundamon" && S.engine === "device"){ S.engine = "embedded"; saveSettings(); segRefresh(); }
   if(S.persona !== "zundamon" && S.engine === "embedded"){ S.engine = "device"; saveSettings(); segRefresh(); }
 });
-["segEngine","segDigitMode","segSub","segAnsMode","segRepeat","segTiming"].forEach((id, i) =>
-  segSetup(id, ["engine","digitMode","sub","ansMode","repeat","timing"][i]));
+["segEngine","segDigitMode","segSub","segAnsMode","segRepeat"].forEach((id, i) =>
+  segSetup(id, ["engine","digitMode","sub","ansMode","repeat"][i]));
 $("verSpan").textContent = APP_VERSION;
 segRefresh();
 window.__yomiageTest = {get S(){ return S; }, buildProblems, problems:() => problems, startRun};
