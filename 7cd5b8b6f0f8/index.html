@@ -119,6 +119,9 @@
   /* 解答画面: 「解答」ボタンは入力欄のすぐ下に置く。キーボードを開いたままでも、
      閉じる操作（チェック）をせずにそのまま押して確定できるようにするため */
   .answer-bar { display:flex; justify-content:center; margin-top:22px; }
+  /* 解答画面の画面内キーパッド（タブレットPC等、キーボードが出ない環境用） */
+  .pad-grid { display:grid; grid-template-columns:repeat(3,76px); gap:8px; justify-content:center; }
+  .pad-grid button { padding:14px 0; font-size:20px; font-weight:bold; touch-action:manipulation; }
   table { border-collapse:collapse; margin:14px 0; font-size:16px; }
   th, td { padding:7px 16px; text-align:center; }
   th { color:#999; font-size:13px; }
@@ -186,7 +189,9 @@
     <button class="choice" id="gradeModeBtn" style="padding:20px 22px;font-size:19px">級・段位で選ぶ</button>
     <button class="choice" id="customModeBtn" style="padding:20px 22px;font-size:19px">自分で設定する</button>
     <button id="fsBtnTop">全画面</button>
+    <button id="quitBtn">終了</button>
   </div>
+  <p id="quitNote" class="small" style="display:none">終了するには、このタブ（またはウィンドウ）を閉じてください</p>
 </section>
 
 <!-- 級と段位のどちらかを選ぶ -->
@@ -299,6 +304,15 @@
   <div style="font-size:19px" id="answerTitle">第1問　答えを入力してください</div>
   <div id="answerGrid"></div>
   <div class="answer-bar"><button class="primary" id="answerBtn">解答</button></div>
+  <div style="margin-top:14px;text-align:center"><button id="keypadToggle" type="button">キーパッド</button></div>
+  <div id="keypad" style="display:none;margin-top:12px">
+    <div class="pad-grid">
+      <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button>
+      <button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button>
+      <button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button>
+      <button type="button" data-key="back">⌫</button><button type="button" data-key="0">0</button><button type="button" data-key="next">次へ</button>
+    </div>
+  </div>
   </div>
 </section>
 
@@ -772,6 +786,13 @@ function startGrade(){
 }
 $("gradeModeBtn").addEventListener("click", () => show("gradeKindScreen"));
 $("customModeBtn").addEventListener("click", () => show("settingsScreen"));
+$("quitBtn").addEventListener("click", () => {
+  /* ブラウザ版はページ自身を閉じられるとは限らない。全画面を解除して
+     window.close() を試し、閉じなかった場合はタブを閉じる案内を出す */
+  try{ if(document.fullscreenElement) document.exitFullscreen(); }catch(e){}
+  try{ window.close(); }catch(e){}
+  setTimeout(() => { const n = $("quitNote"); if(n) n.style.display = "block"; }, 350);
+});
 $("kyuBtn").addEventListener("click", () => buildGradeList("kyu"));
 $("danBtn").addEventListener("click", () => buildGradeList("dan"));
 $("kindBackBtn").addEventListener("click", () => show("startScreen"));
@@ -1263,6 +1284,7 @@ function showAnswer(){
   clearTimers(); show("answerScreen");
   $("answerTitle").textContent = `第${problemIndex + 1}問　答えを入力してください`;
   buildAnswerBlocks();
+  applyKeypadState();
   fitAnswerFont();
   setTimeout(() => { fitAnswerFont(); if(answerBlocks[0]) answerBlocks[0].input.focus(); }, 60);   // カーソルは予め最初の解答欄へ
 }
@@ -1288,6 +1310,48 @@ window.addEventListener("resize", () => {
   if(cfg) fitFlashFont();
   fitAnswerFont();
 });
+/* ---------- 画面内キーパッド（解答画面） ----------
+   タブレットPC（Surface等）では入力欄をタップしてもキーボードが出ず
+   一切入力できないことがあるため、アプリ側でも入力できるようにする。
+   入力先は最後にフォーカスした解答欄。表示/非表示は端末ごとに記憶する */
+let lastAnswerInput = null;
+document.addEventListener("focusin", e => {
+  if(e.target && e.target.classList && e.target.classList.contains("ans-input")) lastAnswerInput = e.target;
+});
+let keypadOn = false;
+try{ keypadOn = localStorage.getItem("flashAnzanKeypad") === "1"; }catch(e){}
+function applyKeypadState(){
+  $("keypad").style.display = keypadOn ? "block" : "none";
+}
+$("keypadToggle").addEventListener("click", () => {
+  keypadOn = !keypadOn;
+  try{ localStorage.setItem("flashAnzanKeypad", keypadOn ? "1" : "0"); }catch(e){}
+  applyKeypadState();
+  const t = lastAnswerInput || (answerBlocks[0] && answerBlocks[0].input);
+  if(keypadOn && t) t.focus();
+});
+document.querySelectorAll("#keypad [data-key]").forEach(btn => {
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault();   // 解答欄のフォーカスを奪わない
+    const inp = (lastAnswerInput && document.contains(lastAnswerInput)) ? lastAnswerInput
+      : (answerBlocks[0] && answerBlocks[0].input);
+    if(!inp) return;
+    const key = btn.dataset.key;
+    const idx = answerBlocks.findIndex(b => b.input === inp);
+    if(key === "next"){
+      if(idx >= 0 && idx + 1 < answerBlocks.length) answerBlocks[idx + 1].input.focus();
+      else submitAnswer();
+      return;
+    }
+    const neg = inp.value.includes("-");
+    let raw = inp.value.replace(/[^0-9]/g, "");
+    if(key === "back") raw = raw.slice(0, -1);
+    else if(raw.length < 15){ raw += key; beepFlash(); }   // 物理キー入力の時と同じ音
+    inp.value = (neg ? "-" : "") + raw;
+    inp.dispatchEvent(new Event("input", { bubbles: true }));   // 既存の整形処理を通す
+  });
+});
+
 $("answerBtn").addEventListener("click", submitAnswer);
 /* iPhoneでは入力欄にフォーカスがある状態でのタップが、環境によって
    「キーボードを閉じるだけ」で消費されることがある。指が触れた瞬間にも
