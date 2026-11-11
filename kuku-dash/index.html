@@ -33,7 +33,7 @@ button:active{filter:brightness(1.25);}
 .btn-dark:active{background:#444;}
 /* ---- 段選択 ---- */
 .dan-panel{margin:6px 14px 14px;background:var(--blue);border:2px ridge #999;
-  flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);gap:12px;padding:14px;}
+  flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr) 1.5fr;gap:12px;padding:14px;}
 .dan-btn{background:var(--slate);color:#fff;font-weight:bold;
   font-size:clamp(20px,5.4vw,28px);min-height:64px;}
 .dan-btn:active{background:var(--yellow);color:#000;}
@@ -131,7 +131,7 @@ button:active{filter:brightness(1.25);}
     <button class="main-btn" style="background:var(--pink)" id="btnExam">しけん</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-15</span>
+    <span class="ver">ver. 20261110-16</span>
   </div>
 </div>
 
@@ -141,7 +141,7 @@ button:active{filter:brightness(1.25);}
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-15</span>
+    <span class="ver">ver. 20261110-16</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -197,7 +197,7 @@ button:active{filter:brightness(1.25);}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-15</span>
+    <span class="ver">ver. 20261110-16</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -358,10 +358,18 @@ function refreshOrderUI(){
   $("tmModes").style.display = exam ? "none" : "flex";
   $("stepRow").style.display = exam ? "none" : "flex";
   document.querySelectorAll("[data-order]").forEach(function(b){
-    b.classList.toggle("selected", b.getAttribute("data-order") === S.selOrder);
+    var sel = b.getAttribute("data-order") === S.selOrder;
+    b.classList.toggle("selected", sel);
+    if (b._label === undefined) b._label = b.textContent;
+    b.textContent = sel ? "✓ " + b._label : b._label;
   });
-  $("tmUp").classList.toggle("selected", S.timeMode === "up");
-  $("tmDown").classList.toggle("selected", S.timeMode === "down");
+  [["tmUp", "up"], ["tmDown", "down"]].forEach(function(pair){
+    var el = $(pair[0]);
+    var sel = S.timeMode === pair[1];
+    el.classList.toggle("selected", sel);
+    if (el._label === undefined) el._label = el.textContent;
+    el.textContent = sel ? "✓ " + el._label : el._label;
+  });
   $("cdMinVal").textContent = S.cdMin;
   $("cdSecVal").textContent = S.cdSec;
   var en = S.timeMode === "down";
