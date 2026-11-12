@@ -253,7 +253,7 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
 
 <script>
 "use strict";
-const APP_VERSION = "20261112-7";
+const APP_VERSION = "20261112-8";
 /* ===== YOMIAGE CORE (portable: 超多機能版へ移植する区画) =====
    yomiage_core.py と同一仕様。共有テストベクトルで一致を検証する。 */
 const MAX_DIGITS = 12;
@@ -496,13 +496,18 @@ document.querySelectorAll("[data-step]").forEach(b => {
   };
   /* 長押しで押しっぱなしになる（少し待ってから連続ステップ）。
      スマホで連打すると画面が拡大してしまう対策も兼ねる。 */
-  let delayT = null, repeatT = null, lastPtr = 0;
+  let delayT = null, repeatT = null, lastPtr = 0, downX = 0, downY = 0;
   const stop = () => { clearTimeout(delayT); clearInterval(repeatT); delayT = repeatT = null; };
   b.addEventListener("pointerdown", e => {
-    e.preventDefault();
-    lastPtr = Date.now();
+    /* preventDefault しないこと。するとボタンの上からドラッグしたとき
+       画面がスクロールしなくなる（他アプリと同じ「どこからでもスライド」対策） */
+    lastPtr = Date.now(); downX = e.clientX; downY = e.clientY;
     stepOnce(); stop();
     delayT = setTimeout(() => { repeatT = setInterval(stepOnce, 90); }, 380);
+  });
+  b.addEventListener("pointermove", e => {
+    /* 指が動いたらスクロールのつもりとみなして長押し連打をやめる */
+    if(delayT && (Math.abs(e.clientX - downX) > 10 || Math.abs(e.clientY - downY) > 10)) stop();
   });
   ["pointerup", "pointerleave", "pointercancel"].forEach(ev => b.addEventListener(ev, stop));
   b.addEventListener("click", () => { if(Date.now() - lastPtr > 600) stepOnce(); });
