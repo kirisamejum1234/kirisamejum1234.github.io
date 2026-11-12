@@ -604,12 +604,21 @@ function isCleanRepeat(arr){
   }
   return true;
 }
-function makeHikitsuzukeruNever(minD, maxD, mouth, vary){
+function hikiFirstDigits(maxD, mouth, answerMode){
+  /* 「引き続ける」の1口目の桁数。基本は最大桁数+1桁だが、「マイナスに
+     ならない」設定では引く数の合計の最大を賄える桁数まで自動で増やす */
+  if(answerMode === "negative") return maxD + 1;
+  const need = (mouth - 1) * (Math.pow(10, maxD) - 1);
+  let fd = maxD + 1;
+  while(Math.pow(10, fd) - 1 < need) fd++;
+  return fd;
+}
+function makeHikitsuzukeruNever(minD, maxD, mouth, vary, firstDigits){
   /* 「引き続ける・マイナスにならない」を構成的に作る。途中経過から次に
      引ける上限を計算しながら決めるので、途中も答えも必ずプラスに収まる */
   const lo = Math.pow(10, minD - 1);
   for(let t = 0; t < 200; t++){
-    const first = makeNumber(maxD + 1, maxD + 1, false);
+    const first = makeNumber(firstDigits || (maxD + 1), firstDigits || (maxD + 1), false);
     const rest = [];
     let remaining = first, ok = true;
     for(let i = 0; i < mouth - 1; i++){
@@ -642,8 +651,8 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyl
     for(let attempt = 0; attempt < 1000; attempt++){
       let cand;
       if(subStyle === "hikitsuzukeru"){
-        // 最初だけ最大桁数+1桁のプラス、あとは全部マイナス
-        cand = [makeNumber(maxD + 1, maxD + 1, false)];
+        // 最初だけ大きい桁のプラス、あとは全部マイナス
+        cand = [makeNumber(hikiFirstDigits(maxD, mouth, answerMode), hikiFirstDigits(maxD, mouth, answerMode), false)];
         for(let i = 1; i < mouth; i++) cand.push(-makeNumber(minD, maxD, vary));
       } else {
         cand = Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
@@ -678,7 +687,7 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyl
       const neverOk = p => { let r = 0; const ps = p.map(n => (r += n)); return Math.min(...ps) >= 0 && ps[ps.length - 1] > 0; };
       const pool = bestNeverH ? bestNeverH.cand : (bestNever ? bestNever.cand : null);
       if(pool && neverOk(pool)) return pool;
-      const built = makeHikitsuzukeruNever(minD, maxD, mouth, vary);
+      const built = makeHikitsuzukeruNever(minD, maxD, mouth, vary, hikiFirstDigits(maxD, mouth, answerMode));
       if(built) return built;
       if(pool) return pool;
     }
@@ -957,7 +966,8 @@ function refreshAnswerSignState(){
   const note = $("subStyleNote");
   if(hiki){
     const maxD = parseInt(zenNum($("maxDigits").value), 10) || 0;
-    let t = `1口目だけプラスの数字（${maxD + 1}桁）が出て、2口目以降は全部引き算になります`;
+    const fd = hikiFirstDigits(maxD, Math.max(mouth || 2, 2), checkedVal("answerSignMode", "never"));
+    let t = `1口目だけプラスの数字（${fd}桁）が出て、2口目以降は全部引き算になります`;
     if(mouth >= 3) t += `（${mouth}口なら、2つ目〜${mouth}つ目が引き算です）`;
     note.textContent = t;
   } else note.textContent = "";
@@ -966,6 +976,7 @@ $("mouth").addEventListener("input", refreshAnswerSignState);
 $("mouth").addEventListener("change", refreshAnswerSignState);
 document.querySelectorAll('input[name="subMode"]').forEach(r => r.addEventListener("change", refreshAnswerSignState));
 document.querySelectorAll('input[name="subStyle"]').forEach(r => r.addEventListener("change", refreshAnswerSignState));
+document.querySelectorAll('input[name="answerSignMode"]').forEach(r => r.addEventListener("change", refreshAnswerSignState));
 $("maxDigits").addEventListener("input", refreshAnswerSignState);
 $("maxDigits").addEventListener("change", refreshAnswerSignState);
 document.querySelectorAll('input[name="layoutMode"]').forEach(r => r.addEventListener("click", () => { layoutPref = r.value; }));
@@ -1101,12 +1112,13 @@ $("startBtn").addEventListener("click", () => {
     $("confirmSpec").textContent = customSummary(c);
     const notes = [];
     if(c.sub && c.subStyle === "hikitsuzukeru"){
+      const fd = hikiFirstDigits(c.maxD, c.mouth, c.answerMode);
       notes.push(c.answerMode === "negative"
-        ? `※引き続ける：2口目以降はすべて引く計算です。1口目の桁数は大きくなります（${c.maxD + 1}桁です）`
-        : `※引き続ける：2口目以降はすべて引く計算で、答えがマイナスにならない都合上、1口目の桁数は大きくなります（${c.maxD + 1}桁です）`);
+        ? `※引き続ける：2口目以降はすべて引く計算です。1口目の桁数は大きくなります（${fd}桁です）`
+        : `※引き続ける：2口目以降はすべて引く計算で、答えがマイナスにならない都合上、1口目の桁数は大きくなります（${fd}桁です）`);
       const ansMax = c.answerMode === "negative"
         ? Math.abs((c.mouth - 1) * (Math.pow(10, c.maxD) - 1) - Math.pow(10, c.maxD))
-        : Math.pow(10, c.maxD + 1) - 1;
+        : Math.pow(10, hikiFirstDigits(c.maxD, c.mouth, c.answerMode)) - 1;
       const ansDigits = String(ansMax).length;
       if(ansDigits > c.maxD)
         notes.push(`※答えが${ansDigits}桁（設定した最大桁数より${ansDigits - c.maxD}桁多い）になることがあります`);
@@ -1195,7 +1207,7 @@ if(document.fonts && document.fonts.load){
 function referenceText(){
   const d = Math.max(1, cfg ? cfg.maxD : 3);
   if(cfg && cfg.sub && cfg.subStyle === "hikitsuzukeru")
-    return "8".repeat(d + 1).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return "8".repeat(hikiFirstDigits(d, cfg.mouth, cfg.answerMode)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   let s = "8".repeat(d).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   /* 並列1のときは引き算オンでも大きさを級・段位モードとそろえるため
      基準にマイナスを含めない（並列時は重なり防止のため含める） */
@@ -1407,7 +1419,7 @@ function fitAnswerFont(){
   if(cfg && cfg.sub && cfg.subStyle === "hikitsuzukeru"){
     /* 引き続けるでは、答えが最大桁数+1桁を超えることがある（口数が多い
        と引く数の合計の分だけマイナス側に伸びる）ので、その最大値で見積もる */
-    const maxAbs = Math.max(Math.pow(10, cfg.maxD + 1) - 1,
+    const maxAbs = Math.max(Math.pow(10, hikiFirstDigits(cfg.maxD, cfg.mouth, cfg.answerMode)) - 1,
       (cfg.mouth - 1) * (Math.pow(10, cfg.maxD) - 1) - Math.pow(10, cfg.maxD));
     d = Math.max(d, String(maxAbs).length);
   }
