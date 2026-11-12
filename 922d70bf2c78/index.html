@@ -76,6 +76,20 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
 .modal .box button.yes{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:#333;color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;display:none;z-index:60;max-width:90vw;text-align:center}
 .endmsg{text-align:center;padding-top:22dvh;font-size:30px;color:var(--green);font-weight:700}
+/* 背の低い画面（横向きスマホ等）では縦を詰めて、入力欄と判定ボタンまで
+   スクロールなしで届くようにする。通常の縦長画面には影響しない */
+@media (max-height:520px){
+ .screen{padding:8px 14px 16px}
+ #scr-answer .inner>p{margin:2px 0!important;font-size:17px!important}
+ #ansInput{font-size:30px;padding:6px}
+ .pad{gap:6px;margin-top:8px}
+ .pad button{padding:7px 0;font-size:21px}
+ #scr-answer .subbtn{padding:7px;font-size:15px;margin:5px 0}
+ #scr-answer .bigbtn{padding:11px;font-size:19px;margin:6px 0}
+ .judgeMsg{font-size:24px;margin:8px 0 2px}
+ #scr-listen .bigbtn{padding:11px;font-size:19px;margin:6px 0}
+ #scr-listen .subbtn{padding:7px;font-size:15px;margin:5px 0}
+}
 </style>
 </head>
 <body>
@@ -253,7 +267,7 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
 
 <script>
 "use strict";
-const APP_VERSION = "20261112-8";
+const APP_VERSION = "20261112-9";
 /* ===== YOMIAGE CORE (portable: 超多機能版へ移植する区画) =====
    yomiage_core.py と同一仕様。共有テストベクトルで一致を検証する。 */
 const MAX_DIGITS = 12;
