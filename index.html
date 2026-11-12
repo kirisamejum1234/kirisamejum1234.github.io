@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#000000">
-<title>フラッシュ暗算</title>
+<title>多機能フラッシュ暗算</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap" rel="stylesheet">
@@ -146,7 +146,7 @@
 <!-- 設定 -->
 <!-- モード選択（最初に表示） -->
 <section id="startScreen" class="screen active">
-  <h1 style="margin-bottom:34px">フラッシュ暗算</h1>
+  <h1 style="margin-bottom:34px">多機能フラッシュ暗算</h1>
   <div style="display:flex;flex-direction:column;gap:16px;width:min(92vw,340px)">
     <button class="choice" id="gradeModeBtn" style="padding:20px 22px;font-size:19px">級・段位で選ぶ</button>
     <button class="choice" id="customModeBtn" style="padding:20px 22px;font-size:19px">自分で設定する</button>
@@ -177,6 +177,7 @@
 <section id="confirmScreen" class="screen">
   <h2 id="confirmTitle" style="font-size:34px;margin-bottom:14px">3級</h2>
   <div id="confirmSpec" style="font-size:19px;line-height:1.7;text-align:center"></div>
+  <div id="confirmNotes" style="font-size:13px;color:#9a9a9a;line-height:1.7;text-align:center;margin-top:8px"></div>
   <div class="row" style="margin-top:28px"><label>連続出題数 <span class="note">1〜15</span></label>
     <select id="confirmQuestions"><option value="1">1問</option><option value="2">2問</option><option value="3">3問</option><option value="4">4問</option><option value="5">5問</option><option value="6">6問</option><option value="7">7問</option><option value="8">8問</option><option value="9">9問</option><option value="10">10問</option><option value="11">11問</option><option value="12">12問</option><option value="13">13問</option><option value="14">14問</option><option value="15">15問</option></select></div>
   <div class="btnrow-settings">
@@ -190,7 +191,7 @@
   <div id="jsWarn" style="background:#5a1a1a;color:#ffd7d7;border:1px solid #ff5252;border-radius:10px;padding:12px 14px;margin:0 0 16px;font-size:14px;line-height:1.7;width:min(92vw,420px);box-sizing:border-box">
     ⚠ この表示が出ている間は、この開き方（ファイルのプレビューなど）ではプログラムが動かず、スタートできません。Safariで開いてください。
   </div>
-  <h1>フラッシュ暗算</h1>
+  <h1>多機能フラッシュ暗算</h1>
   <div class="form">
     <div class="row"><label>最小桁数 <span class="note">例:2→21</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="minDigits" data-step="-1">−</button><input id="minDigits" type="number" inputmode="numeric" min="1" value="2"><button type="button" class="stepbtn" data-target="minDigits" data-step="1">＋</button></div></div>
     <div class="row"><label>最大桁数 <span class="note">例:3→123</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="maxDigits" data-step="-1">−</button><input id="maxDigits" type="number" inputmode="numeric" min="1" value="3"><button type="button" class="stepbtn" data-target="maxDigits" data-step="1">＋</button></div></div>
@@ -218,6 +219,12 @@
         <label><input type="radio" name="answerSignMode" value="never" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> マイナスにならない</label>
         <label><input type="radio" name="answerSignMode" value="mid" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 途中だけマイナス（答えはプラス）</label>
         <label><input type="radio" name="answerSignMode" value="negative" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 答えがマイナスになる</label>
+      </div></div>
+    <div class="row" id="subStyleRow"><label>引き算の出し方 <span class="note">引き算オンの時</span></label>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+        <label><input type="radio" name="subStyle" value="normal" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> ふつう（マイナスの数字がまざる）</label>
+        <label><input type="radio" name="subStyle" value="hikitsuzukeru" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 引き続ける（最初だけプラス、あとは全部引き算）</label>
+        <p class="note" id="subStyleNote" style="margin:0"></p>
       </div></div>
     <div class="row"><label>同じ数字の連続</label>
       <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
@@ -558,7 +565,33 @@ function isCleanRepeat(arr){
   }
   return true;
 }
-function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat){
+function makeHikitsuzukeruNever(minD, maxD, mouth, vary){
+  /* 「引き続ける・マイナスにならない」を構成的に作る。途中経過から次に
+     引ける上限を計算しながら決めるので、途中も答えも必ずプラスに収まる */
+  const lo = Math.pow(10, minD - 1);
+  for(let t = 0; t < 200; t++){
+    const first = makeNumber(maxD + 1, maxD + 1, false);
+    const rest = [];
+    let remaining = first, ok = true;
+    for(let i = 0; i < mouth - 1; i++){
+      const stepsLeft = mouth - 2 - i;
+      const cap = remaining - stepsLeft * lo - 1;
+      if(cap < lo){ ok = false; break; }
+      let val = null;
+      for(let k = 0; k < 50; k++){
+        const cand = makeNumber(minD, maxD, vary);
+        if(cand >= lo && cand <= cap){ val = cand; break; }
+      }
+      if(val === null) val = lo;
+      rest.push(-val);
+      remaining -= val;
+    }
+    if(ok && remaining > 0) return [first, ...rest];
+  }
+  return null;
+}
+function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyle){
+  if(sub && subStyle === "hikitsuzukeru" && answerMode === "mid") answerMode = "never";
   if(sub && mouth >= 2){
     // 2つ目以降の一部をマイナスにする（例: 500, -1,234, 300）。1つ目は必ずプラスで、
     // マイナスは最低1つ入る。数字も符号も引き直しながら条件に合う問題を探す。
@@ -568,9 +601,16 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat){
     let bestNeg = null, bestNever = null, bestMid = null;
     let bestNegH = null, bestNeverH = null, bestMidH = null, firstHard = null;
     for(let attempt = 0; attempt < 1000; attempt++){
-      const cand = Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
-      for(let i = 1; i < cand.length; i++) if(Math.random() < 0.5) cand[i] = -cand[i];
-      if(cand.every(n => n > 0)){ const idx = rand(1, cand.length - 1); cand[idx] = -cand[idx]; }
+      let cand;
+      if(subStyle === "hikitsuzukeru"){
+        // 最初だけ最大桁数+1桁のプラス、あとは全部マイナス
+        cand = [makeNumber(maxD + 1, maxD + 1, false)];
+        for(let i = 1; i < mouth; i++) cand.push(-makeNumber(minD, maxD, vary));
+      } else {
+        cand = Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
+        for(let i = 1; i < cand.length; i++) if(Math.random() < 0.5) cand[i] = -cand[i];
+        if(cand.every(n => n > 0)){ const idx = rand(1, cand.length - 1); cand[idx] = -cand[idx]; }
+      }
       let run = 0; const prefs = cand.map(n => (run += n));
       const total = prefs[prefs.length - 1];
       const minPref = Math.min(...prefs);
@@ -594,6 +634,14 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat){
       } else {
         if(!bestNever || minPref > bestNever.minPref) bestNever = { cand, minPref };
       }
+    }
+    if(subStyle === "hikitsuzukeru" && answerMode === "never"){
+      const neverOk = p => { let r = 0; const ps = p.map(n => (r += n)); return Math.min(...ps) >= 0 && ps[ps.length - 1] > 0; };
+      const pool = bestNeverH ? bestNeverH.cand : (bestNever ? bestNever.cand : null);
+      if(pool && neverOk(pool)) return pool;
+      const built = makeHikitsuzukeruNever(minD, maxD, mouth, vary);
+      if(built) return built;
+      if(pool) return pool;
     }
     if(firstHard) return firstHard;
     if(answerMode === "negative" && bestNegH) return bestNegH.cand;
@@ -702,6 +750,7 @@ function selectGrade(g){
   confirmMode = "grade";
   $("confirmTitle").textContent = g.name;
   $("confirmSpec").textContent = `${g.digits}桁　${g.mouth}口　全体で${g.seconds}秒`;
+  $("confirmNotes").textContent = "";
   show("confirmScreen");
 }
 function customSummary(c){
@@ -711,7 +760,7 @@ function customSummary(c){
   if(c.series > 1) s += `　${c.series}組`;
   if(c.sub){
     const mode = c.answerMode === "mid" ? "途中だけマイナス" : c.answerMode === "negative" ? "答えがマイナス" : "マイナスにならない";
-    s += `　引き算オン（${mode}）`;
+    s += c.subStyle === "hikitsuzukeru" ? `　引き算オン（引き続ける・${mode}）` : `　引き算オン（${mode}）`;
   }
   if(!c.allowRepeat) s += "　同じ数字の連続オフ";
   return s;
@@ -849,15 +898,37 @@ if(qSel.options.length === 0)
 function refreshAnswerSignState(){
   const on = checkedVal("subMode", "off") === "on";
   const mouth = parseInt(zenNum($("mouth").value), 10);
+  const hiki = on && checkedVal("subStyle", "normal") === "hikitsuzukeru";
+  if(hiki && checkedVal("answerSignMode", "never") === "mid")
+    document.querySelector('input[name="answerSignMode"][value="never"]').checked = true;
+  if(hiki && mouth < 3 && checkedVal("answerSignMode", "never") === "negative")
+    document.querySelector('input[name="answerSignMode"][value="never"]').checked = true;
   document.querySelectorAll('input[name="answerSignMode"]').forEach(r => {
-    /* 「途中だけマイナス」は、途中でマイナスになる余地がある口数3以上でないと作れない */
-    r.disabled = !on || (r.value === "mid" && !(mouth >= 3));
+    /* 「途中だけマイナス」は、途中でマイナスになる余地がある口数3以上でないと作れない。
+       「引き続ける」では途中だけマイナスに未対応で、答えがマイナスになる設定も
+       （最初の数字が1桁大きいため）口数3以上でないと作れない */
+    r.disabled = !on || (r.value === "mid" && !(mouth >= 3 && !hiki))
+      || (r.value === "negative" && hiki && !(mouth >= 3));
+  });
+  document.querySelectorAll('input[name="subStyle"]').forEach(r => {
+    r.disabled = !on || (r.value === "hikitsuzukeru" && !(mouth >= 2));
   });
   $("answerSignRow").style.opacity = on ? "1" : "0.4";
+  $("subStyleRow").style.opacity = on ? "1" : "0.4";
+  const note = $("subStyleNote");
+  if(hiki){
+    const maxD = parseInt(zenNum($("maxDigits").value), 10) || 0;
+    let t = `最初だけプラスの数字（${maxD + 1}桁）が出て、2つ目以降は全部引き算になります`;
+    if(mouth >= 3) t += `（${mouth}口なら、2つ目〜${mouth}つ目が引き算です）`;
+    note.textContent = t;
+  } else note.textContent = "";
 }
 $("mouth").addEventListener("input", refreshAnswerSignState);
 $("mouth").addEventListener("change", refreshAnswerSignState);
 document.querySelectorAll('input[name="subMode"]').forEach(r => r.addEventListener("change", refreshAnswerSignState));
+document.querySelectorAll('input[name="subStyle"]').forEach(r => r.addEventListener("change", refreshAnswerSignState));
+$("maxDigits").addEventListener("input", refreshAnswerSignState);
+$("maxDigits").addEventListener("change", refreshAnswerSignState);
 document.querySelectorAll('input[name="layoutMode"]').forEach(r => r.addEventListener("click", () => { layoutPref = r.value; }));
 refreshAnswerSignState();
 
@@ -904,6 +975,7 @@ function readConfig(){
     vary: checkedVal("digitMode", "maxonly") === "random",
     sub: checkedVal("subMode", "off") === "on",
     answerMode: checkedVal("answerSignMode", "never"),
+    subStyle: checkedVal("subStyle", "normal"),
     allowRepeat: checkedVal("repeatMode", "off") === "on",
     questions: parseInt(qSel.value, 10),
     series: intOf("seriesCount"),
@@ -925,6 +997,9 @@ function readConfig(){
   if(!c.vary) c.minD = c.maxD;   // 最大桁数のみ: 最小桁数は使わない
   if(c.mouth < 1) return startError("口数は1以上にしてください。");
   if(c.sub && c.answerMode === "mid" && c.mouth < 3) return startError("「途中だけマイナス（答えはプラス）」は口数3以上で設定してください。");
+  if(c.sub && c.subStyle === "hikitsuzukeru" && c.mouth < 2) return startError("「引き続ける」は口数2以上で設定してください。");
+  if(c.sub && c.subStyle === "hikitsuzukeru" && c.answerMode === "mid") return startError("「引き続ける」は「途中だけマイナス（答えはプラス）」と組み合わせできません。");
+  if(c.sub && c.subStyle === "hikitsuzukeru" && c.answerMode === "negative" && c.mouth < 3) return startError("「引き続ける」で「答えがマイナスになる」は口数3以上で設定してください（口数2では最初の数字が大きいため、答えはマイナスになりません）。");
   // 時間設定は選んだ決め方の方だけを検証する
   if(c.timingMode === "per" && !(c.seconds > 0)) return startError("数字表示秒数には0より大きい数値を入力してください。");
   if(c.timingMode === "total" && !(c.totalSeconds > 0)) return startError("全体の秒数には0より大きい数値を入力してください。");
@@ -941,6 +1016,7 @@ function saveSettings(){
       seriesCount: $("seriesCount").value,
       timingMode: checkedVal("timingMode", "total"), digitMode: checkedVal("digitMode", "maxonly"),
       subMode: checkedVal("subMode", "off"), answerSignMode: checkedVal("answerSignMode", "never"),
+      subStyle: checkedVal("subStyle", "normal"),
       repeatMode: checkedVal("repeatMode", "off"),
       presentMode: checkedVal("presentMode", "simul"), layoutPref,
       confirmQuestions: $("confirmQuestions").value
@@ -959,6 +1035,7 @@ function loadSettings(){
   setVal("seriesCount", data.seriesCount);
   setRadio("timingMode", data.timingMode); setRadio("digitMode", data.digitMode);
   setRadio("subMode", data.subMode); setRadio("answerSignMode", data.answerSignMode);
+  setRadio("subStyle", data.subStyle);
   setRadio("repeatMode", data.repeatMode);
   setRadio("presentMode", data.presentMode);
   if(data.layoutPref){ layoutPref = data.layoutPref; setRadio("layoutMode", data.layoutPref); }
@@ -983,6 +1060,14 @@ $("startBtn").addEventListener("click", () => {
     confirmMode = "custom";
     $("confirmTitle").textContent = "自分で設定";
     $("confirmSpec").textContent = customSummary(c);
+    const notes = [];
+    if(c.sub && c.subStyle === "hikitsuzukeru"){
+      notes.push(`※引き続ける：最初だけ${c.maxD + 1}桁（ひとつ大きい桁）のプラスで、2つ目以降はすべて引き算です`);
+      const maxAbs = (c.mouth - 1) * (Math.pow(10, c.maxD) - 1) - Math.pow(10, c.maxD);
+      if(c.answerMode === "negative" && maxAbs >= 1000)
+        notes.push("※口数が多いため、答えが4桁になることがあります");
+    }
+    $("confirmNotes").innerHTML = notes.map(n => `<div>${n}</div>`).join("");
     show("confirmScreen");
   }catch(e){
     const msg = "次へ進めませんでした。" + (e && e.message ? e.message : e);
@@ -1065,6 +1150,8 @@ if(document.fonts && document.fonts.load){
    引き算のときはマイナス付き）に合わせて決めるので、出題中に大きさが変わらない */
 function referenceText(){
   const d = Math.max(1, cfg ? cfg.maxD : 3);
+  if(cfg && cfg.sub && cfg.subStyle === "hikitsuzukeru")
+    return "8".repeat(d + 1).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   let s = "8".repeat(d).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   /* 並列1のときは引き算オンでも大きさを級・段位モードとそろえるため
      基準にマイナスを含めない（並列時は重なり防止のため含める） */
@@ -1272,7 +1359,14 @@ function buildAnswerBlocks(){
 /* 答えは最大で「最大桁数+1桁（繰り上がり）」+マイナス+コンマ まで。
    その最長の答えに合わせて大きさを固定するので、入力中に大きさが変わらない */
 function fitAnswerFont(){
-  const d = Math.max(1, (cfg ? cfg.maxD : 3) + 1);
+  let d = Math.max(1, (cfg ? cfg.maxD : 3) + 1);
+  if(cfg && cfg.sub && cfg.subStyle === "hikitsuzukeru"){
+    /* 引き続けるでは、答えが最大桁数+1桁を超えることがある（口数が多い
+       と引く数の合計の分だけマイナス側に伸びる）ので、その最大値で見積もる */
+    const maxAbs = Math.max(Math.pow(10, cfg.maxD + 1) - 1,
+      (cfg.mouth - 1) * (Math.pow(10, cfg.maxD) - 1) - Math.pow(10, cfg.maxD));
+    d = Math.max(d, String(maxAbs).length);
+  }
   let ref = "8".repeat(d).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   if(cfg && cfg.sub) ref = "-" + ref;
   answerBlocks.forEach(b => {
@@ -1479,7 +1573,7 @@ function makeSeries(){
   }
   currentSeries = [];
   for(let s = 0; s < cfg.series; s++)
-    currentSeries.push(makeProblem(cfg.minD, cfg.maxD, cfg.mouth, cfg.vary, cfg.sub, cfg.answerMode, cfg.allowRepeat === false));
+    currentSeries.push(makeProblem(cfg.minD, cfg.maxD, cfg.mouth, cfg.vary, cfg.sub, cfg.answerMode, cfg.allowRepeat === false, cfg.subStyle));
   currentNumbers = currentSeries[0] || [];
 }
 function nextProblem(){
