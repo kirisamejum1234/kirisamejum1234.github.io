@@ -1056,8 +1056,10 @@ function fitSizePx(el, text, basePx, maxW){
   return Math.max(20, Math.floor(size));
 }
 if(document.fonts && document.fonts.load){
-  document.fonts.load('bold 40px abacus2', "0123456789,-");
-  document.fonts.load('40px abacus2', "0123456789,-");
+  /* フォント取得に失敗する環境でもエラー扱いにしない（表示は代替フォントで続く） */
+  [["bold 40px abacus2"], ["40px abacus2"]].forEach(([f]) => {
+    try{ const p = document.fonts.load(f, "0123456789,-"); if(p && p.catch) p.catch(() => {}); }catch(e){}
+  });
 }
 /* 数字の大きさは問題ごとに固定する。一番幅が広い数字（最大桁数、
    引き算のときはマイナス付き）に合わせて決めるので、出題中に大きさが変わらない */
