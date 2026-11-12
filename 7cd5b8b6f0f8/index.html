@@ -1102,9 +1102,12 @@ $("startBtn").addEventListener("click", () => {
     const notes = [];
     if(c.sub && c.subStyle === "hikitsuzukeru"){
       notes.push(`※引き続ける：最初だけ${c.maxD + 1}桁（ひとつ大きい桁）のプラスで、2つ目以降はすべて引き算です`);
-      const maxAbs = (c.mouth - 1) * (Math.pow(10, c.maxD) - 1) - Math.pow(10, c.maxD);
-      if(c.answerMode === "negative" && maxAbs >= 1000)
-        notes.push("※口数が多いため、答えが4桁になることがあります");
+      const ansMax = c.answerMode === "negative"
+        ? Math.abs((c.mouth - 1) * (Math.pow(10, c.maxD) - 1) - Math.pow(10, c.maxD))
+        : Math.pow(10, c.maxD + 1) - 1;
+      const ansDigits = String(ansMax).length;
+      if(ansDigits > c.maxD)
+        notes.push(`※答えが${ansDigits}桁（設定した最大桁数より${ansDigits - c.maxD}桁多い）になることがあります`);
     }
     $("confirmNotes").innerHTML = notes.map(n => `<div>${n}</div>`).join("");
     show("confirmScreen");
