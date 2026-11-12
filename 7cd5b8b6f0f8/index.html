@@ -1147,7 +1147,6 @@ function saveSettings(){
       seriesCount: $("seriesCount").value,
       timingMode: checkedVal("timingMode", "total"), digitMode: checkedVal("digitMode", "maxonly"),
       subMode: checkedVal("subMode", "off"), answerSignMode: checkedVal("answerSignMode", "never"),
-      subStyle: checkedVal("subStyle", "normal"),
       repeatMode: checkedVal("repeatMode", "off"),
       presentMode: checkedVal("presentMode", "simul"), layoutPref,
       confirmQuestions: $("confirmQuestions").value
@@ -1166,7 +1165,9 @@ function loadSettings(){
   setVal("seriesCount", data.seriesCount);
   setRadio("timingMode", data.timingMode); setRadio("digitMode", data.digitMode);
   setRadio("subMode", data.subMode); setRadio("answerSignMode", data.answerSignMode);
-  setRadio("subStyle", data.subStyle);
+  /* 引き算の出し方は記憶しない: 開いたときは必ず「ふつう」から始める
+     （覚えてしまうと次回も「引き続ける」になり、「途中だけマイナス」が
+     選べない状態で始まってしまうため。ユーザーの指示による） */
   setRadio("repeatMode", data.repeatMode);
   setRadio("presentMode", data.presentMode);
   if(data.layoutPref){ layoutPref = data.layoutPref; setRadio("layoutMode", data.layoutPref); }
@@ -1473,6 +1474,9 @@ function buildAnswerBlocks(){
       const neg = b.input.value.includes("-");   // どの位置で打っても先頭のマイナスとして扱う
       const raw = b.input.value.replace(/[^0-9]/g, "");
       b.input.value = raw ? (neg ? "-" : "") + fmt(raw) : (neg ? "-" : "");
+      /* 入力位置は常に末尾にそろえる（先頭や途中にあるとBackSpaceで
+         消せなくなる環境があるため） */
+      try{ const end = b.input.value.length; b.input.setSelectionRange(end, end); }catch(e){}
     });
     b.input.addEventListener("keydown", e => {
       if(e.key !== "Enter") return;
@@ -1482,6 +1486,7 @@ function buildAnswerBlocks(){
     });
     /* iPhoneの数字キーパッドには「−」キーが無いので、ボタンでも付け外しできるようにする */
     b.input.addEventListener("focus", () => {
+      try{ const end = b.input.value.length; b.input.setSelectionRange(end, end); }catch(e){}
       setTimeout(() => { try{ b.block.scrollIntoView({ block: "nearest" }); }catch(e){} syncViewportHeight(); }, 380);
     });
     b.minus.addEventListener("click", () => {
