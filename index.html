@@ -918,7 +918,7 @@ function refreshAnswerSignState(){
   const note = $("subStyleNote");
   if(hiki){
     const maxD = parseInt(zenNum($("maxDigits").value), 10) || 0;
-    let t = `最初だけプラスの数字（${maxD + 1}桁）が出て、2つ目以降は全部引き算になります`;
+    let t = `1口目だけプラスの数字（${maxD + 1}桁）が出て、2口目以降は全部引き算になります`;
     if(mouth >= 3) t += `（${mouth}口なら、2つ目〜${mouth}つ目が引き算です）`;
     note.textContent = t;
   } else note.textContent = "";
@@ -1062,7 +1062,9 @@ $("startBtn").addEventListener("click", () => {
     $("confirmSpec").textContent = customSummary(c);
     const notes = [];
     if(c.sub && c.subStyle === "hikitsuzukeru"){
-      notes.push(`※引き続ける：最初だけ${c.maxD + 1}桁（ひとつ大きい桁）のプラスで、2つ目以降はすべて引き算です`);
+      notes.push(c.answerMode === "negative"
+        ? `※引き続ける：2口目以降はすべて引く計算です。1口目の桁数は大きくなります（${c.maxD + 1}桁です）`
+        : `※引き続ける：2口目以降はすべて引く計算で、答えがマイナスにならない都合上、1口目の桁数は大きくなります（${c.maxD + 1}桁です）`);
       const ansMax = c.answerMode === "negative"
         ? Math.abs((c.mouth - 1) * (Math.pow(10, c.maxD) - 1) - Math.pow(10, c.maxD))
         : Math.pow(10, c.maxD + 1) - 1;
