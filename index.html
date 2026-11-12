@@ -305,6 +305,7 @@
   <div class="bottom-area">
     <div class="result-row" id="resultRow"><button id="toResultBtn">次へ ▶</button></div>
     <div class="bottom-buttons">
+      <button id="newBtn">新しい問題</button>
       <button id="sameBtn">同じ問題</button>
       <button id="shuffleBtn">順番を変える</button>
       <button id="reverseBtn">逆順でやる</button>
@@ -322,6 +323,7 @@
   <tbody id="resultBody"></tbody></table></div>
   <div class="summary" id="resultSummary"></div>
   <div class="btnrow-settings">
+    <button id="resultNewBtn">新しい問題</button>
     <button id="resultSameBtn">同じ問題</button>
     <button id="resultShuffleBtn">順番を変える</button>
     <button id="resultReverseBtn">逆順でやる</button>
@@ -1251,9 +1253,10 @@ function referenceText(){
   if(cfg && cfg.sub && cfg.subStyle === "hikitsuzukeru" && cfg.answerMode === "negative")
     return "8".repeat(d + 1).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   let s = "8".repeat(d).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  /* 並列1のときは引き算オンでも大きさを級・段位モードとそろえるため
-     基準にマイナスを含めない（並列時は重なり防止のため含める） */
-  if(cfg && cfg.sub && cfg.series > 1) s = "-" + s;
+  /* 引き算オンのときは並列数によらず基準にマイナスを含める。
+     含めないと、マイナスつきの数字が基準より1文字分広くなり、狭い画面で
+     はみ出す上に、右揃えの基準幅が崩れて数字の位置までズレるため */
+  if(cfg && cfg.sub) s = "-" + s;
   return s;
 }
 let flashFontSize = null;
@@ -1288,7 +1291,7 @@ function fitFlashFont(){
   const maxW = cfg.series <= 1 ? window.innerWidth * 0.92 : cellW * 0.92;
   flashFontSize = fitSizePx(flashCells[0], referenceText(), base, maxW);
   flashCells.forEach(d => { d.style.fontSize = flashFontSize + "px"; });
-  if(cfg.series > 1) clampFlashSizeToLayout();
+  clampFlashSizeToLayout();   /* 1組でも実測ガードを効かせ、端へのはみ出しを絶対に残さない */
   applyFlashAlign();
 }
 /* 一の位がそろうよう、セルの幅を一番広い数字に固定して右揃えにする
@@ -1618,6 +1621,7 @@ function showJudge(results){
   $("nextBtn").style.display = isLast ? "none" : "";        // 次の問題へは最終問題以外
   $("resultRow").style.display = isLast ? "flex" : "none";  // 全問題終了時は右下の次へ→リザルト（4ボタン行の上の段に表示）
 }
+$("newBtn").addEventListener("click", restartNew);
 $("sameBtn").addEventListener("click", () => countdownThenFlash());
 /* 元の数字の集合を一切変えず（新しい数字は作らず）、並びだけを変える。
    今までと同じ並びにはせず、できれば全ての位置が違う並びにする */
@@ -1657,6 +1661,7 @@ $("reverseBtn").addEventListener("click", () => {
   }
   countdownThenFlash();
 });
+$("resultNewBtn").addEventListener("click", restartNew);
 $("resultSameBtn").addEventListener("click", () => restartAll("same"));
 $("resultShuffleBtn").addEventListener("click", () => restartAll("shuffle"));
 $("resultReverseBtn").addEventListener("click", () => restartAll("reverse"));
@@ -1688,6 +1693,15 @@ function nextProblem(){
 }
 /* リザルトから全問やり直す: 同じ問題（記録どおり）／順番を変える（記録の数字を並べ替え）。
    どちらも新しい数字は作らない */
+/* 判定画面とリザルト画面の「新しい問題」: 同じ設定のまま、新しい問題を
+   作り直して最初から始める */
+function restartNew(){
+  if(!cfg) return;
+  problemIndex = 0; records = {}; queuedSeries = null;
+  makeSeries();
+  sessionStart = Date.now();
+  countdownThenFlash();
+}
 function restartAll(mode){
   const total = cfg ? cfg.questions : 0;
   const queue = [];
