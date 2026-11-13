@@ -128,6 +128,39 @@ button:active{filter:brightness(1.25);}
 .list-line .sym{font-weight:bold;font-size:.9em;}
 .list-line.wrong{color:var(--red);}
 .list-sep{color:#888;font-size:15px;padding:2px 0;}
+/* ---- 横画面など「高さが低い」画面向けの詰め配置 ----
+   スマホを横向きにすると高さが 360〜414px しかないため、そのままでは
+   段選択・順序画面が間延びし、ぜんぶ(タブ81個)では計算画面の
+   テンキーが画面外に押し出されていた。高さ 500px 以下では各部を
+   詰めて、スクロールなしで収まるようにする (縦向き・タブレット・
+   PC には影響しない)。 */
+@media (max-height:500px){
+  .header{font-size:24px;padding:10px 8px;}
+  .prompt{padding:8px 20px 2px;font-size:13px;}
+  .footer{padding:4px 12px;}
+  .dan-panel{gap:8px;padding:10px;margin:4px 14px 10px;}
+  .dan-btn{min-height:0;font-size:20px;}
+  .order-btn{min-height:52px;font-size:20px;}
+  .order-desc{padding:4px 2px;}
+  .tm-btn{padding:6px 0;}
+  .step-row{padding:6px 14px 0;}
+  .tabs{max-height:46dvh;overflow-y:auto;gap:3px;padding:2px 0 4px;}
+  .tab{font-size:14px;min-width:34px;padding:2px 0;}
+  .problem{font-size:34px;padding:2px 0 4px;}
+  .input-box{min-height:52px;font-size:34px;}
+  .status{min-height:24px;padding-top:6px;}
+  .saiten{padding:8px 36px;}
+  .keypad{gap:4px;}
+  .key{font-size:24px;}
+  .key-ok{font-size:18px;}
+  #scr-calc{height:100dvh;}
+  .btn-start{padding:7px 30px;}
+  .step-btn{padding:7px 12px;}
+  .step-val{font-size:22px;}
+  #scr-order .footer{position:sticky;bottom:0;background:var(--beige);z-index:5;}
+  #scr-result{padding:12px 16px calc(10px + env(safe-area-inset-bottom));}
+}
+
 @media (max-width:560px){
   .result-main{flex-direction:column;}
   .result-left{flex:none;flex-direction:row;flex-wrap:wrap;align-items:center;}
@@ -185,7 +218,7 @@ button:active{filter:brightness(1.25);}
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-22</span>
+    <span class="ver">ver. 20261110-24</span>
   </div>
 </div>
 
@@ -215,7 +248,7 @@ button:active{filter:brightness(1.25);}
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-22</span>
+    <span class="ver">ver. 20261110-24</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -271,7 +304,7 @@ button:active{filter:brightness(1.25);}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-22</span>
+    <span class="ver">ver. 20261110-24</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -330,7 +363,7 @@ button:active{filter:brightness(1.25);}
 
 <script>
 "use strict";
-var APP_VERSION = "20261110-22";
+var APP_VERSION = "20261110-24";
 var S = {
   dan: null, order: null, mode: "normal",
   items: [], answers: [], idx: 0, input: "",
@@ -346,6 +379,7 @@ function $(id){ return document.getElementById(id); }
 function show(id){
   document.querySelectorAll(".screen").forEach(function(el){ el.classList.remove("active"); });
   $(id).classList.add("active");
+  window.scrollTo(0, 0);
 }
 function formatElapsed(sec){
   var cs = Math.floor(sec * 100);
