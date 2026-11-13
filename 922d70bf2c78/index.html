@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4f1e8">
 <title>読み上げ算</title>
 <link rel="icon" href="data:,">
 <style>
@@ -76,6 +77,19 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
 .modal .box button.yes{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:#333;color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;display:none;z-index:60;max-width:90vw;text-align:center}
 .endmsg{text-align:center;padding-top:22dvh;font-size:30px;color:var(--green);font-weight:700}
+/* スクロールバーは背景になじむ細く落ち着いた色に（存在は分かる程度に残す）。
+   設定画面・結果表など、スクロールする全箇所に効く */
+html{scrollbar-width:thin;scrollbar-color:#b3ac9c transparent}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#b3ac9c;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#9d9684}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-corner{background:transparent}
+/* 全画面のときもアプリの背景色で全体を埋める（白い帯を出さない） */
+:fullscreen{background:var(--bg)}
+/* 全画面のときだけ隅に出る、目立たない終了ボタン */
+#btnFsExit{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 8px);right:calc(env(safe-area-inset-right, 0px) + 10px);z-index:9999;display:none;font-size:12px;padding:6px 12px;border:none;border-radius:999px;background:rgba(35,35,35,.55);color:#fff;opacity:.8}
+#btnFsExit.on{display:block}
 /* 背の低い画面（横向きスマホ等）では縦を詰めて、入力欄と判定ボタンまで
    スクロールなしで届くようにする。通常の縦長画面には影響しない */
 @media (max-height:520px){
@@ -193,6 +207,7 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
 
   <button class="bigbtn" id="btnStart">はじめる</button>
   <button class="subbtn" id="btnEnd">おわる</button>
+  <button class="subbtn" id="btnFs">全画面</button>
   <p class="ver">読み上げ算 ver. <span id="verSpan"></span></p>
  </div>
 </div>
@@ -263,11 +278,16 @@ table.res td,table.res th{border-bottom:1px solid #ddd;padding:8px 6px;text-alig
  <p>おわりますか？</p>
  <div class="rowbtn"><button id="endNo">やめる</button><button class="yes" id="endYes">はい</button></div>
 </div></div>
+<div class="modal" id="fsModal"><div class="box">
+ <p>この端末では全画面表示が使えません。iPhoneのSafariでは、共有ボタンから「ホーム画面に追加」して、そこから開くと全画面で使えます。</p>
+ <div class="rowbtn"><button class="yes" id="fsOk">閉じる</button></div>
+</div></div>
+<button id="btnFsExit">全画面を終了</button>
 <div id="toast"></div>
 
 <script>
 "use strict";
-const APP_VERSION = "20261112-9";
+const APP_VERSION = "20261114-1";
 /* ===== YOMIAGE CORE (portable: 超多機能版へ移植する区画) =====
    yomiage_core.py と同一仕様。共有テストベクトルで一致を検証する。 */
 const MAX_DIGITS = 12;
@@ -1068,6 +1088,25 @@ $("endYes").addEventListener("click", () => {
   setTimeout(() => showScreen("scr-end"), 350);
 });
 $("btnEndBack").addEventListener("click", () => showScreen("scr-settings"));
+/* 全画面: 入るボタン／全画面中だけ隅に出る終了ボタン／Escでも終了 */
+const fsExitBtn = $("btnFsExit");
+function fsSync(){ fsExitBtn.classList.toggle("on", !!document.fullscreenElement); }
+document.addEventListener("fullscreenchange", fsSync);
+$("btnFs").addEventListener("click", () => {
+  if(document.fullscreenElement){ document.exitFullscreen(); return; }
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if(req){
+    try{ const p = req.call(el); if(p && p.catch) p.catch(() => $("fsModal").classList.add("open")); }
+    catch(e){ $("fsModal").classList.add("open"); }
+  } else $("fsModal").classList.add("open");
+});
+fsExitBtn.addEventListener("click", () => { if(document.fullscreenElement) document.exitFullscreen(); });
+$("fsOk").addEventListener("click", () => $("fsModal").classList.remove("open"));
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape" && document.fullscreenElement) document.exitFullscreen();
+});
+fsSync();
 /* 初期化 */
 segSetup("segPersona", "persona", () => {
   if(PERSONAS[S.persona].embedded_dir) ensureClips();
