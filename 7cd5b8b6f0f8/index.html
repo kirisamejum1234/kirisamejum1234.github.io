@@ -1315,13 +1315,24 @@ const COUNT_INK_OFFSET = {
   kyokasho:  { "3": [-0.008, 0.087], "2": [-0.004, 0.079], "1": [-0.054, 0.083] },
   kyokashoB: { "3": [-0.004, 0.087], "2": [0.000, 0.079], "1": [-0.054, 0.083] }
 };
+/* 光学補正（フォントサイズ比、この分だけ字面中心合わせより下へずらす）。
+   数字は字面の幾何中心に置くと上に浮いて見える（特に「2」は上部の曲線に
+   視覚の重みが寄る）。実描画の拡大画像を目視で比較して数字ごとに決めた値
+   （候補 0 / +0.03 / +0.045 / +0.06em の中から「目で真ん中」に見えるもの）。
+   PC版も同じ値を使う */
+const COUNT_OPTICAL_DOWN = {
+  soroban:   { "3": 0.040, "2": 0.050, "1": 0.030 },
+  kyokasho:  { "3": 0.045, "2": 0.045, "1": 0.030 },
+  kyokashoB: { "3": 0.045, "2": 0.045, "1": 0.030 }
+};
 function setCountDigit(d){
   const el = $("countNum");
   el.textContent = d;
   const off = (COUNT_INK_OFFSET[numFontChoice] || {})[String(d)];
   if(off){
     const fs = parseFloat(getComputedStyle(el).fontSize) || 0;
-    el.style.transform = "translate(" + (-off[0] * fs).toFixed(1) + "px," + (-off[1] * fs).toFixed(1) + "px)";
+    const down = (COUNT_OPTICAL_DOWN[numFontChoice] || {})[String(d)] || 0;
+    el.style.transform = "translate(" + (-off[0] * fs).toFixed(1) + "px," + ((down - off[1]) * fs).toFixed(1) + "px)";
   } else {
     el.style.transform = "";
   }
