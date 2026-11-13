@@ -1305,6 +1305,27 @@ $("fsExitBtn").addEventListener("click", () => {
 
 /* ---------- カウントダウン → 出題 ---------- */
 let _runStartBusy = false;
+/* カウントダウン数字の「字面（インク）中心」のずれ（フォントサイズ比、
+   Chromiumで実測）。行ボックスの中心に置くとフォント内部の行メトリクスの
+   都合で字面が丸の中心からずれる（教科書体は下に約0.08em）。
+   数字を出すたびに、この分だけ逆向きにずらして字面中心を丸の中心に
+   合わせる（PC版は描画系が違うため別々に実測した値を持つ） */
+const COUNT_INK_OFFSET = {
+  soroban:   { "3": [-0.008, -0.004], "2": [-0.004, -0.004], "1": [-0.025, -0.004] },
+  kyokasho:  { "3": [-0.008, 0.087], "2": [-0.004, 0.079], "1": [-0.054, 0.083] },
+  kyokashoB: { "3": [-0.004, 0.087], "2": [0.000, 0.079], "1": [-0.054, 0.083] }
+};
+function setCountDigit(d){
+  const el = $("countNum");
+  el.textContent = d;
+  const off = (COUNT_INK_OFFSET[numFontChoice] || {})[String(d)];
+  if(off){
+    const fs = parseFloat(getComputedStyle(el).fontSize) || 0;
+    el.style.transform = "translate(" + (-off[0] * fs).toFixed(1) + "px," + (-off[1] * fs).toFixed(1) + "px)";
+  } else {
+    el.style.transform = "";
+  }
+}
 function countdownThenFlash(){
   if(_runStartBusy) return;   // フォント待ちの間の二重スタート防止
   clearTimers();
@@ -1315,7 +1336,7 @@ function countdownThenFlash(){
        3・2・1 の間隔がずれないように。マス計算と同じ方式） */
     const t0 = performance.now();
     let shown = 3;
-    $("countNum").textContent = shown;
+    setCountDigit(shown);
     beepCountdown();
     const tick = () => {
       const elapsed = performance.now() - t0;
@@ -1323,7 +1344,7 @@ function countdownThenFlash(){
       if(remain <= 0){ flashNumbers(); return; }
       if(remain !== shown){
         shown = remain;
-        $("countNum").textContent = remain;
+        setCountDigit(remain);
         beepCountdown();
       }
       const nextBoundary = (Math.floor(elapsed / 1000) + 1) * 1000;
