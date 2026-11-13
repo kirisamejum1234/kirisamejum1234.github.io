@@ -1675,14 +1675,19 @@ document.querySelectorAll("#keypad [data-key]").forEach(btn => {
       return;
     }
     if(key === "minus"){
+      /* 何度押してもマイナスが付いたままにする（トグルにしない）。
+         マイナスを消す操作は「⌫」に一本化する（PC版と同じ） */
       const raw0 = inp.value.replace(/[^0-9]/g, "");
-      inp.value = (inp.value.includes("-") ? "" : "-") + raw0;
+      inp.value = "-" + raw0;
       inp.dispatchEvent(new Event("input", { bubbles: true }));
       return;
     }
-    const neg = inp.value.includes("-");
+    let neg = inp.value.includes("-");
     let raw = inp.value.replace(/[^0-9]/g, "");
-    if(key === "back") raw = raw.slice(0, -1);
+    if(key === "back"){
+      if(raw) raw = raw.slice(0, -1);
+      else neg = false;   // 数字が無いときの⌫はマイナスを消す
+    }
     else if(raw.length < 15){ raw += key; beepFlash(); }   // 物理キー入力の時と同じ音
     inp.value = (neg ? "-" : "") + raw;
     inp.dispatchEvent(new Event("input", { bubbles: true }));   // 既存の整形処理を通す
