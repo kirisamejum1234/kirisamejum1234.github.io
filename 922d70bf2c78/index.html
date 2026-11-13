@@ -287,7 +287,7 @@ html{scrollbar-width:thin;scrollbar-color:#b3ac9c transparent}
 
 <script>
 "use strict";
-const APP_VERSION = "20261114-3";
+const APP_VERSION = "20261114-4";
 /* ===== YOMIAGE CORE (portable: 超多機能版へ移植する区画) =====
    yomiage_core.py と同一仕様。共有テストベクトルで一致を検証する。 */
 const MAX_DIGITS = 12;
@@ -901,6 +901,15 @@ async function speakScript(script, hooks){
     if(!speakScript._embWarned){ speakScript._embWarned = true; toast("内蔵音声を読み込めませんでした。端末の声で読み上げます"); }
   }
   const entries = script.map(e => ({entry:e, units:expandSpeechUnits([e])}));
+  if(eng === "voicevox"){
+    /* 先に全ユニット分の合成を開始しておく。読み上げの途中で合成すると
+       合成にかかる時間がそのまま数字の間隔に食い込んでぶれてしまう。
+       結果はキャッシュされ、再生側の await は完了済みを受け取る */
+    for(const {entry, units} of entries) for(const u of units){
+      u._final = !!entry.is_last;
+      fetchVoicevoxWav(u, persona).catch(() => {});
+    }
+  }
   const totalNums = script.filter(e => e.kind === "num").length;
   let numIndex = 0, startedCount = 0, errorCount = 0, unitCount = 0;
   const track = {note(st, er){ if(st) startedCount++; if(er) errorCount++; }};
