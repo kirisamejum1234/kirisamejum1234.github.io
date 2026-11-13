@@ -49,11 +49,11 @@
     touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
   .stepbtn:disabled { opacity:.3; cursor:default; }
   .stepbtn.lbl { width:44px; font-size:12px; font-weight:bold; white-space:nowrap; padding:0; }
-  .row .stepper input { width:58px; }
+  .row .stepper input { width:78px; padding-left:6px; padding-right:6px; }
   /* 秒数の行はボタンが4つ並ぶため、狭い画面でも収まるよう一回り小さくする */
   .stepper.sec .stepbtn { width:38px; height:42px; }
   .stepper.sec { gap:3px; }
-  .row .stepper.sec input { width:52px; }
+  .row .stepper.sec input { width:94px; padding-left:6px; padding-right:6px; }
   .row.sec-row { flex-wrap:wrap; }
   .check { display:flex; gap:10px; align-items:flex-start; margin:14px 0; font-size:13px; line-height:1.5; }
   .check input { width:22px; height:22px; margin-top:2px; accent-color:#00b84f; }
@@ -84,7 +84,6 @@
   #answerGrid { margin:18px 0 26px; max-width:96vw; }
   .ans-block { display:flex; flex-direction:column; align-items:center; gap:8px; }
   .ans-label { color:#9e9e9e; font-size:14px; font-weight:bold; }
-  .ans-minus { font-size:20px; padding:0 14px; flex:0 0 auto; }
   #flashNum, #countNum {
     color:#00b84f; font-weight:bold; line-height:1.05; white-space:nowrap;
   }
@@ -153,7 +152,7 @@
   @media (max-width:480px){
     h1 { font-size:26px; }
     .row input { width:92px; }
-    .row .stepper input { width:56px; }
+    .row .stepper input { width:74px; }
     th, td { padding:6px 8px; }
     table { font-size:14px; }
     td.val { font-size:16px; }
@@ -349,8 +348,7 @@
   <div class="screen-inner">
   <div style="font-size:19px" id="answerTitle">第1問　答えを入力してください</div>
   <div id="answerGrid"></div>
-  <div style="margin-top:14px;text-align:center"><button id="keypadToggle" type="button">キーパッド</button></div>
-  <div id="keypad" style="display:none;margin-top:12px">
+  <div id="keypad" style="margin-top:12px">
     <div class="pad-grid">
       <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button>
       <button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button>
@@ -1297,27 +1295,45 @@ $("fsExitBtn").addEventListener("click", () => {
 });
 
 /* ---------- カウントダウン → 出題 ---------- */
+let _runStartBusy = false;
 function countdownThenFlash(){
-  clearTimers(); show("countScreen");
-  /* 絶対時刻ベースで1秒ごとの境界にそろえる（タイマーの遅れが累積して
-     3・2・1 の間隔がずれないように。マス計算と同じ方式） */
-  const t0 = performance.now();
-  let shown = 3;
-  $("countNum").textContent = shown;
-  beepCountdown();
-  const tick = () => {
-    const elapsed = performance.now() - t0;
-    const remain = 3 - Math.floor(elapsed / 1000);
-    if(remain <= 0){ flashNumbers(); return; }
-    if(remain !== shown){
-      shown = remain;
-      $("countNum").textContent = remain;
-      beepCountdown();
-    }
-    const nextBoundary = (Math.floor(elapsed / 1000) + 1) * 1000;
-    later(tick, Math.max(10, nextBoundary - elapsed));
+  if(_runStartBusy) return;   // フォント待ちの間の二重スタート防止
+  clearTimers();
+  const begin = () => {
+    _runStartBusy = false;
+    clearTimers(); show("countScreen");
+    /* 絶対時刻ベースで1秒ごとの境界にそろえる（タイマーの遅れが累積して
+       3・2・1 の間隔がずれないように。マス計算と同じ方式） */
+    const t0 = performance.now();
+    let shown = 3;
+    $("countNum").textContent = shown;
+    beepCountdown();
+    const tick = () => {
+      const elapsed = performance.now() - t0;
+      const remain = 3 - Math.floor(elapsed / 1000);
+      if(remain <= 0){ flashNumbers(); return; }
+      if(remain !== shown){
+        shown = remain;
+        $("countNum").textContent = remain;
+        beepCountdown();
+      }
+      const nextBoundary = (Math.floor(elapsed / 1000) + 1) * 1000;
+      later(tick, Math.max(10, nextBoundary - elapsed));
+    };
+    later(tick, 1000);
   };
-  later(tick, 1000);
+  /* 選択中フォントの読込が終わってから始める。読込前の代替フォントで
+     数字の大きさを測ると実表示とずれて枠からはみ出すため。
+     待ちは最大0.9秒で打ち切り、通常は読込済みで即座に始まる */
+  if(document.fonts && document.fonts.load){
+    try{
+      _runStartBusy = true;
+      const fam = FONT_FAMILY_BY_CHOICE[numFontChoice] || "\"abacus2\"";
+      const jobs = [document.fonts.load("bold 40px " + fam, "0123456789,-"),
+                    document.fonts.load("40px " + fam, "0123456789,-")];
+      Promise.race([Promise.all(jobs), new Promise(r => setTimeout(r, 900))]).then(begin, begin);
+    }catch(e){ _runStartBusy = false; begin(); }
+  } else begin();
 }
 /* 文字の実際の幅を測って、画面に収まるフォントサイズを返す。
    abacus2 は数字1文字が約0.88em幅と広いため、文字数×0.62em のような
@@ -1339,7 +1355,7 @@ function fitSizePx(el, text, basePx, maxW){
 }
 if(document.fonts && document.fonts.load){
   /* フォント取得に失敗する環境でもエラー扱いにしない（表示は代替フォントで続く） */
-  [["bold 40px abacus2"], ["40px abacus2"]].forEach(([f]) => {
+  [["bold 40px abacus2"], ["40px abacus2"], ["bold 40px kleeone"], ["40px kleeone"], ["bold 40px kleeonebold"], ["40px kleeonebold"]].forEach(([f]) => {
     try{ const p = document.fonts.load(f, "0123456789,-"); if(p && p.catch) p.catch(() => {}); }catch(e){}
   });
 }
@@ -1399,13 +1415,29 @@ function fitFlashFont(){
    テキストが箱より広いと右揃えが効かず左端固定になり数字がズレるため、
    箱は常にはみ出し分まで含めて確保する。数字の大きさと一の位の位置は
    数字部分だけで決まり、マイナスはその左に付くだけになる */
+/* 実際に描かれる文字の大きさを DOM で直接測る。canvas の計測はフォントの
+   読込状態やブラウザごとの太字合成の差で実表示とずれることがあり、その
+   ズレが「枠からはみ出す／一桁だけ左に寄る」見え方になるため、箱決めと
+   はみ出しガードは実表示ベースで測る */
+const _inkRange = (() => { try { return document.createRange(); } catch(e){ return null; } })();
+function inkRectOf(el){
+  if(!_inkRange) return el.getBoundingClientRect();
+  _inkRange.selectNodeContents(el);
+  return _inkRange.getBoundingClientRect();
+}
+function inkWidthOf(el, text){
+  const prev = el.textContent;
+  el.textContent = text;
+  const w = inkRectOf(el).width;
+  el.textContent = prev;
+  return w;
+}
 function setCellBoxes(size){
-  if(!flashCells.length || !_measureCtx) return;
+  if(!flashCells.length) return;
   try{
-    const cs = getComputedStyle(flashCells[0]);
-    _measureCtx.font = cs.fontWeight + " " + size + "px " + cs.fontFamily;
-    const refW = _measureCtx.measureText(referenceText()).width;
-    const guardW = _measureCtx.measureText(guardText()).width;
+    flashCells.forEach(d => { d.style.fontSize = size + "px"; });
+    const refW = inkWidthOf(flashCells[0], referenceText());
+    const guardW = inkWidthOf(flashCells[0], guardText());
     flashCells.forEach(d => {
       d.style.width = Math.ceil(guardW) + "px";
       d.style.marginLeft = ((refW - guardW) / 2) + "px";
@@ -1441,7 +1473,7 @@ function clampFlashSizeToLayout(){
     flashCells.forEach(d => { d.style.fontSize = size + "px"; });
     setCellBoxes(size);   /* 箱幅もそのサイズの実寸に合わせ、最終配置の形で測る */
     const sr = stage.getBoundingClientRect();
-    const rs = flashCells.map(d => d.getBoundingClientRect());
+    const rs = flashCells.map(d => inkRectOf(d));
     const cx = i => (rs[i].left + rs[i].right) / 2, cy = i => (rs[i].top + rs[i].bottom) / 2;
     let k = 1;
     for(let i = 0; i < rs.length; i++){
@@ -1496,7 +1528,7 @@ function flashNumbers(){
 }
 
 /* ---------- 解答入力 ---------- */
-let answerBlocks = [];   // [{block, input, minus}, ...] 組の順番どおり
+let answerBlocks = [];   // [{block, input}, ...] 組の順番どおり
 function buildAnswerBlocks(){
   const grid = $("answerGrid");
   grid.innerHTML = "";
@@ -1516,12 +1548,9 @@ function buildAnswerBlocks(){
     inp.className = "numfont ans-input"; inp.type = "text";
     inp.setAttribute("inputmode", "numeric"); inp.autocomplete = "off";
     inp.style.cssText = "flex:1 1 0;min-width:0;width:0;margin:0;text-align:center";
-    const mb = document.createElement("button");
-    mb.type = "button"; mb.className = "ans-minus"; mb.textContent = "−";
-    mb.title = "マイナスを付ける／外す";
-    rowEl.appendChild(inp); rowEl.appendChild(mb);
+    rowEl.appendChild(inp);
     block.appendChild(rowEl);
-    return { block, input: inp, minus: mb };
+    return { block, input: inp };
   });
   /* 入力欄の並びは数字の配置に合わせる（どの答えがどの組か迷わないように） */
   if(cfg.series <= 1){
@@ -1561,16 +1590,9 @@ function buildAnswerBlocks(){
       if(i + 1 < answerBlocks.length) answerBlocks[i + 1].input.focus();   // Enterで次の欄へ
       else submitAnswer();
     });
-    /* iPhoneの数字キーパッドには「−」キーが無いので、ボタンでも付け外しできるようにする */
     b.input.addEventListener("focus", () => {
       try{ const end = b.input.value.length; b.input.setSelectionRange(end, end); }catch(e){}
       setTimeout(() => { try{ b.block.scrollIntoView({ block: "nearest" }); }catch(e){} syncViewportHeight(); }, 380);
-    });
-    b.minus.addEventListener("click", () => {
-      const v = b.input.value;
-      b.input.value = v.includes("-") ? v.replace(/-/g, "") : "-" + v;
-      beepFlash();
-      b.input.focus();
     });
   });
 }
@@ -1596,7 +1618,6 @@ function showAnswer(){
   clearTimers(); show("answerScreen");
   $("answerTitle").textContent = `第${problemIndex + 1}問　答えを入力してください`;
   buildAnswerBlocks();
-  applyKeypadState();
   fitAnswerFont();
   setTimeout(() => { fitAnswerFont(); if(answerBlocks[0]) answerBlocks[0].input.focus(); }, 60);   // カーソルは予め最初の解答欄へ
 }
@@ -1625,22 +1646,10 @@ window.addEventListener("resize", () => {
 /* ---------- 画面内キーパッド（解答画面） ----------
    タブレットPC（Surface等）では入力欄をタップしてもキーボードが出ず
    一切入力できないことがあるため、アプリ側でも入力できるようにする。
-   入力先は最後にフォーカスした解答欄。表示/非表示は端末ごとに記憶する */
+   入力先は最後にフォーカスした解答欄。キーパッドは常時表示する */
 let lastAnswerInput = null;
 document.addEventListener("focusin", e => {
   if(e.target && e.target.classList && e.target.classList.contains("ans-input")) lastAnswerInput = e.target;
-});
-let keypadOn = false;
-try{ keypadOn = localStorage.getItem("flashAnzanKeypad") === "1"; }catch(e){}
-function applyKeypadState(){
-  $("keypad").style.display = keypadOn ? "block" : "none";
-}
-$("keypadToggle").addEventListener("click", () => {
-  keypadOn = !keypadOn;
-  try{ localStorage.setItem("flashAnzanKeypad", keypadOn ? "1" : "0"); }catch(e){}
-  applyKeypadState();
-  const t = lastAnswerInput || (answerBlocks[0] && answerBlocks[0].input);
-  if(keypadOn && t) t.focus();
 });
 document.querySelectorAll("#keypad [data-key]").forEach(btn => {
   btn.addEventListener("pointerdown", e => {
