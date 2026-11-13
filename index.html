@@ -577,6 +577,15 @@ function beepFlash(){
   /* メディア要素の再生が拒否されたら、Web Audio側で必ず鳴らす */
   playClip("flash", FLASH_WAV_B64, webAudioFlash);
 }
+/* 再生中のクリップを止める。高速表示では最後の数字の音が表示間隔より
+   長く、解答画面に移ったあとまで尾を引いて1回余分に聞こえるため、
+   画面が移る瞬間に止める（PC版と同じ対策） */
+function stopClip(key){
+  try{
+    const pool = CLIP_POOLS[key];
+    if(pool) pool.forEach(a => { try{ a.pause(); a.currentTime = 0; }catch(e){} });
+  }catch(e){}
+}
 const beepCorrect   = () => { playClip("correct", CORRECT_WAV_B64, () => { tone(1568, 0.14); tone(1175, 0.34, {delay:0.15}); }); };  // ピンポーン
 const beepIncorrect = () => { playClip("wrong", WRONG_WAV_B64, () => { tone(170, 0.7, {type:"square", vol:0.34}); tone(173, 0.7, {type:"square", vol:0.3}); }); }; // ブー（1回）
 
@@ -1576,6 +1585,7 @@ function fitAnswerFont(){
   });
 }
 function showAnswer(){
+  stopClip("flash");   // 高速表示の最後の音の尾が解答画面に流れ込むのを防ぐ
   clearTimers(); show("answerScreen");
   $("answerTitle").textContent = `第${problemIndex + 1}問　答えを入力してください`;
   buildAnswerBlocks();
