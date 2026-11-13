@@ -65,7 +65,7 @@
   button.choice { font-weight:bold; font-size:18px; }
   button.choice:active { background:#00b84f; opacity:1; }
   .btnrow-settings { display:flex; gap:12px; justify-content:center; margin-top:26px; }
-  #resultScreen .btnrow-settings { flex-wrap:nowrap; gap:8px; }
+  #resultScreen .btnrow-settings { flex-wrap:wrap; gap:8px; }
   #resultScreen .btnrow-settings button { padding:12px 8px; font-size:13px; white-space:nowrap; }
   /* 数字表示 */
   #flashScreen, #countScreen { padding:0; }
@@ -121,7 +121,7 @@
   /* 中央寄せを上下 auto マージンで行うと、内容がはみ出したときに
      はみ出し分がスクロール範囲の外へ出て、下の行に届かなくなる（実機で確認）。
      内側ラッパー（min-height:100%）で「収まれば中央寄せ、はみ出せば上からスクロール」にする */
-  #settingsScreen.active, #answerScreen.active, #judgeScreen.active, #resultScreen.active { display:block; overflow-y:auto; padding:0; }
+  #startScreen.active, #gradeKindScreen.active, #gradeListScreen.active, #confirmScreen.active, #settingsScreen.active, #answerScreen.active, #judgeScreen.active, #resultScreen.active { display:block; overflow-y:auto; padding:0; }
   .screen-inner { min-height:100%; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
   #judgeScreen .screen-inner { padding-bottom:150px; }  /* 下部の固定ボタンに最後の行が隠れないように */
   /* 解答画面: 「解答」ボタンは入力欄のすぐ下に置く。キーボードを開いたままでも、
@@ -193,6 +193,7 @@
 <!-- 設定 -->
 <!-- モード選択（最初に表示） -->
 <section id="startScreen" class="screen active">
+  <div class="screen-inner">
   <h1 style="margin-bottom:34px">多機能フラッシュ暗算</h1>
   <div style="display:flex;flex-direction:column;gap:16px;width:min(92vw,340px)">
     <button class="choice" id="gradeModeBtn" style="padding:20px 22px;font-size:19px">級・段位で選ぶ</button>
@@ -201,27 +202,33 @@
     <button id="quitBtn">終了</button>
   </div>
   <p id="quitNote" class="small" style="display:none">終了するには、このタブ（またはウィンドウ）を閉じてください</p>
+  </div>
 </section>
 
 <!-- 級と段位のどちらかを選ぶ -->
 <section id="gradeKindScreen" class="screen">
+  <div class="screen-inner">
   <h2 style="margin-bottom:30px">級・段位で選ぶ</h2>
   <div style="display:flex;flex-direction:column;gap:16px;width:min(92vw,340px)">
     <button class="choice" id="kyuBtn" style="padding:20px 22px;font-size:19px">10級〜1級</button>
     <button class="choice" id="danBtn" style="padding:20px 22px;font-size:19px">初段〜十段</button>
     <button id="kindBackBtn">戻る</button>
   </div>
+  </div>
 </section>
 
 <!-- 級・段位の一覧 -->
 <section id="gradeListScreen" class="screen">
+  <div class="screen-inner">
   <h2 id="gradeListTitle" style="margin-bottom:26px">級を選んでください</h2>
   <div id="gradeList" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;width:min(92vw,400px)"></div>
   <button id="listBackBtn" style="margin-top:26px">戻る</button>
+  </div>
 </section>
 
 <!-- 級・段位の開始画面（変えられるのは連続出題数だけ） -->
 <section id="confirmScreen" class="screen">
+  <div class="screen-inner">
   <h2 id="confirmTitle" style="font-size:34px;margin-bottom:14px">3級</h2>
   <div id="confirmSpec" style="font-size:19px;line-height:1.7;text-align:center"></div>
   <div id="confirmNotes" style="font-size:13px;color:#9a9a9a;line-height:1.7;text-align:center;margin-top:8px"></div>
@@ -230,6 +237,7 @@
   <div class="btnrow-settings">
     <button id="confirmBackBtn">戻る</button>
     <button class="primary" id="confirmStartBtn">スタート</button>
+  </div>
   </div>
 </section>
 
@@ -1291,11 +1299,11 @@ function referenceText(){
   const d = Math.max(1, cfg ? cfg.maxD : 3);
   if(cfg && cfg.sub && cfg.subStyle === "hikitsuzukeru" && cfg.answerMode === "negative")
     return "8".repeat(d + 1).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  let s = "8".repeat(d).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  /* 引き算オンのときは並列数によらず基準にマイナスを含める。
-     含めないと、マイナスつきの数字が基準より1文字分広くなり、狭い画面で
-     はみ出す上に、右揃えの基準幅が崩れて数字の位置までズレるため */
-  if(cfg && cfg.sub) s = "-" + s;
+  /* 基準は数字部分だけ（マイナスは含めない）。数字の大きさと右端の位置は
+     数字部分で決め、マイナスはその左に付くだけにする。これにより
+     「123」と「-123」で数字の大きさも一の位の位置も完全に同じになる。
+     はみ出し防止は clampFlashSizeToLayout の実測ガード（マイナス込み）で担う */
+  const s = "8".repeat(d).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return s;
 }
 let flashFontSize = null;
@@ -1330,34 +1338,49 @@ function fitFlashFont(){
   const maxW = cfg.series <= 1 ? window.innerWidth * 0.92 : cellW * 0.92;
   flashFontSize = fitSizePx(flashCells[0], referenceText(), base, maxW);
   flashCells.forEach(d => { d.style.fontSize = flashFontSize + "px"; });
+  applyFlashAlign();
   clampFlashSizeToLayout();   /* 1組でも実測ガードを効かせ、端へのはみ出しを絶対に残さない */
   applyFlashAlign();
 }
 /* 一の位がそろうよう、セルの幅を一番広い数字に固定して右揃えにする
    （中央揃えだと引き算のマイナス付き数字と位がずれて読みにくい） */
+/* セルの箱を「表示されうる最も広い文字列（マイナス込み）」の幅にし、
+   箱の右端が数字部分の右端（＝一の位の位置）に来るよう左へずらす。
+   テキストが箱より広いと右揃えが効かず左端固定になり数字がズレるため、
+   箱は常にはみ出し分まで含めて確保する。数字の大きさと一の位の位置は
+   数字部分だけで決まり、マイナスはその左に付くだけになる */
+function setCellBoxes(size){
+  if(!flashCells.length || !_measureCtx) return;
+  try{
+    const cs = getComputedStyle(flashCells[0]);
+    _measureCtx.font = cs.fontWeight + " " + size + "px " + cs.fontFamily;
+    const refW = _measureCtx.measureText(referenceText()).width;
+    const guardW = _measureCtx.measureText(guardText()).width;
+    flashCells.forEach(d => {
+      d.style.width = Math.ceil(guardW) + "px";
+      d.style.marginLeft = ((refW - guardW) / 2) + "px";
+    });
+  }catch(e){}
+}
 function applyFlashAlign(){
   if(!flashCells.length || !flashFontSize) return;
-  let wpx = null;
-  if(_measureCtx){
-    try{
-      const cs = getComputedStyle(flashCells[0]);
-      _measureCtx.font = cs.fontWeight + " " + flashFontSize + "px " + cs.fontFamily;
-      wpx = _measureCtx.measureText(referenceText()).width;
-    }catch(e){}
-  }
-  flashCells.forEach(d => {
-    if(wpx) d.style.width = Math.ceil(wpx) + "px";
-    d.style.textAlign = "right";
-  });
+  setCellBoxes(flashFontSize);
+  flashCells.forEach(d => { d.style.textAlign = "right"; });
 }
 /* 並列表示では、セルの中心同士の距離に対して数字が大きいと隣と重なる。
    一番幅の広い数字を全セルに入れて実測し、重なりと画面端へのはみ出しが
    消える大きさまで縮める（fitSizePx の下限20pxのままだと、組数・桁数が
    多いパターンで重なってしまうため、その場合は20px未満まで下げる） */
+/* 表示されうる最も広い文字列（マイナス込み）。サイズ決定の基準とは別に、
+   画面端へのはみ出しチェック専用に使う */
+function guardText(){
+  const ref = referenceText();
+  return (cfg && cfg.sub) ? "-" + ref : ref;
+}
 function clampFlashSizeToLayout(){
   const stage = $("flashStage");
   if(!stage || !flashCells.length) return;
-  const ref = referenceText();
+  const ref = guardText();
   const saved = flashCells.map(d => [d.textContent, d.style.visibility]);
   const sr0 = stage.getBoundingClientRect();
   if(sr0.width < 10 || sr0.height < 10) return;   // 測れない環境では従来の大きさのまま
@@ -1366,6 +1389,7 @@ function clampFlashSizeToLayout(){
   let size = flashFontSize;
   for(let guard = 0; guard < 3; guard++){
     flashCells.forEach(d => { d.style.fontSize = size + "px"; });
+    setCellBoxes(size);   /* 箱幅もそのサイズの実寸に合わせ、最終配置の形で測る */
     const sr = stage.getBoundingClientRect();
     const rs = flashCells.map(d => d.getBoundingClientRect());
     const cx = i => (rs[i].left + rs[i].right) / 2, cy = i => (rs[i].top + rs[i].bottom) / 2;
