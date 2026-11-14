@@ -165,6 +165,14 @@ body.fs #timerLabel{margin-right:112px;}
    テンキーが画面外に押し出されていた。高さ 500px 以下では各部を
    詰めて、スクロールなしで収まるようにする (縦向き・タブレット・
    PC には影響しない)。 */
+/* ---------- カウントダウン (3・2・1) ---------- */
+#scr-count{align-items:center;justify-content:center;}
+.count-circle{width:min(52vw,250px);height:min(52vw,250px);border:9px solid var(--slate);border-radius:50%;color:#404040;display:flex;align-items:center;justify-content:center;font-size:min(30vw,150px);font-weight:700;line-height:1;}
+#countDigit{display:inline-block;}
+#countCaption{margin-top:16px;color:var(--slate);font-size:20px;font-weight:bold;text-align:center;}
+@media (orientation:landscape) and (max-height:520px){
+  .count-circle{width:min(50vh,250px);height:min(50vh,250px);}
+}
 @media (max-height:500px){
   .header{font-size:24px;padding:10px 8px;}
   .prompt{padding:8px 20px 2px;font-size:13px;}
@@ -256,7 +264,7 @@ body.fs #timerLabel{margin-right:112px;}
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-29</span>
+    <span class="ver">ver. 20261110-30</span>
   </div>
 </div>
 
@@ -288,7 +296,7 @@ body.fs #timerLabel{margin-right:112px;}
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-29</span>
+    <span class="ver">ver. 20261110-30</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -344,7 +352,7 @@ body.fs #timerLabel{margin-right:112px;}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-29</span>
+    <span class="ver">ver. 20261110-30</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -352,6 +360,10 @@ body.fs #timerLabel{margin-right:112px;}
 </div>
 
 <!-- 3) 計算画面 -->
+<div id="scr-count" class="screen">
+  <div class="count-circle"><span id="countDigit" class="num">3</span></div>
+  <div id="countCaption"></div>
+</div>
 <div id="scr-calc" class="screen">
   <div style="display:flex;align-items:center"><div class="tabs" id="tabs" style="flex:1"></div><span class="timer-label" id="timerLabel"></span></div>
   <div class="calc-main">
@@ -403,7 +415,7 @@ body.fs #timerLabel{margin-right:112px;}
 
 <script>
 "use strict";
-var APP_VERSION = "20261110-29";
+var APP_VERSION = "20261110-30";
 var S = {
   dan: null, order: null, mode: "normal",
   items: [], answers: [], idx: 0, input: "",
@@ -678,6 +690,84 @@ function startSession(order){
   S.timeLimit = S.playMode === "exam" ? examLimit()
     : (S.timeMode === "down" ? S.cdMin * 60 + S.cdSec : null);
   S.timeUp = false;
+  runCountdown();
+}
+/* ---------- カウントダウン (3・2・1) ----------
+   スタートを押した直後、全モード共通で丸の中に数字を出してから
+   計算を始める。開始時刻に固定し、1秒ごとの境界に合わせて切り替える
+   (処理の遅れが累積しない絶対時刻方式)。音は出さない (このアプリの仕様) */
+var countTimer = null, countStartAt = 0, countShown = 3, counting = false;
+var CD_OPTICAL_EM = { "3": 0.05, "2": 0.055, "1": 0.03 };
+function cdCaption(){
+  var dan = S.dan === "all" ? "1〜9だん ぜんぶ" : S.dan + "のだん";
+  var order = { junban: "じゅんばん", gyaku: "ぎゃくじゅん",
+                random: "ランダム" }[S.order] || "";
+  var txt = (S.playMode === "exam" ? "しけん　" : "") + dan + "　" + order;
+  /* 見出しの数字も、アプリの決まりどおり数字用フォントで出す */
+  return txt.replace(/(\d+)/g, '<span class="num">$1</span>');
+}
+function centerCountDigit(){
+  /* 数字の字面 (インク) の中心が丸の中心に来るよう補正する。
+     行ボックス基準で中央に置くと字面がフォントごとにずれるため、
+     今のフォントの実測値からずれを計算する (端末が変わっても合う)。
+     さらに、字面の幾何中心だと数字は目に上へ浮いて見えるため、
+     数字ごとに光学補正を少しだけ下へ足す */
+  var sp = $("countDigit");
+  if (!sp) return;
+  var cs = getComputedStyle(sp);
+  var size = parseFloat(cs.fontSize);
+  if (!(size > 0)) return;
+  var ctx = null;
+  try {
+    ctx = centerCountDigit._ctx ||
+      (centerCountDigit._ctx = document.createElement("canvas").getContext("2d"));
+  } catch (e) { return; }
+  if (!ctx) return;
+  ctx.font = cs.fontWeight + " " + size + "px " + cs.fontFamily;
+  var m = ctx.measureText(sp.textContent || "3");
+  if (m.actualBoundingBoxAscent === undefined ||
+      m.fontBoundingBoxAscent === undefined) return;
+  var inkCenterFromBaseline =
+    (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2;
+  var offset = inkCenterFromBaseline +
+    (m.fontBoundingBoxAscent - m.fontBoundingBoxDescent) / 2;
+  var digit = (sp.textContent || "").trim();
+  var optical = (CD_OPTICAL_EM[digit] !== undefined
+    ? CD_OPTICAL_EM[digit] : 0.04) * size;
+  var dy = -offset + optical;
+  sp.style.transform = dy ? "translateY(" + dy + "px)" : "";
+}
+function runCountdown(){
+  if (counting) return;
+  counting = true; countShown = 3;
+  $("countCaption").innerHTML = cdCaption();
+  $("countDigit").textContent = "3";
+  show("scr-count");
+  centerCountDigit();
+  countStartAt = Date.now();
+  countTimer = setTimeout(countTick, 1000);
+}
+function countTick(){
+  countTimer = null;
+  if (!counting) return;
+  var elapsed = Date.now() - countStartAt;
+  var remain = 3 - Math.floor(elapsed / 1000);
+  if (remain <= 0){ counting = false; beginSession(); return; }
+  if (remain !== countShown){
+    countShown = remain;
+    $("countDigit").textContent = String(remain);
+    centerCountDigit();
+  }
+  var next = (Math.floor(elapsed / 1000) + 1) * 1000;
+  countTimer = setTimeout(countTick,
+    Math.max(1, countStartAt + next - Date.now()));
+}
+function cancelCountdown(){
+  if (countTimer){ clearTimeout(countTimer); countTimer = null; }
+  counting = false;
+}
+function beginSession(){
+  /* カウントダウンが終わってから制限時間の計測を始める */
   S.startTime = Date.now();
   show("scr-calc"); renderCalc(); startTimer();
 }
@@ -730,7 +820,7 @@ function renderCalc(){
     tabs.appendChild(b);
   });
   var curTab = tabs.children[S.idx];
-  if (curTab) curTab.scrollIntoView({ block: "nearest" });
+  if (curTab && curTab.scrollIntoView) curTab.scrollIntoView({ block: "nearest" });
   if (S.mode === "naoshi"){
     var tag = document.createElement("span");
     tag.className = "naoshi-tag"; tag.textContent = "なおし";
@@ -916,6 +1006,11 @@ document.addEventListener("keydown", function(e){
   if (e.key === "Enter" || e.code === "NumpadEnter"){ pressOK(); e.preventDefault(); }
 });
 window.__KD = { S: S, selectDan: selectDan, startSession: startSession,
+  skipCountdown: function(){
+    if (countTimer){ clearTimeout(countTimer); countTimer = null; }
+    if (counting){ countStartAt -= 10000; countTick(); }
+  },
+  isCounting: function(){ return counting; },
   startNaoshi: startNaoshi, pressDigit: pressDigit, pressBack: pressBack,
   pressAC: pressAC, pressOK: pressOK, gotoQuestion: gotoQuestion,
   showResult: showResult, formatElapsed: formatElapsed,
