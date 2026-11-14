@@ -135,6 +135,10 @@
   ::-webkit-scrollbar-track { background:#0d0d0d; }
   ::-webkit-scrollbar-thumb { background:#4a4a4a; border-radius:4px; }
   ::-webkit-scrollbar-thumb:hover { background:#6a6a6a; }
+  /* 矢印キー移動のフォーカス先が目で分かるようにする */
+  .screen :focus-visible { outline:2px solid #00b84f; outline-offset:2px; }
+  /* マウスドラッグでスクロールしている間は文字を選択しない */
+  .drag-scrolling, .drag-scrolling * { user-select:none !important; -webkit-user-select:none !important; }
   /* 全画面のときだけ左上の隅に出す終了ボタン（小さく目立たない。
      判定画面の下部ボタン帯と重ならないよう下ではなく上に置く） */
   #fsExitBtn { position:fixed; top:calc(10px + env(safe-area-inset-top)); left:calc(10px + env(safe-area-inset-left)); z-index:9999; background:rgba(28,28,28,.85); color:#bbb; border:1px solid #444; border-radius:6px; font-size:12px; padding:7px 12px; opacity:.55; }
@@ -1839,6 +1843,151 @@ document.addEventListener("keydown", e => {
   if(e.target && e.target.closest && e.target.closest("input, button, select, textarea")) return;  // 入力欄・ボタン上のEnterは要素本来の動作に任せる
   if(!$("judgeScreen").classList.contains("active")) return;
   if(problemIndex >= cfg.questions - 1) showResult(); else nextProblem();  // Enter = 次の問題へ
+});
+
+/* ---------- どこをドラッグしてもスクロール（マウス） ----------
+   タッチはブラウザ標準のスクロールに任せ、マウスのドラッグだけを扱う。
+   入力欄・セレクト・ステッパー（長押し操作が本体）の上では本来の操作を
+   優先する。ボタン等の上でドラッグした場合は、離したときのクリックを
+   止める（タップとドラッグを取り違えない） */
+document.querySelectorAll("section.screen").forEach(sec => {
+  let drag = null, suppressUntil = 0;
+  sec.addEventListener("pointerdown", e => {
+    if(e.pointerType !== "mouse" || e.button !== 0) return;
+    if(e.target.closest("input, select, textarea, .stepbtn")) return;
+    drag = { y: e.clientY, top: sec.scrollTop, moved: false };
+  });
+  sec.addEventListener("pointermove", e => {
+    if(!drag) return;
+    const dy = e.clientY - drag.y;
+    if(!drag.moved && Math.abs(dy) < 6) return;
+    drag.moved = true;
+    sec.classList.add("drag-scrolling");
+    sec.scrollTop = drag.top - dy;
+    e.preventDefault();
+  });
+  const endDrag = () => {
+    if(drag && drag.moved) suppressUntil = Date.now() + 250;
+    drag = null;
+    sec.classList.remove("drag-scrolling");
+  };
+  sec.addEventListener("pointerup", endDrag);
+  sec.addEventListener("pointercancel", endDrag);
+  sec.addEventListener("click", e => {
+    if(Date.now() < suppressUntil){
+      e.stopPropagation();
+      e.preventDefault();
+      suppressUntil = 0;
+    }
+  }, true);
+});
+
+/* ---------- 矢印キー移動・Enterで進行 ----------
+   対象は選択・設定・解答の各画面。ステッパーは移動対象に含めない。
+   ラジオはグループの並び方向（縦/横）の矢印はブラウザ標準の選択切替に
+   任せ、端と直交方向だけ画面の並び通りに移動する。セレクトは上下で
+   値を切り替え、左右で移動する。Enter はボタンにフォーカスがあるときは
+   そのボタンを押し、それ以外では画面の決定ボタンとして働く */
+const ARROW_NAV_SCREENS = ["startScreen", "gradeKindScreen", "gradeListScreen", "confirmScreen", "settingsScreen", "answerScreen"];
+function navRect(el){
+  /* ラジオは入力そのもの（小さな丸）ではなく、文字を含むラベルの
+     範囲で位置を測る（PC版のラジオボタン＝文字込みの部品と同じ考え方） */
+  const box = (el.type === "radio" || el.type === "checkbox")
+    ? (el.closest("label") || el) : el;
+  const r = box.getBoundingClientRect();
+  return { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom,
+           cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2 };
+}
+function navCandidates(screen){
+  if(screen.id === "answerScreen"){
+    const list = answerBlocks.map(b => b.input);
+    const btn = $("answerBtn");
+    if(btn) list.push(btn);
+    return list.filter(el => !el.disabled && el.getClientRects().length);
+  }
+  return [...screen.querySelectorAll("input, select, button")].filter(el =>
+    !el.disabled && el.type !== "hidden" && !el.classList.contains("stepbtn")
+    && el.getClientRects().length);
+}
+function navPick(list, cur, dir){
+  const c = navRect(cur);
+  const vertical = dir === "Up" || dir === "Down";
+  const primary = [], fallback = [];
+  for(const el of list){
+    if(el === cur) continue;
+    const r = navRect(el);
+    if(dir === "Up" && !(r.cy < c.cy - 2)) continue;
+    if(dir === "Down" && !(r.cy > c.cy + 2)) continue;
+    if(dir === "Left" && !(r.cx < c.cx - 2)) continue;
+    if(dir === "Right" && !(r.cx > c.cx + 2)) continue;
+    const overlap = vertical ? (r.x0 < c.x1 && c.x0 < r.x1) : (r.y0 < c.y1 && c.y0 < r.y1);
+    const gap = dir === "Up" ? c.y0 - r.y1 : dir === "Down" ? r.y0 - c.y1
+              : dir === "Left" ? c.x0 - r.x1 : r.x0 - c.x1;
+    const score = vertical ? Math.abs(r.cy - c.cy) + 1.5 * Math.abs(r.cx - c.cx)
+                           : Math.abs(r.cx - c.cx) + 1.5 * Math.abs(r.cy - c.cy);
+    (overlap ? primary : fallback).push({ gap, score, el });
+  }
+  const pool = primary.length
+    ? primary.sort((a, b) => a.gap - b.gap || a.score - b.score)
+    : fallback.sort((a, b) => a.score - b.score || a.gap - b.gap);
+  return pool.length ? pool[0].el : null;
+}
+function navGo(screen, cur, dir){
+  const target = navPick(navCandidates(screen), cur, dir);
+  if(target){
+    target.focus();
+    try{ target.scrollIntoView({ block: "nearest" }); }catch(e){}
+  }
+}
+document.addEventListener("keydown", e => {
+  const screen = screens.map(id => $(id)).find(s => s.classList.contains("active"));
+  if(!screen) return;
+  if(e.key === "Enter"){
+    const t = e.target;
+    if(t && t.closest && t.closest("button, select")) return;   // ボタン・セレクト上は本来の動作
+    if(screen.id === "settingsScreen"){ e.preventDefault(); $("startBtn").click(); }
+    else if(screen.id === "confirmScreen"){ e.preventDefault(); $("confirmStartBtn").click(); }
+    return;
+  }
+  const dir = { ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right" }[e.key];
+  if(!dir || !ARROW_NAV_SCREENS.includes(screen.id)) return;
+  const ae = document.activeElement;
+  if(ae && ae.type === "radio"){
+    const g = [...document.querySelectorAll(`input[type="radio"][name="${ae.name}"]`)]
+      .filter(r => !r.disabled && r.getClientRects().length);
+    let axis = "vertical";
+    if(g.length >= 2){
+      const a = navRect(g[0]), b = navRect(g[1]);
+      axis = Math.abs(b.cy - a.cy) >= Math.abs(b.cx - a.cx) ? "vertical" : "horizontal";
+    }
+    const along = (axis === "vertical" && (dir === "Up" || dir === "Down"))
+               || (axis === "horizontal" && (dir === "Left" || dir === "Right"));
+    if(along){
+      const idx = g.indexOf(ae);
+      const sibling = (dir === "Down" || dir === "Right") ? g[idx + 1] : g[idx - 1];
+      if(sibling) return;   // グループ内の選択切替はブラウザ標準に任せる
+    }
+    e.preventDefault();
+    navGo(screen, ae, dir);
+    return;
+  }
+  if(ae && ae.tagName === "SELECT"){
+    if(dir === "Up" || dir === "Down") return;   // 値の切替は標準に任せる
+    e.preventDefault();
+    navGo(screen, ae, dir);
+    return;
+  }
+  const list = navCandidates(screen);
+  if(!list.length) return;
+  if(!ae || !list.includes(ae)){
+    e.preventDefault();
+    const t = (dir === "Down" || dir === "Right") ? list[0] : list[list.length - 1];
+    t.focus();
+    try{ t.scrollIntoView({ block: "nearest" }); }catch(err){}
+    return;
+  }
+  e.preventDefault();
+  navGo(screen, ae, dir);
 });
 /* 現在の設定で、組数ぶんの問題を生成する */
 function makeSeries(){
