@@ -135,6 +135,9 @@
   ::-webkit-scrollbar-track { background:#0d0d0d; }
   ::-webkit-scrollbar-thumb { background:#4a4a4a; border-radius:4px; }
   ::-webkit-scrollbar-thumb:hover { background:#6a6a6a; }
+  /* 全画面のときだけ、左上の「全画面を終了」ボタンに各画面の見出しが
+     重ならないよう、内容の上余白を広げる（通常表示は変えない） */
+  :fullscreen .screen-inner { padding-top:56px; }
   /* 矢印キー移動のフォーカス先が目で分かるようにする */
   .screen :focus-visible { outline:2px solid #00b84f; outline-offset:2px; }
   /* マウスドラッグでスクロールしている間は文字を選択しない */
@@ -1988,6 +1991,27 @@ document.addEventListener("keydown", e => {
   }
   e.preventDefault();
   navGo(screen, ae, dir);
+});
+
+/* ---------- Esc で1つ前の画面へ戻る ----------
+   全画面の最中はブラウザ標準で Esc が全画面終了になるのが先
+   （その Esc はページに届かない）。届いた場合も全画面中は何もしない。
+   それ以外は画面の「戻る」「最初に戻る」の流れに合わせる */
+document.addEventListener("keydown", e => {
+  if(e.key !== "Escape") return;
+  if(document.fullscreenElement) return;   // 全画面終了が先
+  const active = screens.find(id => $(id).classList.contains("active"));
+  if(active === "settingsScreen" || active === "gradeKindScreen") show("startScreen");
+  else if(active === "gradeListScreen") show("gradeKindScreen");
+  else if(active === "confirmScreen"){
+    if(confirmMode === "grade") show("gradeListScreen"); else show("settingsScreen");
+  }
+  else if(active === "countScreen" || active === "flashScreen" || active === "answerScreen"){
+    clearTimers(); stopClip("count"); stopClip("flash");
+    if(cfg && cfg.gradeSpec) show("confirmScreen"); else show("settingsScreen");
+  }
+  else if(active === "judgeScreen" || active === "resultScreen") goHome();
+  // startScreen（トップ）では何もしない
 });
 /* 現在の設定で、組数ぶんの問題を生成する */
 function makeSeries(){
