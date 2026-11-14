@@ -117,6 +117,8 @@ body.fs #timerLabel{margin-right:112px;}
 .tabs{max-height:32dvh;overflow-y:auto;}
 .tab{background:#cfcfcf;color:#222;font-size:clamp(16px,4.6vw,21px);min-width:44px;padding:5px 0;}
 .tab.current{background:var(--yellow);}
+/* 矢印キーナビのフォーカス表示 */
+.kb-focus{outline:4px solid var(--red) !important;outline-offset:2px;}
 .tab.cleared{background:var(--cleared);}
 .naoshi-tag{color:var(--red);font-weight:bold;font-size:18px;margin-left:10px;}
 .calc-main{flex:1;display:flex;gap:8px;min-height:0;}
@@ -264,7 +266,7 @@ body.fs #timerLabel{margin-right:112px;}
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-30</span>
+    <span class="ver">ver. 20261110-31</span>
   </div>
 </div>
 
@@ -296,7 +298,7 @@ body.fs #timerLabel{margin-right:112px;}
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-30</span>
+    <span class="ver">ver. 20261110-31</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -352,7 +354,7 @@ body.fs #timerLabel{margin-right:112px;}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-30</span>
+    <span class="ver">ver. 20261110-31</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -415,7 +417,7 @@ body.fs #timerLabel{margin-right:112px;}
 
 <script>
 "use strict";
-var APP_VERSION = "20261110-30";
+var APP_VERSION = "20261110-31";
 var S = {
   dan: null, order: null, mode: "normal",
   items: [], answers: [], idx: 0, input: "",
@@ -432,6 +434,7 @@ function show(id){
   document.querySelectorAll(".screen").forEach(function(el){ el.classList.remove("active"); });
   $(id).classList.add("active");
   window.scrollTo(0, 0);
+  kbInit();
 }
 function formatElapsed(sec){
   var cs = Math.floor(sec * 100);
@@ -1005,6 +1008,147 @@ document.addEventListener("keydown", function(e){
   }
   if (e.key === "Enter" || e.code === "NumpadEnter"){ pressOK(); e.preventDefault(); }
 });
+/* ================================================================
+   ドラッグスクロール + 矢印キーナビ (全アプリ共通依頼 2026-11-14)
+   ================================================================ */
+// マウスドラッグでスクロール (タッチは標準のスクロールに任せる)。
+// ドラッグと判定したら、その後の click を止めてボタン誤作動を防ぐ
+function makeDragScroll(el){
+  if (!el) return;
+  var down = false, moved = false, sx = 0, sy = 0, st = 0, sl = 0;
+  el.addEventListener("pointerdown", function(e){
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    down = true; moved = false;
+    sx = e.clientX; sy = e.clientY; st = el.scrollTop; sl = el.scrollLeft;
+  });
+  el.addEventListener("pointermove", function(e){
+    if (!down) return;
+    var dx = e.clientX - sx, dy = e.clientY - sy;
+    if (!moved && Math.hypot(dx, dy) < 6) return;
+    moved = true;
+    el.scrollTop = st - dy;
+    el.scrollLeft = sl - dx;
+  });
+  function end(){ down = false; }
+  el.addEventListener("pointerup", end);
+  el.addEventListener("pointercancel", end);
+  el.addEventListener("click", function(e){
+    if (moved){ e.stopPropagation(); e.preventDefault(); moved = false; }
+  }, true);
+}
+// 画面全体 (ボタン等の上でない場所) のマウスドラッグでページスクロール
+function makeWindowDragScroll(el){
+  var down = false, moved = false, sy = 0, st = 0;
+  el.addEventListener("pointerdown", function(e){
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    if (e.target.closest("button, input, select, textarea, a")) return;
+    // 内部でスクロールできる領域 (結果リスト等) はそちらのドラッグに任せる。
+    // 内部でスクロールしきれない (伸びてページ側がスクロールする) 場合は
+    // こちらのページスクロールで拾う
+    var sc = e.target.closest("#resultList, #tabs");
+    if (sc && (sc.scrollHeight > sc.clientHeight + 1 ||
+               sc.scrollWidth > sc.clientWidth + 1)) return;
+    down = true; moved = false; sy = e.clientY; st = window.scrollY;
+  });
+  el.addEventListener("pointermove", function(e){
+    if (!down) return;
+    var dy = e.clientY - sy;
+    if (!moved && Math.abs(dy) < 6) return;
+    moved = true;
+    window.scrollTo(window.scrollX, st - dy);
+  });
+  function end(){ down = false; }
+  el.addEventListener("pointerup", end);
+  el.addEventListener("pointercancel", end);
+  el.addEventListener("click", function(e){
+    if (moved){ e.stopPropagation(); e.preventDefault(); moved = false; }
+  }, true);
+}
+makeDragScroll($("resultList"));
+makeDragScroll($("tabs"));
+document.querySelectorAll(".screen").forEach(makeWindowDragScroll);
+
+// 矢印キーナビ: 選択・設定画面で項目間を移動し、Enter でそのまま実行。
+// 長押し連続タイプのステッパー (.step-btn) は移動対象に含めない
+var NAV_SCREEN_IDS = ["scr-main", "scr-dan", "scr-order", "scr-result",
+  "scr-end"];
+var kbEl = null;
+function navTargets(){
+  var scr = document.querySelector(".screen.active");
+  if (!scr || NAV_SCREEN_IDS.indexOf(scr.id) < 0) return [];
+  return Array.prototype.filter.call(
+    scr.querySelectorAll("button"), function(b){
+      return b.offsetParent !== null && !b.disabled &&
+        !b.classList.contains("step-btn") && b.id !== "btnFsExit";
+    });
+}
+function setKbFocus(el){
+  if (kbEl) kbEl.classList.remove("kb-focus");
+  kbEl = el || null;
+  if (kbEl) kbEl.classList.add("kb-focus");
+}
+function kbInit(){
+  var t = navTargets();
+  if (!t.length){ setKbFocus(null); return; }
+  var scr = document.querySelector(".screen.active");
+  var el = t[0];
+  if (scr.id === "scr-main" && $("btnPractice")) el = $("btnPractice");
+  if (scr.id === "scr-order" && $("btnStart")) el = $("btnStart");
+  if (scr.id === "scr-result"){
+    var nb = $("btnNaoshi");
+    el = (nb && nb.offsetParent !== null) ? nb : ($("btnResultOK") || el);
+  }
+  setKbFocus(el);
+}
+function kbMove(dir){
+  var t = navTargets();
+  if (!t.length) return;
+  if (!kbEl || t.indexOf(kbEl) < 0){ setKbFocus(t[0]); return; }
+  var c = kbEl.getBoundingClientRect();
+  var cx = c.left + c.width / 2, cy = c.top + c.height / 2;
+  var best = null, bs = Infinity;
+  t.forEach(function(el){
+    if (el === kbEl) return;
+    var r = el.getBoundingClientRect();
+    var dx = r.left + r.width / 2 - cx, dy = r.top + r.height / 2 - cy;
+    if (dir === "Right" && dx <= 4) return;
+    if (dir === "Left" && dx >= -4) return;
+    if (dir === "Down" && dy <= 4) return;
+    if (dir === "Up" && dy >= -4) return;
+    var sc = (dir === "Left" || dir === "Right")
+      ? Math.abs(dx) + 3 * Math.abs(dy)
+      : Math.abs(dy) + 3 * Math.abs(dx);
+    if (sc < bs){ bs = sc; best = el; }
+  });
+  if (best){
+    setKbFocus(best);
+    try { best.focus({ preventScroll: true }); } catch (e) {}
+  }
+}
+document.addEventListener("keydown", function(e){
+  // 合言葉ゲート表示中は無効 (ゲート用語は分割して書く: ゲート生成側の検査のため)
+  if (document.getElementById("kuku" + "Gate")) return;
+  var scr = document.querySelector(".screen.active");
+  if (!scr || NAV_SCREEN_IDS.indexOf(scr.id) < 0) return;
+  if (e.key && e.key.indexOf("Arrow") === 0){
+    e.preventDefault();
+    kbMove(e.key.slice(5));
+  } else if (e.key === "Enter"){
+    if (kbEl && navTargets().indexOf(kbEl) >= 0){
+      e.preventDefault();
+      kbEl.click();
+    }
+  }
+});
+// マウスで押した項目にフォーカスを同期 (対象外を押したら解除)
+document.addEventListener("pointerdown", function(e){
+  var b = e.target.closest ? e.target.closest("button") : null;
+  if (!b) return;
+  if (navTargets().indexOf(b) >= 0) setKbFocus(b);
+  else setKbFocus(null);
+}, true);
+kbInit();
+
 window.__KD = { S: S, selectDan: selectDan, startSession: startSession,
   skipCountdown: function(){
     if (countTimer){ clearTimeout(countTimer); countTimer = null; }
