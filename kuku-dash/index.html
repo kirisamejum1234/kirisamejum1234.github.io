@@ -84,6 +84,11 @@ body.fs #btnFs{display:none;}
 #btnFsExit{position:fixed;top:max(8px, env(safe-area-inset-top));right:max(8px, env(safe-area-inset-right));z-index:80;display:none;background:rgba(35,35,35,.55);color:#fff;font-size:12px;font-weight:bold;padding:7px 11px;border:none;border-radius:6px;}
 body.fs #btnFsExit{display:block;}
 body.fs #timerLabel{margin-right:112px;}
+/* 全画面時、結果画面のリスト見出しが「全画面を終了」ボタン (右上) の
+   下に入らないよう、横並びレイアウトのときだけ右カラムを少し下げる */
+@media (min-width:561px){
+  body.fs .result-right{padding-top:42px;}
+}
 #fsToast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:rgba(35,35,35,.88);color:#fff;font-size:14px;padding:10px 18px;border-radius:8px;display:none;z-index:90;max-width:92vw;text-align:center;}
 #fsToast.show{display:block;}
 /* ---- スクロールバー (白く目立たせない) ---- */
@@ -266,7 +271,7 @@ body.fs #timerLabel{margin-right:112px;}
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-31</span>
+    <span class="ver">ver. 20261110-32</span>
   </div>
 </div>
 
@@ -298,7 +303,7 @@ body.fs #timerLabel{margin-right:112px;}
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-31</span>
+    <span class="ver">ver. 20261110-32</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -354,7 +359,7 @@ body.fs #timerLabel{margin-right:112px;}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-31</span>
+    <span class="ver">ver. 20261110-32</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -417,7 +422,7 @@ body.fs #timerLabel{margin-right:112px;}
 
 <script>
 "use strict";
-var APP_VERSION = "20261110-31";
+var APP_VERSION = "20261110-32";
 var S = {
   dan: null, order: null, mode: "normal",
   items: [], answers: [], idx: 0, input: "",
@@ -1140,6 +1145,32 @@ document.addEventListener("keydown", function(e){
     }
   }
 });
+// Esc で前画面へ戻る (全画面中はブラウザ側の全画面終了が先に効く)
+document.addEventListener("keydown", function(e){
+  if (e.key !== "Escape") return;
+  // 合言葉ゲート表示中は無効 (ゲート用語は分割: ゲート生成側の検査のため)
+  if (document.getElementById("kuku" + "Gate")) return;
+  if (document.fullscreenElement) return;  // 全画面を抜けるのはブラウザ側
+  var qm = $("quitModal");
+  if (qm && qm.classList.contains("show")){ $("btnQuitNo").click(); return; }
+  var scr = document.querySelector(".screen.active");
+  if (!scr) return;
+  if (scr.id === "scr-calc"){
+    stopTimer();  // 進行中のセッションを止める
+    if (S.mode === "naoshi") showResult();
+    else selectDan(S.dan);
+  } else if (scr.id === "scr-count"){
+    if (countTimer){ clearTimeout(countTimer); countTimer = null; }
+    counting = false;
+    selectDan(S.dan);
+  } else if (scr.id === "scr-order"){
+    show("scr-dan");
+  } else if (scr.id === "scr-dan" || scr.id === "scr-result" ||
+             scr.id === "scr-end"){
+    show("scr-main");
+  }
+});
+
 // マウスで押した項目にフォーカスを同期 (対象外を押したら解除)
 document.addEventListener("pointerdown", function(e){
   var b = e.target.closest ? e.target.closest("button") : null;
