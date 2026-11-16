@@ -20,7 +20,7 @@
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation;}
 html,body{margin:0;padding:0;height:100%;}
 html{background:var(--page);}
-body.soroban{font-family:"ABACUS2","UD デジタル 教科書体 NK-R","UD Digi Kyokasho NK-R","UD デジタル 教科書体","Klee One","Hiragino Sans","Noto Sans JP",sans-serif;}
+body.soroban{font-family:"UD デジタル 教科書体 NK-R","UD Digi Kyokasho NK-R","UD デジタル 教科書体","Klee One","Hiragino Sans","Noto Sans JP",sans-serif;}
 body.soroban .num{font-family:"ABACUS2","UD デジタル 教科書体 NK-R","UD Digi Kyokasho NK-R","UD デジタル 教科書体","Klee One",sans-serif;}
 body.soroban .sym,body.soroban .order-desc,body.soroban #examNoteTxt{font-family:"UD デジタル 教科書体 NK-R","UD Digi Kyokasho NK-R","UD デジタル 教科書体","Klee One",sans-serif;}
 body{font-family:"UD デジタル 教科書体 NK-R","UD Digi Kyokasho NK-R","UD デジタル 教科書体","Klee One","Hiragino Sans","Noto Sans JP",sans-serif;background:var(--page);color:#111;overscroll-behavior:none;}
@@ -272,7 +272,7 @@ button{touch-action:manipulation;}
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-41</span>
+    <span class="ver">ver. 20261110-42</span>
   </div>
 </div>
 
@@ -304,7 +304,7 @@ button{touch-action:manipulation;}
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-41</span>
+    <span class="ver">ver. 20261110-42</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -368,7 +368,7 @@ button{touch-action:manipulation;}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-41</span>
+    <span class="ver">ver. 20261110-42</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -432,7 +432,7 @@ button{touch-action:manipulation;}
 
 <script>
 "use strict";
-var APP_VERSION = "20261110-41";
+var APP_VERSION = "20261110-42";
 var S = {
   dan: null, order: null, mode: "normal",
   items: [], answers: [], idx: 0, input: "",
@@ -463,7 +463,7 @@ function formatElapsed(sec){
   var panel = $("danPanel");
   for (var d = 1; d <= 9; d++){
     var b = document.createElement("button");
-    b.className = "dan-btn"; b.textContent = d + " のだん";
+    b.className = "dan-btn"; b.innerHTML = '<span class="num">' + d + '</span> のだん';
     (function(dan){ b.addEventListener("click", function(){ selectDan(dan); }); })(d);
     panel.appendChild(b);
   }
@@ -482,7 +482,7 @@ function selectDan(d){
     $("descGyaku").textContent = "9×9 から 1×1 の順（81問）";
     $("descRandom").textContent = "バラバラの順（問題数を選べます）";
   } else {
-    $("orderTitle").textContent = d + " のだん";
+    $("orderTitle").innerHTML = numWrap(d + " のだん");
     $("descJunban").textContent = d + "×1 から " + d + "×9 の順";
     $("descGyaku").textContent = d + "×9 から " + d + "×1 の順";
     $("descRandom").textContent = "バラバラの順";
@@ -544,6 +544,9 @@ var fontMode = "kyokasho";
    5連続タップするたびに 通常→裏→真裏→通常 と切り替わる。
    保存はしない (開き直すと通常に戻る) */
 var secretLevel = 0, sorobanTaps = 0;
+function numWrap(t){
+  return String(t).replace(/(\d+)/g, '<span class="num">$1</span>');
+}
 function secretPrefix(){ return secretLevel === 1 ? "半" : (secretLevel === 2 ? "三乗" : ""); }
 function secretName(){ return secretPrefix() + "くくダッシュ"; }
 function updateMainTitle(){
@@ -638,7 +641,7 @@ function refreshOrderUI(){
   $("secretCountRow").style.display = S.dan === "secret" ? "flex" : "none";
   $("sCountVal").textContent = S.secretCount;
   if (S.dan === "secret"){
-    $("examTimeTxt").textContent = "カウントダウン " + (S.secretCount / 9) + "分";
+    $("examTimeTxt").innerHTML = numWrap("カウントダウン " + (S.secretCount / 9) + "分");
     $("examNoteTxt").textContent = S.secretCount === 9
       ? "しけんは1分固定です"
       : S.secretCount + "問（9問で1分）で計算しています";
@@ -646,14 +649,14 @@ function refreshOrderUI(){
   $("qCountVal").textContent = S.qCount;
   if (S.dan === "all" && S.selOrder === "random"){
     var sec = S.qCount * 6;
-    $("examTimeTxt").textContent =
-      "カウントダウン " + Math.floor(sec / 60) + "分" + (sec % 60) + "秒";
+    $("examTimeTxt").innerHTML =
+      numWrap("カウントダウン " + Math.floor(sec / 60) + "分" + (sec % 60) + "秒");
     $("examNoteTxt").textContent = S.qCount + "問 × 6秒 で計算しています";
   } else if (S.dan === "all"){
-    $("examTimeTxt").textContent = "カウントダウン 8分";
+    $("examTimeTxt").innerHTML = numWrap("カウントダウン 8分");
     $("examNoteTxt").textContent = "81問・しけんは8分固定です";
   } else if (S.dan !== "secret") {
-    $("examTimeTxt").textContent = "カウントダウン 1分";
+    $("examTimeTxt").innerHTML = numWrap("カウントダウン 1分");
     $("examNoteTxt").textContent = "しけんは1分固定です";
   }
   $("tmModes").style.display = exam ? "none" : "flex";
@@ -887,7 +890,7 @@ function updateTimer(){
   if (S.mode !== "normal" || S.finished) return;
   var elapsed = (Date.now() - S.startTime) / 1000;
   if (S.timeLimit === null){
-    $("timerLabel").textContent = "時間 " + mmss(elapsed);
+    $("timerLabel").innerHTML = numWrap("時間 " + mmss(elapsed));
   } else {
     var remain = S.timeLimit - elapsed;
     if (remain <= 0){
@@ -896,7 +899,7 @@ function updateTimer(){
       showResult();
       return;
     }
-    $("timerLabel").textContent = "残り " + mmss(Math.ceil(remain));
+    $("timerLabel").innerHTML = numWrap("残り " + mmss(Math.ceil(remain)));
   }
 }
 function startNaoshi(){
@@ -1102,10 +1105,10 @@ function showResult(){
     : (S.dan === "secret"
       ? secretName() + (S.secretCount !== 9 ? " " + S.secretCount + "問" : "")
       : S.dan + " のだん");
-  $("settingsText").innerHTML = danText + "（" + (S.playMode === "exam" ? "しけん" : "れんしゅう") + "）<br>"
-    + (orderNames[S.order] || "") + "／" + timeName;
-  $("scoreText").textContent = S.resultScore + "点／" + S.resultItems.length + "点";
-  $("elapsedText").textContent = formatElapsed(S.elapsed || 0);
+  $("settingsText").innerHTML = numWrap(danText) + "（" + (S.playMode === "exam" ? "しけん" : "れんしゅう") + "）<br>"
+    + (orderNames[S.order] || "") + "／" + numWrap(timeName);
+  $("scoreText").innerHTML = numWrap(S.resultScore + "点／" + S.resultItems.length + "点");
+  $("elapsedText").innerHTML = numWrap(formatElapsed(S.elapsed || 0));
   var hasWrong = S.resultWrong.length > 0;
   var showNaoshi = hasWrong && !S.naoshiCompleted && S.playMode !== "exam";
   $("naoshiNote").style.display = showNaoshi ? "" : "none";
