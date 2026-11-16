@@ -294,6 +294,12 @@
         <label><input type="radio" name="fontChoice" value="kyokasho" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> きょうかしょ</label>
         <label><input type="radio" name="fontChoice" value="kyokashoB" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> きょうかしょ（太字）</label>
       </div></div>
+    <div class="row"><label>数字の大きさ</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
+        <label><input type="radio" name="numSize" value="small" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 小</label>
+        <label><input type="radio" name="numSize" value="medium" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 中</label>
+        <label><input type="radio" name="numSize" value="large" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 大</label>
+      </div></div>
     <div id="startError" style="display:none;background:#5a1a1a;color:#ffd7d7;border:1px solid #ff5252;border-radius:10px;padding:10px 14px;margin:18px 0 0;font-size:14px;line-height:1.6"></div>
     <div class="btnrow-settings">
       <button id="settingsBackBtn">戻る</button>
@@ -1156,6 +1162,10 @@ const SETTINGS_KEY = "flashAnzanSettingsV1";
    新しいフォントで測り直す */
 const FONT_FAMILY_BY_CHOICE = { soroban: '"abacus2"', kyokasho: '"kleeone"', kyokashoB: '"kleeonebold"' };
 let numFontChoice = "soroban";
+/* 数字の大きさ（フラッシュ表示のみ）: 大=従来の大きさ / 中=公式ソフトの
+   大きさ（3桁・1組で画面高の約19%）/ 小=中からさらに同じ比率で縮小 */
+const NUM_SIZE_SCALES = {small: 0.41, medium: 0.64, large: 1.0};
+let numSizeChoice = "medium";
 function applyFontChoice(v){
   numFontChoice = FONT_FAMILY_BY_CHOICE[v] ? v : "soroban";
   document.documentElement.classList.toggle("num-bold", numFontChoice === "kyokashoB");
@@ -1165,6 +1175,8 @@ function applyFontChoice(v){
 }
 document.querySelectorAll('input[name="fontChoice"]').forEach(r =>
   r.addEventListener("change", () => { applyFontChoice(r.value); saveSettings(); }));
+document.querySelectorAll('input[name="numSize"]').forEach(r =>
+  r.addEventListener("change", () => { numSizeChoice = r.value; saveSettings(); }));
 function saveSettings(){
   try{
     const data = {
@@ -1176,7 +1188,8 @@ function saveSettings(){
       repeatMode: checkedVal("repeatMode", "off"),
       presentMode: checkedVal("presentMode", "simul"), layoutPref,
       confirmQuestions: $("confirmQuestions").value,
-      fontChoice: checkedVal("fontChoice", "soroban")
+      fontChoice: checkedVal("fontChoice", "soroban"),
+      numSize: checkedVal("numSize", "medium")
     };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
   }catch(e){ /* 保存できない環境では何もしない */ }
@@ -1201,6 +1214,8 @@ function loadSettings(){
   setVal("confirmQuestions", data.confirmQuestions);
   setRadio("fontChoice", data.fontChoice);
   applyFontChoice(data.fontChoice || "soroban");
+  setRadio("numSize", data.numSize);
+  numSizeChoice = NUM_SIZE_SCALES[data.numSize] ? data.numSize : "medium";
   refreshSeriesState(); refreshTimingState(); refreshDigitModeState(); refreshAnswerSignState();
 }
 loadSettings();
@@ -1418,7 +1433,9 @@ function fitFlashFont(){
     ? Math.min(window.innerWidth * 0.36, window.innerHeight * 0.46, 560)
     : Math.min(cellW * 0.36, cellH * 0.46, 340);
   const maxW = cfg.series <= 1 ? window.innerWidth * 0.92 : cellW * 0.92;
-  flashFontSize = fitSizePx(flashCells[0], referenceText(), base, maxW);
+  flashFontSize = Math.max(6, Math.round(
+    fitSizePx(flashCells[0], referenceText(), base, maxW)
+    * (NUM_SIZE_SCALES[numSizeChoice] || 1)));
   flashCells.forEach(d => { d.style.fontSize = flashFontSize + "px"; });
   applyFlashAlign();
   clampFlashSizeToLayout();   /* 1組でも実測ガードを効かせ、端へのはみ出しを絶対に残さない */
