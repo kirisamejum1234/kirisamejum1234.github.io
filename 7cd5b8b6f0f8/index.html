@@ -1545,7 +1545,22 @@ function fitSizePx(el, text, basePx, maxW){
   size = Math.min(size, maxW / Math.max(estEm, 0.3));
   /* 太字の輪郭太らせは実測の幅より見た目が広がるため、その分を差し引く */
   if(document.documentElement.classList.contains("num-bold")) size *= 0.92;
-  return Math.max(20, Math.floor(size));
+  const fitted = Math.floor(size);
+  if(fitted >= 20) return fitted;
+  /* 20pxでははみ出してしまう長いテキスト（大きな桁数の答えなど）だけ、
+     収まる大きさまで下げる。20は「収まるとき」の下限であって、
+     収まらないときは収める方を優先する */
+  let w20;
+  if(_measureCtx){
+    const cs = getComputedStyle(el);
+    _measureCtx.font = cs.fontWeight + " 20px " + cs.fontFamily;
+    w20 = _measureCtx.measureText(text).width || 1;
+    if(document.documentElement.classList.contains("num-bold")) w20 *= 1.04;
+  } else {
+    w20 = 20 * estEm * 0.62;
+  }
+  if(w20 <= maxW) return 20;
+  return Math.max(1, Math.floor(20 * maxW / w20));
 }
 if(document.fonts && document.fonts.load){
   /* フォント取得に失敗する環境でもエラー扱いにしない（表示は代替フォントで続く） */
@@ -1688,8 +1703,8 @@ function clampFlashSizeToLayout(){
       }
     }
     if(k >= 0.999) break;
-    size = Math.max(6, Math.floor(size * k * 100) / 100);
-    if(size <= 6) break;
+    size = Math.max(1, Math.floor(size * k * 100) / 100);
+    if(size <= 1) break;
   }
   flashFontSize = size;
   flashCells.forEach((d, i) => { d.style.fontSize = size + "px"; d.textContent = saved[i][0]; d.style.visibility = saved[i][1]; });
