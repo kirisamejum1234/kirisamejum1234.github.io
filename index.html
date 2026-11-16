@@ -235,7 +235,7 @@
   </div>
   <h1>多機能フラッシュ暗算</h1>
   <div class="form">
-    <div class="row"><label>最小桁数 <span class="note">例:2→21</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="minDigits" data-step="-1">−</button><input id="minDigits" type="number" inputmode="numeric" min="1" value="2"><button type="button" class="stepbtn" data-target="minDigits" data-step="1">＋</button></div></div>
+    <div class="row" id="minDigitsRow"><label>最小桁数 <span class="note">例:2→21</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="minDigits" data-step="-1">−</button><input id="minDigits" type="number" inputmode="numeric" min="1" value="2"><button type="button" class="stepbtn" data-target="minDigits" data-step="1">＋</button></div></div>
     <div class="row"><label>最大桁数 <span class="note">例:3→123</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="maxDigits" data-step="-1">−</button><input id="maxDigits" type="number" inputmode="numeric" min="1" value="3"><button type="button" class="stepbtn" data-target="maxDigits" data-step="1">＋</button></div></div>
     <div class="row"><label>口数 <span class="note">数字の個数</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="mouth" data-step="-1">−</button><input id="mouth" type="number" inputmode="numeric" min="1" value="5"><button type="button" class="stepbtn" data-target="mouth" data-step="1">＋</button></div></div>
     <div class="row"><label>時間の決め方</label>
@@ -243,8 +243,8 @@
         <label><input type="radio" name="timingMode" value="total" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 全体の秒数で決める</label>
         <label><input type="radio" name="timingMode" value="per" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 1つの数字の秒数で決める</label>
       </div></div>
-    <div class="row sec-row"><label>全体の秒数 <span class="note">小数可</span></label><div class="stepper sec"><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="-0.1">−0.1</button><input id="totalSeconds" type="text" inputmode="decimal" value="5.0"><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="1">＋1</button></div></div>
-    <div class="row sec-row"><label>数字表示秒数 <span class="note">小数可</span></label><div class="stepper sec"><button type="button" class="stepbtn lbl" data-target="seconds" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="seconds" data-step="-0.1">−0.1</button><input id="seconds" type="text" inputmode="decimal" value="1.0"><button type="button" class="stepbtn lbl" data-target="seconds" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="seconds" data-step="1">＋1</button></div></div>
+    <div class="row sec-row" id="totalSecondsRow"><label>全体の秒数 <span class="note">小数可</span></label><div class="stepper sec"><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="-0.1">−0.1</button><input id="totalSeconds" type="text" inputmode="decimal" value="5.0"><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="1">＋1</button></div></div>
+    <div class="row sec-row" id="secondsRow"><label>数字表示秒数 <span class="note">小数可</span></label><div class="stepper sec"><button type="button" class="stepbtn lbl" data-target="seconds" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="seconds" data-step="-0.1">−0.1</button><input id="seconds" type="text" inputmode="decimal" value="1.0"><button type="button" class="stepbtn lbl" data-target="seconds" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="seconds" data-step="1">＋1</button></div></div>
     <p class="note" style="margin:-2px 0 10px">全体の秒数 = カウントダウンが終わってから、最後の数字が終わるまでの時間です</p>
     <div class="row"><label>桁数の出し方</label>
       <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
@@ -269,6 +269,13 @@
         <label><input type="radio" name="subStyle" value="hikitsuzukeru" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 引き続ける（最初だけプラス、あとは全部引き算）</label>
         <p class="note" id="subStyleNote" style="margin:0"></p>
         <p id="subStyleWarn" style="margin:0;color:#ff6961;font-size:12px;font-weight:bold"></p>
+      </div></div>
+    <div class="row" id="subCountRow"><label>引き算の数 <span class="note">ふつうの時</span></label>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+        <div><input id="subCount" type="number" inputmode="numeric" min="1" placeholder="おまかせ"> <span class="note">口（空欄＝おまかせ）</span></div>
+        <label><input type="radio" name="subArrange" value="random" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> ランダム</label>
+        <label><input type="radio" name="subArrange" value="together" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 連続する</label>
+        <label><input type="radio" name="subArrange" value="separate" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 連続しない</label>
       </div></div>
     <div class="row"><label>同じ数字の連続</label>
       <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
@@ -685,7 +692,49 @@ function makeHikitsuzukeruNever(minD, maxD, mouth, vary, noRepeat){
   }
   return null;
 }
-function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyle){
+/* 引き算にする位置の集合を返す（PC版 _sub_positions と同じ考え方）。
+   並び方は「なるべく」の指定: 連続しないは隣り合う組数が一番少ない並びから、
+   連続するは1かたまりの並びから、ランダムは完全に無作為に選ぶ。
+   どの並びにするかは問題ごとに毎回引き直す */
+function subPositions(mouth, count, arrange, answerMode){
+  const tail = []; for(let i = 1; i < mouth; i++) tail.push(i);
+  count = Math.min(count, tail.length);
+  if(count <= 0) return new Set();
+  const midOk = pos => {
+    if(answerMode !== "mid") return true;
+    for(const i of pos){
+      if(i > mouth - 2) continue;
+      for(let j = i + 1; j < mouth; j++) if(!pos.has(j)) return true;
+    }
+    return false;
+  };
+  const sample = () => { const a = [...tail]; for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return new Set(a.slice(0, count)); };
+  if(arrange === "together"){
+    const starts = []; for(let s = 1; s <= mouth - count; s++) starts.push(s);
+    for(let i = starts.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [starts[i], starts[j]] = [starts[j], starts[i]]; }
+    for(const s of starts){ const pos = new Set(); for(let k = s; k < s + count; k++) pos.add(k); if(midOk(pos)) return pos; }
+    const s0 = starts.length ? starts[0] : 1; const pos = new Set(); for(let k = s0; k < s0 + count; k++) pos.add(k); return pos;
+  }
+  if(arrange === "separate"){
+    let nComb = 1; for(let i = 0; i < count; i++) nComb = nComb * (tail.length - i) / (i + 1);
+    let cands;
+    if(nComb <= 20000){
+      cands = []; const cur = [];
+      const rec = (start) => { if(cur.length === count){ cands.push(new Set(cur)); return; } for(let i = start; i < tail.length; i++){ cur.push(tail[i]); rec(i + 1); cur.pop(); } };
+      rec(0);
+    } else cands = Array.from({length: 300}, sample);
+    const adjPairs = pos => { let n = 0; pos.forEach(i => { if(pos.has(i + 1)) n++; }); return n; };
+    const best = Math.min(...cands.map(adjPairs));
+    let pool = cands.filter(c => adjPairs(c) === best);
+    const feasible = pool.filter(midOk);
+    if(feasible.length) pool = feasible;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  let pos = sample();
+  for(let t = 0; t < 50 && !midOk(pos); t++) pos = sample();
+  return pos;
+}
+function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyle, subCount, subArrange){
   if(sub && subStyle === "hikitsuzukeru" && answerMode === "mid") answerMode = "never";
   if(sub && subStyle === "hikitsuzukeru" && answerMode === "never" && mouth >= 2){
     // 引き続ける・マイナスにならない専用の作り方（1口目は最大桁数）
@@ -712,6 +761,11 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyl
     // answerMode: "never"=途中も答えもマイナスにならない /
     //             "mid"=途中はマイナスになるが答えはプラス（口数3以上） /
     //             "negative"=答えがマイナスになる
+    // 引き算の数が指定されている場合は、符号の位置を先に決めて固定する
+    // （「引き続ける」は全部マイナスが定義なので対象外）
+    let positions = null;
+    if(subCount && subStyle !== "hikitsuzukeru")
+      positions = subPositions(mouth, subCount, subArrange, answerMode);
     let bestNeg = null, bestNever = null, bestMid = null;
     let bestNegH = null, bestNeverH = null, bestMidH = null, firstHard = null;
     for(let attempt = 0; attempt < 1000; attempt++){
@@ -722,8 +776,12 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyl
         for(let i = 1; i < mouth; i++) cand.push(-makeNumber(minD, maxD, vary));
       } else {
         cand = Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
-        for(let i = 1; i < cand.length; i++) if(Math.random() < 0.5) cand[i] = -cand[i];
-        if(cand.every(n => n > 0)){ const idx = rand(1, cand.length - 1); cand[idx] = -cand[idx]; }
+        if(positions){
+          positions.forEach(i => { cand[i] = -cand[i]; });
+        } else {
+          for(let i = 1; i < cand.length; i++) if(Math.random() < 0.5) cand[i] = -cand[i];
+          if(cand.every(n => n > 0)){ const idx = rand(1, cand.length - 1); cand[idx] = -cand[idx]; }
+        }
       }
       let run = 0; const prefs = cand.map(n => (run += n));
       const total = prefs[prefs.length - 1];
@@ -866,7 +924,9 @@ function customSummary(c){
   if(c.series > 1) s += `　${c.series}組`;
   if(c.sub){
     const mode = c.answerMode === "mid" ? "途中だけマイナス" : c.answerMode === "negative" ? "答えがマイナス" : "マイナスにならない";
-    s += c.subStyle === "hikitsuzukeru" ? `　引き算オン（引き続ける・${mode}）` : `　引き算オン（${mode}）`;
+    s += c.subStyle === "hikitsuzukeru" ? `　引き算オン（引き続ける・${mode}）`
+      : c.subCount ? `　引き算オン（${mode}・引き算${c.subCount}口・${({together: "連続する", separate: "連続しない"})[c.subArrange] || "ランダム"}）`
+      : `　引き算オン（${mode}）`;
   }
   if(!c.allowRepeat) s += "　同じ数字の連続オフ";
   return s;
@@ -982,11 +1042,12 @@ function refreshSeriesState(){
     : (layoutPref === "row" && n >= 11) ? "col" : layoutPref;   /* 横並びは10組まで（11組以上は数字が小さすぎて重なるため縦並びで代用し、設定は記憶する） */
   (effLayout === "col" ? colR : effLayout === "shape" ? shapeR : rowR).checked = true;
   document.querySelectorAll('input[name="presentMode"]').forEach(r => { r.disabled = n < 2; });
-  $("presentRow").style.opacity = n < 2 ? "0.4" : "1";
+  // 1組だけの間は、出し方・配置の行を隠す（値はそのまま残る）
+  $("presentRow").style.display = n < 2 ? "none" : "";
   rowR.disabled = n < 2 || n >= 11;
   colR.disabled = n < 2;
   shapeR.disabled = n < 3;
-  $("layoutRow").style.opacity = n < 2 ? "0.4" : "1";
+  $("layoutRow").style.display = n < 2 ? "none" : "";
   $("layoutShapeLabel").textContent = n === 4 ? "四角" : (n >= 5 ? "多角形" : "三角");
 }
 $("seriesCount").addEventListener("input", refreshSeriesState);
@@ -1038,8 +1099,18 @@ function refreshAnswerSignState(){
   document.querySelectorAll('input[name="subStyle"]').forEach(r => {
     r.disabled = !on || (r.value === "hikitsuzukeru" && !(mouth >= 2));
   });
-  $("answerSignRow").style.opacity = on ? "1" : "0.4";
-  $("subStyleRow").style.opacity = on ? "1" : "0.4";
+  // 引き算オフの間は、答え・出し方・引き算の数の行を隠す（値はそのまま残る）。
+  // 引き算の数は「引き続ける」の間も隠す
+  $("answerSignRow").style.display = on ? "" : "none";
+  $("subStyleRow").style.display = on ? "" : "none";
+  $("subCountRow").style.display = (on && !hiki) ? "" : "none";
+  // 引き算の数・並び方: 引き算オン＋ふつう＋口数2以上で有効。
+  // 並び方は数が決まっている時だけ意味がある
+  const cntOn = on && !hiki && mouth >= 2;
+  $("subCount").disabled = !cntOn;
+  const hasCount = $("subCount").value.trim() !== "";
+  document.querySelectorAll('input[name="subArrange"]').forEach(r => { r.disabled = !(cntOn && hasCount); });
+
   const note = $("subStyleNote");
   if(hiki){
     let t = "1口目だけ最大桁数のプラスの数字が出て、2口目以降は全部引き算になります";
@@ -1064,6 +1135,7 @@ function refreshAnswerSignState(){
       : "※引き続けるでは、1口目はいつも最大桁数です。引く数字は最小桁数で出ます";
   } else dnote.textContent = "";
 }
+$("subCount").addEventListener("input", refreshAnswerSignState);
 $("mouth").addEventListener("input", refreshAnswerSignState);
 $("mouth").addEventListener("change", refreshAnswerSignState);
 document.querySelectorAll('input[name="subMode"]').forEach(r => r.addEventListener("change", refreshAnswerSignState));
@@ -1084,10 +1156,11 @@ function refreshTimingState(){
   const per = checkedVal("timingMode", "total") === "per";
   $("seconds").disabled = !per;
   $("totalSeconds").disabled = per;
-  $("seconds").style.opacity = per ? "1" : "0.4";
   setStepEnabled("seconds", per);
   setStepEnabled("totalSeconds", !per);
-  $("totalSeconds").style.opacity = per ? "0.4" : "1";
+  // 選んでいない方の行は隠す（値はそのまま残る）
+  $("totalSecondsRow").style.display = per ? "none" : "";
+  $("secondsRow").style.display = per ? "" : "none";
 }
 document.querySelectorAll('input[name="timingMode"]').forEach(r => r.addEventListener("change", refreshTimingState));
 refreshTimingState();
@@ -1101,8 +1174,9 @@ function refreshDigitModeState(){
     && checkedVal("subStyle", "normal") === "hikitsuzukeru";
   const useMin = random || hiki;
   $("minDigits").disabled = !useMin;
-  $("minDigits").style.opacity = useMin ? "1" : "0.4";
   setStepEnabled("minDigits", useMin);
+  // 使わない間は最小桁数の行を隠す（値はそのまま残る）
+  $("minDigitsRow").style.display = useMin ? "" : "none";
 }
 document.querySelectorAll('input[name="digitMode"]').forEach(r => r.addEventListener("change", refreshDigitModeState));
 refreshDigitModeState();
@@ -1157,6 +1231,21 @@ function readConfig(){
   if(c.sub && c.subStyle === "hikitsuzukeru" && c.answerMode === "mid") return startError("「引き続ける」は「途中だけマイナス（答えはプラス）」と組み合わせできません。");
   if(c.sub && c.subStyle === "hikitsuzukeru" && c.answerMode === "negative" && c.mouth < 3) return startError("「引き続ける」で「答えがマイナスになる」は口数3以上で設定してください（口数2では最初の数字が大きいため、答えはマイナスになりません）。");
   if(c.sub && c.subStyle === "hikitsuzukeru" && c.answerMode === "never" && !hikiNeverPossible(c.minD, c.maxD, c.mouth)) return startError("この設定では「引き続ける・マイナスにならない」問題を作れません（口数を減らすか、最大桁数を上げてください）。");
+  // 引き算の数（ふつうの時のみ）: 空欄・不正値なら0=おまかせ。口数-1を超えたら口数-1に丸める
+  let subCount = 0;
+  const subArrange = checkedVal("subArrange", "random");
+  if(c.sub && c.subStyle === "normal" && c.mouth >= 2){
+    const v = parseInt(zenNum($("subCount").value), 10);
+    if(!isNaN(v) && v >= 1) subCount = Math.min(v, c.mouth - 1);
+  }
+  c.subCount = subCount; c.subArrange = subArrange;
+  // 並び方や答えモードの条件を完全には満たせない組み合わせでは、止めずに
+  // 「なるべくそうする」扱いにし、確認画面で知らせる
+  c.subArrangeNote = "";
+  if(subCount > 0 && subArrange === "separate" && subCount > Math.floor(c.mouth / 2))
+    c.subArrangeNote = `※引き算${subCount}口を連続させない並びは、この口数では作れません。なるべく連続させません`;
+  else if(subCount > 0 && c.answerMode === "mid" && subCount >= c.mouth - 1)
+    c.subArrangeNote = "※この設定では「途中だけマイナス（答えはプラス）」を完全には満たせません。なるべく条件に近づけて作ります";
   // 時間設定は選んだ決め方の方だけを検証する
   if(c.timingMode === "per" && !(c.seconds > 0)) return startError("数字表示秒数には0より大きい数値を入力してください。");
   if(c.timingMode === "total" && !(c.totalSeconds > 0)) return startError("全体の秒数には0より大きい数値を入力してください。");
@@ -1198,6 +1287,7 @@ function saveSettings(){
       subMode: checkedVal("subMode", "off"), answerSignMode: checkedVal("answerSignMode", "never"),
       repeatMode: checkedVal("repeatMode", "off"),
       presentMode: checkedVal("presentMode", "simul"), layoutPref,
+      subCount: $("subCount").value, subArrange: checkedVal("subArrange", "random"),
       confirmQuestions: $("confirmQuestions").value,
       fontChoice: checkedVal("fontChoice", "soroban"),
       numSize: checkedVal("numSize", "medium")
@@ -1211,6 +1301,9 @@ function loadSettings(){
   if(!data) return;
   const setVal = (id, v) => { if(v !== undefined && v !== null) $(id).value = v; };
   const setRadio = (name, v) => { if(!v) return; const r = document.querySelector(`input[name="${name}"][value="${v}"]`); if(r) r.checked = true; };
+  setVal("subCount", data.subCount);
+  // 旧バージョンの「交互」は「連続しない」に読み替える
+  setRadio("subArrange", data.subArrange === "alternate" ? "separate" : data.subArrange);
   setVal("minDigits", data.minDigits); setVal("maxDigits", data.maxDigits);
   setVal("mouth", data.mouth); setVal("seconds", data.seconds); setVal("totalSeconds", data.totalSeconds);
   setVal("seriesCount", data.seriesCount);
@@ -1248,6 +1341,7 @@ $("startBtn").addEventListener("click", () => {
     $("confirmTitle").textContent = "自分で設定";
     $("confirmSpec").textContent = customSummary(c);
     const notes = [];
+    if(c.subArrangeNote) notes.push(c.subArrangeNote);
     if(c.sub && c.subStyle === "hikitsuzukeru"){
       if(c.answerMode === "negative"){
         notes.push(`※引き続ける：2口目以降はすべて引く計算です。1口目の桁数は大きくなります（${c.maxD + 1}桁です）`);
@@ -1519,13 +1613,19 @@ function clampFlashSizeToLayout(){
     const sr = stage.getBoundingClientRect();
     const rs = flashCells.map(d => inkRectOf(d));
     const cx = i => (rs[i].left + rs[i].right) / 2, cy = i => (rs[i].top + rs[i].bottom) / 2;
+    /* 組と組の間隔は、最低でも数字1個分の幅（縦は数字の高さの3割）を空ける。
+       間隔が詰まっていると別々の組の数字が続けて読めてしまい、1つの大きな
+       数字に見えてしまうため（PC版と同じ考え方） */
+    const gapX = Math.max(inkWidthOf(flashCells[0], "9"), 1);
     let k = 1;
     for(let i = 0; i < rs.length; i++){
       k = Math.min(k, 2 * (cx(i) - sr.left - GAP) / rs[i].width, 2 * (sr.right - cx(i) - GAP) / rs[i].width);
       k = Math.min(k, 2 * (cy(i) - sr.top - GAP) / rs[i].height, 2 * (sr.bottom - cy(i) - GAP) / rs[i].height);
+      const gapY = Math.max(GAP, rs[i].height * 0.30);
       for(let j = i + 1; j < rs.length; j++){
-        const kx = 2 * Math.max(Math.abs(cx(i) - cx(j)) - GAP, 0) / (rs[i].width + rs[j].width);
-        const ky = 2 * Math.max(Math.abs(cy(i) - cy(j)) - GAP, 0) / (rs[i].height + rs[j].height);
+        const dxj = Math.abs(cx(i) - cx(j)), dyj = Math.abs(cy(i) - cy(j));
+        const kx = dxj > 0 ? dxj / ((rs[i].width + rs[j].width) / 2 + gapX) : 0;
+        const ky = dyj > 0 ? dyj / ((rs[i].height + rs[j].height) / 2 + gapY) : 0;
         k = Math.min(k, Math.max(kx, ky));   // 横か縦のどちらかで離れれば重ならない
       }
     }
@@ -2175,7 +2275,7 @@ function makeSeries(){
   }
   currentSeries = [];
   for(let s = 0; s < cfg.series; s++)
-    currentSeries.push(makeProblem(cfg.minD, cfg.maxD, cfg.mouth, cfg.vary, cfg.sub, cfg.answerMode, cfg.allowRepeat === false, cfg.subStyle));
+    currentSeries.push(makeProblem(cfg.minD, cfg.maxD, cfg.mouth, cfg.vary, cfg.sub, cfg.answerMode, cfg.allowRepeat === false, cfg.subStyle, cfg.subCount || 0, cfg.subArrange || "random"));
   currentNumbers = currentSeries[0] || [];
 }
 function nextProblem(){
