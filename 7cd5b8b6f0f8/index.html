@@ -667,17 +667,22 @@ const beepIncorrect = () => { playClip("wrong", WRONG_WAV_B64, () => { tone(170,
 
 /* ---------- 問題生成 ---------- */
 const rand = (a,b) => Math.floor(Math.random() * (b - a + 1)) + a;
+/* 問題の数字は BigInt で扱う（ふつうの Number では16桁以上で計算が
+   ずれてしまうため）。桁ごとに数字を作るので、何桁でも正確 */
+const absN = n => (n < 0n ? -n : n);
 function makeNumber(minD, maxD, vary){
   const d = vary ? rand(minD, maxD) : maxD;
-  if(d <= 1) return rand(1, 9);
-  return rand(Math.pow(10, d - 1), Math.pow(10, d) - 1);
+  if(d <= 1) return BigInt(rand(1, 9));
+  let s = String(rand(1, 9));
+  for(let i = 1; i < d; i++) s += String(rand(0, 9));
+  return BigInt(s);
 }
 /* 「同じ数字の連続オフ」用: 数字の桁の集合と、重なりの判定。
    符号違い（5 と -5）も「同じ数字」として扱う */
-const digitSetOf = n => new Set(String(Math.abs(n)).split(""));
-function hasInternalDup(n){ const s = String(Math.abs(n)); return new Set(s).size !== s.length; }
+const digitSetOf = n => new Set(String(absN(n)).split(""));
+function hasInternalDup(n){ const s = String(absN(n)); return new Set(s).size !== s.length; }
 function isHardRepeat(arr){
-  for(let i = 1; i < arr.length; i++) if(Math.abs(arr[i]) === Math.abs(arr[i - 1])) return true;
+  for(let i = 1; i < arr.length; i++) if(absN(arr[i]) === absN(arr[i - 1])) return true;
   return false;
 }
 function isCleanRepeat(arr){
@@ -692,7 +697,7 @@ function hikiNeverPossible(minD, maxD, mouth){
   /* 「引き続ける・マイナスにならない」が作れる設定か。
      1口目は最大桁数（最大 10^最大桁数-1）、引く数は最小でも
      10^(最小桁数-1) ずつ引く。これでも答えが1以上残せる設定だけ作れる */
-  return (Math.pow(10, maxD) - 1) - (mouth - 1) * Math.pow(10, minD - 1) >= 1;
+  return (10n ** BigInt(maxD) - 1n) - BigInt(mouth - 1) * (10n ** BigInt(minD - 1)) >= 1n;
 }
 function hikiSubNumber(minD, maxD, vary){
   /* 引き続けるの引く数（絶対値）。桁数の出し方がランダムのときは
@@ -703,14 +708,14 @@ function makeHikitsuzukeruNever(minD, maxD, mouth, vary, noRepeat){
   /* 「引き続ける・マイナスにならない」を構成的に作る。1口目は最大桁数。
      途中経過から次に引ける上限を計算しながら決めるので、途中も答えも
      必ずプラスに収まる。作れない設定では null を返す */
-  const lo = Math.pow(10, minD - 1);
+  const lo = 10n ** BigInt(minD - 1);
   for(let t = 0; t < 300; t++){
     const first = makeNumber(maxD, maxD, false);
     const rest = [];
     let remaining = first, ok = true;
     for(let i = 0; i < mouth - 1; i++){
       const stepsLeft = mouth - 2 - i;
-      const cap = remaining - stepsLeft * lo - 1;
+      const cap = remaining - BigInt(stepsLeft) * lo - 1n;
       if(cap < lo){ ok = false; break; }
       let val = null;
       for(let k = 0; k < 60; k++){
@@ -722,7 +727,7 @@ function makeHikitsuzukeruNever(minD, maxD, mouth, vary, noRepeat){
       if(val === null){
         val = lo;
         if(noRepeat && rest.length && val === rest[rest.length - 1]){
-          val = lo + 1;
+          val = lo + 1n;
           if(val > cap){ ok = false; break; }
         }
       }
@@ -783,8 +788,8 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyl
     for(let attempt = 0; attempt < 600; attempt++){
       const cand = [makeNumber(maxD, maxD, false)];
       for(let i = 1; i < mouth; i++) cand.push(-hikiSubNumber(minD, maxD, vary));
-      let run = 0; const prefs = cand.map(n => (run += n));
-      if(prefs[prefs.length - 1] > 0 && Math.min(...prefs) >= 0){
+      let run = 0n; const prefs = cand.map(n => (run += n));
+      if(prefs[prefs.length - 1] > 0n && prefs.reduce((a, b) => a < b ? a : b) >= 0n){
         const hardOk = !noRepeat || !isHardRepeat(cand);
         if(hardOk && (!noRepeat || isCleanRepeat(cand))) return cand;
         if(noRepeat && hardOk && !best) best = cand;
@@ -821,16 +826,16 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyl
           positions.forEach(i => { cand[i] = -cand[i]; });
         } else {
           for(let i = 1; i < cand.length; i++) if(Math.random() < 0.5) cand[i] = -cand[i];
-          if(cand.every(n => n > 0)){ const idx = rand(1, cand.length - 1); cand[idx] = -cand[idx]; }
+          if(cand.every(n => n > 0n)){ const idx = rand(1, cand.length - 1); cand[idx] = -cand[idx]; }
         }
       }
-      let run = 0; const prefs = cand.map(n => (run += n));
+      let run = 0n; const prefs = cand.map(n => (run += n));
       const total = prefs[prefs.length - 1];
-      const minPref = Math.min(...prefs);
-      const dipsMid = prefs.slice(0, -1).some(p => p < 0);
-      const modeOk = answerMode === "negative" ? total < 0
-                   : answerMode === "mid" ? (total > 0 && dipsMid)
-                   : (total > 0 && minPref >= 0);
+      const minPref = prefs.reduce((a, b) => a < b ? a : b);
+      const dipsMid = prefs.slice(0, -1).some(p => p < 0n);
+      const modeOk = answerMode === "negative" ? total < 0n
+                   : answerMode === "mid" ? (total > 0n && dipsMid)
+                   : (total > 0n && minPref >= 0n);
       const hardOk = !noRepeat || !isHardRepeat(cand);
       // 条件を満たし、（オフ時は）同じ数字の連続がなく桁の重なりもない候補は即採用
       if(modeOk && hardOk && (!noRepeat || isCleanRepeat(cand))) return cand;
@@ -915,9 +920,9 @@ function gradeNumber(digits, kind){
   /* kind: "zero"=下1桁が0 / "nonzero"=下1桁が0でない / "dan"=100の倍数でない3桁 */
   for(let t = 0; t < 500; t++){
     const n = makeNumber(digits, digits, false);
-    if(kind === "zero" && n % 10 === 0) return n;
-    if(kind === "nonzero" && n % 10 !== 0) return n;
-    if(kind === "dan" && n % 100 !== 0) return n;
+    if(kind === "zero" && n % 10n === 0n) return n;
+    if(kind === "nonzero" && n % 10n !== 0n) return n;
+    if(kind === "dan" && n % 100n !== 0n) return n;
   }
   return makeNumber(digits, digits, false);
 }
@@ -1020,7 +1025,15 @@ $("confirmStartBtn").addEventListener("click", () => { saveSettings(); if(confir
 $("settingsBackBtn").addEventListener("click", () => show("startScreen"));
 $("fsBtnTop").addEventListener("click", () => $("fsBtn").click());
 
-const fmt = n => (n === null || n === undefined || n === "") ? "" : Number(n).toLocaleString("ja-JP");
+const fmt = n => {
+  if(n === null || n === undefined || n === "") return "";
+  if(typeof n === "bigint") return n.toLocaleString("ja-JP");
+  if(typeof n === "string" && /^-?\d+$/.test(n)){
+    const neg = n.startsWith("-");
+    return (neg ? "-" : "") + (neg ? n.slice(1) : n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+  return Number(n).toLocaleString("ja-JP");
+};
 
 /* ---------- 状態 ---------- */
 let cfg = null, problemIndex = 0, currentNumbers = [], currentSeries = [], records = {}, sessionStart = null, queuedSeries = null;
@@ -1290,6 +1303,10 @@ function readConfig(){
   // 時間設定は選んだ決め方の方だけを検証する
   if(c.timingMode === "per" && !(c.seconds > 0)) return startError("数字表示秒数には0より大きい数値を入力してください。");
   if(c.timingMode === "total" && !(c.totalSeconds > 0)) return startError("全体の秒数には0より大きい数値を入力してください。");
+  // 物理的に表示できない速さは弾く（1つの数字の表示時間が短すぎると、
+  // 画面に出る前に消えてしまい、数字として見えないため）
+  if(c.timingMode === "per" && c.seconds < 0.05) return startError("この設定では設定できません（数字表示秒数が短すぎて、数字が表示されません）。0.05秒以上にしてください。");
+  if(c.timingMode === "total" && c.totalSeconds / c.mouth < 0.05) return startError(`この設定では設定できません（${c.mouth}口を${c.totalSeconds}秒で出すと、1つの数字は約${(c.totalSeconds / c.mouth).toFixed(2)}秒しか表示されず見えません）。全体の秒数を増やすか、口数を減らしてください。`);
   return c;
 }
 
@@ -1386,8 +1403,8 @@ $("startBtn").addEventListener("click", () => {
     if(c.sub && c.subStyle === "hikitsuzukeru"){
       if(c.answerMode === "negative"){
         notes.push(`※引き続ける：2口目以降はすべて引く計算です。1口目の桁数は大きくなります（${c.maxD + 1}桁です）`);
-        const ansMax = Math.abs((c.mouth - 1) * (Math.pow(10, c.maxD) - 1) - Math.pow(10, c.maxD));
-        const ansDigits = String(ansMax).length;
+        const ansMaxB = BigInt(c.mouth - 1) * (10n ** BigInt(c.maxD) - 1n) - 10n ** BigInt(c.maxD);
+        const ansDigits = (ansMaxB < 0n ? -ansMaxB : ansMaxB).toString().length;
         if(ansDigits > c.maxD)
           notes.push(`※答えが${ansDigits}桁（設定した最大桁数より${ansDigits - c.maxD}桁多い）になることがあります`);
       } else {
@@ -1864,7 +1881,7 @@ document.querySelectorAll("#keypad [data-key]").forEach(btn => {
       if(raw) raw = raw.slice(0, -1);
       else neg = false;   // 数字が無いときの⌫はマイナスを消す
     }
-    else if(raw.length < 15){ raw += key; beepFlash(); }   // 物理キー入力の時と同じ音
+    else { raw += key; beepFlash(); }   // 物理キー入力の時と同じ音（桁数の上限は設けない）
     inp.value = (neg ? "-" : "") + raw;
     inp.dispatchEvent(new Event("input", { bubbles: true }));   // 既存の整形処理を通す
   });
@@ -1879,14 +1896,14 @@ $("answerBtn").addEventListener("pointerdown", e => { e.preventDefault(); submit
 function parseAnswer(v){
   const neg = v.includes("-");
   const raw = v.replace(/[^0-9]/g, "");
-  return raw === "" ? null : (neg ? -parseInt(raw, 10) : parseInt(raw, 10));   // 空白も入力として不正解扱い
+  return raw === "" ? null : (neg ? -BigInt(raw) : BigInt(raw));   // 空白も入力として不正解扱い
 }
 function submitAnswer(){
   if(!$("answerScreen").classList.contains("active")) return;   // 二重実行防止（pointerdown+click）
   /* 組ごとに採点する */
   const results = currentSeries.map((nums, s) => {
     const user = parseAnswer(answerBlocks[s] ? answerBlocks[s].input.value : "");
-    const answer = nums.reduce((a, b) => a + b, 0);
+    const answer = nums.reduce((a, b) => a + b, 0n);
     return { numbers: [...nums], answer, user, correct: user !== null && user === answer };
   });
   records[problemIndex] = { series: results, correct: results.every(r => r.correct) };
@@ -1959,11 +1976,11 @@ $("sameBtn").addEventListener("click", () => countdownThenFlash());
 function sequenceModeOk(numbers, answerMode){
   if(!numbers.length) return true;
   const prefs = [];
-  let run = 0;
+  let run = 0n;
   for(const n of numbers){ run += n; prefs.push(run); }
-  if(answerMode === "negative") return prefs[prefs.length - 1] < 0 && numbers[0] > 0;
-  if(answerMode === "mid") return prefs[prefs.length - 1] > 0 && numbers[0] > 0 && prefs.slice(0, -1).some(p => p < 0);
-  return prefs[prefs.length - 1] > 0 && Math.min(...prefs) >= 0;
+  if(answerMode === "negative") return prefs[prefs.length - 1] < 0n && numbers[0] > 0n;
+  if(answerMode === "mid") return prefs[prefs.length - 1] > 0n && numbers[0] > 0n && prefs.slice(0, -1).some(p => p < 0n);
+  return prefs[prefs.length - 1] > 0n && prefs.reduce((a, b) => a < b ? a : b) >= 0n;
 }
 /* 記録済みの数字だけを使い、条件を満たし、avoidOrder と違う並びを返す。
    作れなければ null。firstFixed（引き続ける）は1口目固定で残りだけ */
