@@ -215,6 +215,9 @@ button{touch-action:manipulation;}
   .result-left{flex:none;flex-direction:row;flex-wrap:wrap;align-items:center;}
 }
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="くくダッシュ">
 </head>
 <body>
 <div id="kukuGate" style="position:fixed;inset:0;z-index:99999;background:#10201a;color:#f2f2f2;display:flex;align-items:center;justify-content:center;font-family:'Hiragino Sans','Yu Gothic UI','Meiryo',sans-serif;">
@@ -255,6 +258,14 @@ button{touch-action:manipulation;}
 })();
 </script>
 
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(function(){});
+  });
+}
+</script>
+
 
 <!-- 0) メイン画面 -->
 <div id="scr-main" class="screen beige active">
@@ -272,7 +283,7 @@ button{touch-action:manipulation;}
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-42</span>
+    <span class="ver">ver. 20261110-43</span>
   </div>
 </div>
 
@@ -304,7 +315,7 @@ button{touch-action:manipulation;}
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-42</span>
+    <span class="ver">ver. 20261110-43</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -368,7 +379,7 @@ button{touch-action:manipulation;}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-42</span>
+    <span class="ver">ver. 20261110-43</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -432,7 +443,7 @@ button{touch-action:manipulation;}
 
 <script>
 "use strict";
-var APP_VERSION = "20261110-42";
+var APP_VERSION = "20261110-43";
 var S = {
   dan: null, order: null, mode: "normal",
   items: [], answers: [], idx: 0, input: "",
