@@ -66,6 +66,8 @@
     background:#1c1c1c; color:#fff; cursor:pointer; font-family:inherit;
   }
   button.primary { background:#00b84f; color:#fff; font-weight:bold; font-size:18px; padding:14px 40px; }
+  /* 条件を満たす並び替えが作れない問題のボタン: 押せるまま見た目だけグレー */
+  button.btn-grey { background:#3d3d3d; color:#9a9a9a; }
   button:active { opacity:.75; }
   /* 並列の選択肢ボタン（モード選択・級種別）: 片方だけ緑だと、選ぶ前から
      「そちらが推奨」に見えて誘導のようになるので同色にそろえ、押した瞬間だけ緑にする */
@@ -414,6 +416,15 @@
   </div>
 </section>
 
+<div id="reorderModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:300;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1c1c1c;border-radius:14px;padding:26px 24px;max-width:520px;width:100%;text-align:center">
+    <div id="reorderModalText" style="color:#fff;font-size:16px;line-height:1.7;margin-bottom:20px"></div>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button id="reorderYesBtn" class="primary" style="padding:12px 34px">はい</button>
+      <button id="reorderNoBtn" style="padding:12px 34px">いいえ</button>
+    </div>
+  </div>
+</div>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -1820,11 +1831,129 @@ function showJudge(results){
   const isLast = problemIndex >= cfg.questions - 1;
   $("nextBtn").style.display = isLast ? "none" : "";        // 次の問題へは最終問題以外
   $("resultRow").style.display = isLast ? "flex" : "none";  // 全問題終了時は右下の次へ→リザルト（4ボタン行の上の段に表示）
+  /* 答えモードの条件を満たす並び替えプランを先に計算し、作れない場合は
+     ボタンをグレー表示にする（押せはする。押すと警告が出る） */
+  const recJ = records[problemIndex];
+  if(recJ && recJ.series){
+    const numsJ = recJ.series.map(r => [...r.numbers]);
+    const planJ = shufflePlan(numsJ, currentSeries.map(s => [...s]));
+    judgeShufflePlan = planJ === null ? "warn" : planJ;
+    judgeReverseOk = reverseOk(numsJ);
+  } else {
+    judgeShufflePlan = "plain";
+    judgeReverseOk = true;
+  }
+  $("shuffleBtn").classList.toggle("btn-grey", judgeShufflePlan === "warn");
+  $("reverseBtn").classList.toggle("btn-grey", !judgeReverseOk);
 }
 $("newBtn").addEventListener("click", restartNew);
 $("sameBtn").addEventListener("click", () => countdownThenFlash());
 /* 元の数字の集合を一切変えず（新しい数字は作らず）、並びだけを変える。
    今までと同じ並びにはせず、できれば全ての位置が違う並びにする */
+/* 並びが答えモードの条件を満たすか（生成時の判定と同じ意味）。
+   never: 累計が一度もマイナスにならず答えはプラス /
+   mid: 途中で一度は沈み、答えはプラス、1口目がプラス /
+   negative: 答えがマイナスで、1口目がプラス */
+function sequenceModeOk(numbers, answerMode){
+  if(!numbers.length) return true;
+  const prefs = [];
+  let run = 0;
+  for(const n of numbers){ run += n; prefs.push(run); }
+  if(answerMode === "negative") return prefs[prefs.length - 1] < 0 && numbers[0] > 0;
+  if(answerMode === "mid") return prefs[prefs.length - 1] > 0 && numbers[0] > 0 && prefs.slice(0, -1).some(p => p < 0);
+  return prefs[prefs.length - 1] > 0 && Math.min(...prefs) >= 0;
+}
+/* 記録済みの数字だけを使い、条件を満たし、avoidOrder と違う並びを返す。
+   作れなければ null。firstFixed（引き続ける）は1口目固定で残りだけ */
+function shuffleModeDifferent(source, avoidOrder, answerMode, firstFixed){
+  const src = [...source], avoid = avoidOrder ? [...avoidOrder] : [...source];
+  if(src.length < 2 || new Set(src).size < 2) return src;
+  const head = firstFixed ? src.slice(0, 1) : [];
+  const tailSrc = firstFixed ? src.slice(1) : [...src];
+  if(firstFixed && (tailSrc.length < 2 || new Set(tailSrc).size < 2)) return src;
+  const ok = c => c.join(",") !== avoid.join(",") && sequenceModeOk(c, answerMode);
+  for(let k = 0; k < 200; k++){
+    const tail = [...tailSrc];
+    for(let i = tail.length - 1; i > 0; i--){ const j = rand(0, i); [tail[i], tail[j]] = [tail[j], tail[i]]; }
+    const cand = head.concat(tail);
+    if(ok(cand)) return cand;
+  }
+  for(let k = 1; k < tailSrc.length; k++){
+    const cand = head.concat(tailSrc.slice(k), tailSrc.slice(0, k));
+    if(ok(cand)) return cand;
+  }
+  const rev = head.concat([...tailSrc].reverse());
+  if(ok(rev)) return rev;
+  return null;
+}
+function reorderCtx(){
+  if(!cfg || !cfg.sub) return {need: false, mode: "never", fixed: false};
+  return {need: true, mode: cfg.answerMode || "never", fixed: cfg.subStyle === "hikitsuzukeru"};
+}
+function shufflePlan(seriesNums, avoidOrders){
+  const ctx = reorderCtx();
+  const out = [];
+  for(let s = 0; s < seriesNums.length; s++){
+    const cand = ctx.need
+      ? shuffleModeDifferent(seriesNums[s], avoidOrders[s], ctx.mode, ctx.fixed)
+      : shuffleDifferent(seriesNums[s], avoidOrders[s]);
+    if(cand === null) return null;
+    out.push(cand);
+  }
+  return out;
+}
+function reverseOk(seriesNums){
+  const ctx = reorderCtx();
+  if(!ctx.need) return true;
+  return seriesNums.every(nums => sequenceModeOk([...nums].reverse(), ctx.mode));
+}
+function allShufflePlan(){
+  const total = cfg ? cfg.questions : 0;
+  const plans = [];
+  for(let i = 0; i < total; i++){
+    const rec = records[i];
+    if(!rec || !rec.series) return null;
+    const nums = rec.series.map(r => [...r.numbers]);
+    const plan = shufflePlan(nums, nums);
+    if(plan === null) return "warn";
+    plans.push(plan);
+  }
+  return plans;
+}
+function allReverseOk(){
+  const total = cfg ? cfg.questions : 0;
+  for(let i = 0; i < total; i++){
+    const rec = records[i];
+    if(!rec || !rec.series) return true;
+    if(!reverseOk(rec.series.map(r => [...r.numbers]))) return false;
+  }
+  return true;
+}
+function reorderWarnText(kind){
+  const ctx = reorderCtx();
+  if(kind === "reverse" && ctx.fixed) return "逆順からやるとマイナスからスタートします";
+  if(ctx.mode === "mid") return "この問題は順番をかえると途中マイナスにならなくなります";
+  if(ctx.mode === "negative") return "この問題は順番をかえるとマイナスから始まります";
+  return "この問題は順番をかえると途中マイナスになります";
+}
+let reorderYesCallback = null;
+function showReorderConfirm(message, onYes){
+  $("reorderModalText").textContent = message;
+  reorderYesCallback = onYes;
+  $("reorderModal").style.display = "flex";
+}
+function hideReorderConfirm(){
+  $("reorderModal").style.display = "none";
+  reorderYesCallback = null;
+}
+$("reorderYesBtn").addEventListener("click", () => {
+  const cb = reorderYesCallback;
+  hideReorderConfirm();
+  if(cb) cb();
+});
+$("reorderNoBtn").addEventListener("click", hideReorderConfirm);
+let judgeShufflePlan = "plain", judgeReverseOk = true;
+let resultShufflePlan = "plain", resultReverseOk = true;
 function shuffleDifferent(source, avoidOrder){
   const src = [...source], avoid = avoidOrder ? [...avoidOrder] : [...source];
   if(src.length < 2 || new Set(src).size < 2) return src;
@@ -1840,9 +1969,24 @@ function shuffleDifferent(source, avoidOrder){
 }
 $("shuffleBtn").addEventListener("click", () => {
   // 元の問題の数字（記録済みのもの）が土台なので、新しい数字は絶対に出ない。
-  // 並列計算では組ごとに並べ替える
+  // 並列計算では組ごとに並べ替える。条件を満たす並びが作れる場合はそれを
+  // 使い、作れない場合は警告を出してから従来どおり並べ替える
   const rec = records[problemIndex];
   if(rec && rec.series){
+    if(Array.isArray(judgeShufflePlan)){
+      currentSeries = judgeShufflePlan.map(a => [...a]);
+      currentNumbers = currentSeries[0] || [];
+      countdownThenFlash();
+      return;
+    }
+    if(judgeShufflePlan === "warn"){
+      showReorderConfirm(reorderWarnText("shuffle"), () => {
+        currentSeries = rec.series.map((r, s) => shuffleDifferent(r.numbers, currentSeries[s]));
+        currentNumbers = currentSeries[0] || [];
+        countdownThenFlash();
+      });
+      return;
+    }
     currentSeries = rec.series.map((r, s) => shuffleDifferent(r.numbers, currentSeries[s]));
     currentNumbers = currentSeries[0] || [];
   }
@@ -1853,18 +1997,42 @@ $("toResultBtn").addEventListener("click", showResult);
 $("homeBtn1").addEventListener("click", goHome);
 $("homeBtn2").addEventListener("click", goHome);
 $("reverseBtn").addEventListener("click", () => {
-  // 記録済みの数字を逆順にする（新しい数字は作らない）。並列計算では組ごとに逆順
+  // 記録済みの数字を逆順にする（新しい数字は作らない）。並列計算では組ごとに逆順。
+  // 逆順が答えモードの条件を満たさない場合は警告を出してから逆順にする
   const rec = records[problemIndex];
   if(rec && rec.series){
-    currentSeries = rec.series.map(r => [...r.numbers].reverse());
-    currentNumbers = currentSeries[0] || [];
+    if(judgeReverseOk){
+      currentSeries = rec.series.map(r => [...r.numbers].reverse());
+      currentNumbers = currentSeries[0] || [];
+      countdownThenFlash();
+      return;
+    }
+    showReorderConfirm(reorderWarnText("reverse"), () => {
+      currentSeries = rec.series.map(r => [...r.numbers].reverse());
+      currentNumbers = currentSeries[0] || [];
+      countdownThenFlash();
+    });
+    return;
   }
   countdownThenFlash();
 });
 $("resultNewBtn").addEventListener("click", restartNew);
 $("resultSameBtn").addEventListener("click", () => restartAll("same"));
-$("resultShuffleBtn").addEventListener("click", () => restartAll("shuffle"));
-$("resultReverseBtn").addEventListener("click", () => restartAll("reverse"));
+$("resultShuffleBtn").addEventListener("click", () => {
+  if(resultShufflePlan === "warn"){
+    showReorderConfirm(reorderWarnText("shuffle"), () => restartAll("shuffle"));
+    return;
+  }
+  if(Array.isArray(resultShufflePlan)){
+    restartAll("shuffle", resultShufflePlan);
+    return;
+  }
+  restartAll("shuffle");
+});
+$("resultReverseBtn").addEventListener("click", () => {
+  if(resultReverseOk){ restartAll("reverse"); return; }
+  showReorderConfirm(reorderWarnText("reverse"), () => restartAll("reverse"));
+});
 document.addEventListener("keydown", e => {
   if(e.key !== "Enter") return;
   if(e.target && e.target.closest && e.target.closest("input, button, select, textarea")) return;  // 入力欄・ボタン上のEnterは要素本来の動作に任せる
@@ -2068,10 +2236,10 @@ function restartNew(){
   sessionStart = Date.now();
   countdownThenFlash();
 }
-function restartAll(mode){
+function restartAll(mode, queueOverride){
   const total = cfg ? cfg.questions : 0;
-  const queue = [];
-  for(let i = 0; i < total; i++){
+  const queue = queueOverride || [];
+  if(!queueOverride) for(let i = 0; i < total; i++){
     const rec = records[i];
     if(!rec || !rec.series) return;   // 記録がそろっていない場合は何もしない
     queue.push(rec.series.map(r => mode === "shuffle" ? shuffleDifferent(r.numbers, r.numbers)
@@ -2092,6 +2260,13 @@ function goHome(){ clearTimers(); show("startScreen"); }
 /* ---------- リザルト ---------- */
 function showResult(){
   clearTimers(); show("resultScreen");
+  /* 全問ぶんの並び替えプランを先に計算し、作れない問題があればボタンを
+     グレー表示にする（押せはする。押すと警告が出る） */
+  const planR = allShufflePlan();
+  resultShufflePlan = planR === null ? "plain" : planR;
+  resultReverseOk = allReverseOk();
+  $("resultShuffleBtn").classList.toggle("btn-grey", resultShufflePlan === "warn");
+  $("resultReverseBtn").classList.toggle("btn-grey", !resultReverseOk);
   const total = cfg.questions, count = cfg.series;
   const positions = layoutPositions(count, cfg.layout);
   const elapsed = sessionStart ? (Date.now() - sessionStart) / 1000 : 0;
