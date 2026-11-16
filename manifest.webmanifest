@@ -1,0 +1,23 @@
+{
+  "background_color": "#000000",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "name": "多機能フラッシュ暗算",
+  "scope": "/",
+  "short_name": "フラッシュ暗算",
+  "start_url": "/",
+  "theme_color": "#000000"
+}

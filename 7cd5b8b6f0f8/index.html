@@ -7,9 +7,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#000000">
 <title>多機能フラッシュ暗算</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="フラッシュ暗算">
+<link rel="apple-touch-icon" href="/icon.svg">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; background:#000; }
@@ -2394,6 +2396,16 @@ function showResult(){
 /* 初期化が最後まで完了したら「プログラムが動いていない場合」の警告を消す。
    この行に到達できない環境（プレビュー表示など）では警告が残り続ける */
 $("jsWarn").style.display = "none";
+</script>
+<script>
+/* オフライン対応: Service Worker がアプリ本体を端末に保存し、2回目以降は
+   通信なし（機内モード等）でも起動・出題・判定まで動くようにする。
+   file: で開いた場合など登録できない環境では、何もせず通常どおり開く */
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("/sw.js").catch(function(){});
+  });
+}
 </script>
 </body>
 </html>
