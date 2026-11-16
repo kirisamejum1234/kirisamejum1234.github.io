@@ -272,7 +272,7 @@ button{touch-action:manipulation;}
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-40</span>
+    <span class="ver">ver. 20261110-41</span>
   </div>
 </div>
 
@@ -304,7 +304,7 @@ button{touch-action:manipulation;}
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-40</span>
+    <span class="ver">ver. 20261110-41</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -368,7 +368,7 @@ button{touch-action:manipulation;}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-40</span>
+    <span class="ver">ver. 20261110-41</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -432,7 +432,7 @@ button{touch-action:manipulation;}
 
 <script>
 "use strict";
-var APP_VERSION = "20261110-40";
+var APP_VERSION = "20261110-41";
 var S = {
   dan: null, order: null, mode: "normal",
   items: [], answers: [], idx: 0, input: "",
@@ -544,7 +544,7 @@ var fontMode = "kyokasho";
    5連続タップするたびに 通常→裏→真裏→通常 と切り替わる。
    保存はしない (開き直すと通常に戻る) */
 var secretLevel = 0, sorobanTaps = 0;
-function secretPrefix(){ return secretLevel === 1 ? "半・" : (secretLevel === 2 ? "三乗・" : ""); }
+function secretPrefix(){ return secretLevel === 1 ? "半" : (secretLevel === 2 ? "三乗" : ""); }
 function secretName(){ return secretPrefix() + "くくダッシュ"; }
 function updateMainTitle(){
   var sp = $("secretPrefix");
@@ -568,14 +568,12 @@ function applyFontMode(){
   });
 }
 $("btnFontSoroban").addEventListener("click", function(){
-  if (fontMode === "soroban"){
-    sorobanTaps += 1;
-    if (sorobanTaps >= 5){
-      sorobanTaps = 0;
-      secretLevel = (secretLevel + 1) % 3;
-      updateMainTitle();
-    }
-  } else sorobanTaps = 0;
+  sorobanTaps += 1;
+  if (sorobanTaps >= 5){
+    sorobanTaps = 0;
+    secretLevel = (secretLevel + 1) % 3;
+    updateMainTitle();
+  }
   fontMode = "soroban"; applyFontMode();
  });
 $("btnFontKyokasho").addEventListener("click", function(){ sorobanTaps = 0; fontMode = "kyokasho"; applyFontMode(); });
