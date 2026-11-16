@@ -14,7 +14,7 @@
 
 :root{
   --dark:#232323; --blue:#1e1ed2; --beige:#eae3d3; --page:#ededed;
-  --slate:#5f6d75; --key:#151515; --yellow:#f5e900; --red:#e60012; --red-dark:#b0000f;
+  --slate:#5f6d75; --key:#151515; --yellow:#f5e900; --red:#e60012; --red-dark:#b0000f; --purple:#b366ff;
   --orange:#f08a2e; --pink:#e0309a; --greencat:#17b83a; --cleared:#8fd18a;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation;}
@@ -258,7 +258,7 @@ button{touch-action:manipulation;}
 
 <!-- 0) メイン画面 -->
 <div id="scr-main" class="screen beige active">
-  <div class="header">くくダッシュ<button id="btnFs" type="button">全画面</button></div>
+  <div class="header"><span id="secretPrefix"></span>くくダッシュ<button id="btnFs" type="button">全画面</button></div>
   <div class="main-area">
     <button class="main-btn" style="background:var(--greencat)" id="btnPractice">れんしゅう</button>
     <button class="main-btn" style="background:var(--pink)" id="btnExam">しけん</button>
@@ -272,7 +272,7 @@ button{touch-action:manipulation;}
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-39</span>
+    <span class="ver">ver. 20261110-40</span>
   </div>
 </div>
 
@@ -304,7 +304,7 @@ button{touch-action:manipulation;}
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-39</span>
+    <span class="ver">ver. 20261110-40</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -338,6 +338,14 @@ button{touch-action:manipulation;}
       <button class="step-btn" data-count="10">＋10</button>
     </div>
   </div>
+  <div class="step-row" id="secretCountRow" style="display:none">
+    <span class="step-unit" style="font-weight:bold;color:#2020a0;font-size:19px">もんだい数</span>
+    <div class="step-group">
+      <button class="step-btn" data-scount="-9">−9</button>
+      <span class="step-val num" id="sCountVal">9</span><span class="step-unit">問</span>
+      <button class="step-btn" data-scount="9">＋9</button>
+    </div>
+  </div>
   <div class="time-label">タイム計測</div>
   <div class="exam-time" id="examTimeRow"><span class="fixed" id="examTimeTxt">カウントダウン 1分</span><span class="note" id="examNoteTxt">しけんは1分固定です</span></div>
   <div class="time-modes" id="tmModes">
@@ -360,7 +368,7 @@ button{touch-action:manipulation;}
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-39</span>
+    <span class="ver">ver. 20261110-40</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -394,6 +402,7 @@ button{touch-action:manipulation;}
       <button class="key num" data-digit="0">0</button>
       <button class="key-func" id="btnBack">←<br>1つけす</button>
       <button class="key-func" id="btnAC">AC<br>全部けす</button>
+      <button class="key num" id="btnDot" style="display:none">.</button>
       <button class="key-top" id="btnTop">トップへ</button>
       <button class="key-ok" id="btnOK">OK</button>
     </div>
@@ -423,7 +432,7 @@ button{touch-action:manipulation;}
 
 <script>
 "use strict";
-var APP_VERSION = "20261110-39";
+var APP_VERSION = "20261110-40";
 var S = {
   dan: null, order: null, mode: "normal",
   items: [], answers: [], idx: 0, input: "",
@@ -432,7 +441,7 @@ var S = {
   naoshiCleared: new Set(), naoshiDrafts: {},
   resultItems: [], resultAnswers: [], resultScore: 0, resultWrong: [],
   selOrder: "junban", timeMode: "up", cdMin: 1, cdSec: 0,
-  playMode: "practice", qCount: 20,
+  playMode: "practice", qCount: 20, secretCount: 9,
   timeLimit: null, timeUp: false, timerId: null
 };
 function $(id){ return document.getElementById(id); }
@@ -481,10 +490,29 @@ function selectDan(d){
   refreshOrderUI();
   show("scr-order");
 }
-$("btnOrderBack").addEventListener("click", function(){ show("scr-dan"); });
+$("btnOrderBack").addEventListener("click", function(){ show(S.dan === "secret" ? "scr-main" : "scr-dan"); });
 $("btnClose").addEventListener("click", function(){ show("scr-main"); });
+function openSecretOrder(){
+  S.dan = "secret";
+  $("orderTitle").innerHTML = "";
+  var sp = document.createElement("span");
+  sp.textContent = secretPrefix();
+  sp.style.color = secretLevel === 1 ? "var(--red)" : "var(--purple)";
+  $("orderTitle").appendChild(sp);
+  $("orderTitle").appendChild(document.createTextNode("くくダッシュ"));
+  $("descJunban").textContent = "1×1 から 9×9 の順";
+  $("descGyaku").textContent = "9×9 から 1×1 の順";
+  $("descRandom").textContent = "バラバラの順";
+  refreshOrderUI();
+  show("scr-order");
+}
+function openOrderForDan(){
+  if (S.dan === "secret") openSecretOrder();
+  else selectDan(S.dan);
+}
 function enterMode(m){
   S.playMode = m;
+  if (secretLevel > 0){ openSecretOrder(); return; }
   var tag = $("danModeTag");
   tag.textContent = m === "exam" ? "しけん" : "れんしゅう";
   tag.style.color = m === "exam" ? "#e60012" : "#2020a0";
@@ -512,6 +540,23 @@ $("btnQuitYes").addEventListener("click", function(){
 /* もじのかたち: そろばん(ABACUS2) / きょうかしょ。既定はきょうかしょ。
    設定は開いている間だけ覚え、開き直したら きょうかしょ に戻る。 */
 var fontMode = "kyokasho";
+/* 隠しモード (裏=半 / 真裏=三乗): そろばん表示のまま「そろばん」を
+   5連続タップするたびに 通常→裏→真裏→通常 と切り替わる。
+   保存はしない (開き直すと通常に戻る) */
+var secretLevel = 0, sorobanTaps = 0;
+function secretPrefix(){ return secretLevel === 1 ? "半・" : (secretLevel === 2 ? "三乗・" : ""); }
+function secretName(){ return secretPrefix() + "くくダッシュ"; }
+function updateMainTitle(){
+  var sp = $("secretPrefix");
+  sp.textContent = secretPrefix();
+  sp.style.color = secretLevel === 1 ? "var(--red)" : "var(--purple)";
+}
+function correctAnswer(d, k){
+  if (secretLevel === 1) return d * k / 2;
+  if (secretLevel === 2) return d * d * d;
+  return d * k;
+}
+function parseAns(t){ return t.indexOf(".") >= 0 ? parseFloat(t) : parseInt(t, 10); }
 function applyFontMode(){
   document.body.classList.toggle("soroban", fontMode === "soroban");
   [["btnFontSoroban", "soroban"], ["btnFontKyokasho", "kyokasho"]].forEach(function(pair){
@@ -522,9 +567,18 @@ function applyFontMode(){
     el.textContent = sel ? "✓ " + el._label : el._label;
   });
 }
-$("btnFontSoroban").addEventListener("click", function(){ fontMode = "soroban"; applyFontMode();
+$("btnFontSoroban").addEventListener("click", function(){
+  if (fontMode === "soroban"){
+    sorobanTaps += 1;
+    if (sorobanTaps >= 5){
+      sorobanTaps = 0;
+      secretLevel = (secretLevel + 1) % 3;
+      updateMainTitle();
+    }
+  } else sorobanTaps = 0;
+  fontMode = "soroban"; applyFontMode();
  });
-$("btnFontKyokasho").addEventListener("click", function(){ fontMode = "kyokasho"; applyFontMode(); });
+$("btnFontKyokasho").addEventListener("click", function(){ sorobanTaps = 0; fontMode = "kyokasho"; applyFontMode(); });
 applyFontMode();
 /* 全画面: 入る操作はメイン画面ヘッダーのボタン。終了は全画面中だけ
    右上に出る小さなボタンと Esc。使えない環境では案内を出す。
@@ -570,6 +624,9 @@ document.querySelectorAll("[data-order]").forEach(function(b){
 $("tmUp").addEventListener("click", function(){ S.timeMode = "up"; refreshOrderUI(); });
 $("tmDown").addEventListener("click", function(){ S.timeMode = "down"; refreshOrderUI(); });
 function examLimit(){
+  if (S.dan === "secret"){
+    return (S.secretCount / 9) * 60;
+  }
   if (S.dan === "all"){
     return S.selOrder === "random" ? S.qCount * 6 : 8 * 60;
   }
@@ -580,6 +637,14 @@ function refreshOrderUI(){
   $("examTimeRow").style.display = exam ? "block" : "none";
   $("countRow").style.display =
     (S.dan === "all" && S.selOrder === "random") ? "flex" : "none";
+  $("secretCountRow").style.display = S.dan === "secret" ? "flex" : "none";
+  $("sCountVal").textContent = S.secretCount;
+  if (S.dan === "secret"){
+    $("examTimeTxt").textContent = "カウントダウン " + (S.secretCount / 9) + "分";
+    $("examNoteTxt").textContent = S.secretCount === 9
+      ? "しけんは1分固定です"
+      : S.secretCount + "問（9問で1分）で計算しています";
+  }
   $("qCountVal").textContent = S.qCount;
   if (S.dan === "all" && S.selOrder === "random"){
     var sec = S.qCount * 6;
@@ -589,7 +654,7 @@ function refreshOrderUI(){
   } else if (S.dan === "all"){
     $("examTimeTxt").textContent = "カウントダウン 8分";
     $("examNoteTxt").textContent = "81問・しけんは8分固定です";
-  } else {
+  } else if (S.dan !== "secret") {
     $("examTimeTxt").textContent = "カウントダウン 1分";
     $("examNoteTxt").textContent = "しけんは1分固定です";
   }
@@ -618,6 +683,24 @@ function stepCount(delta){
   S.qCount = Math.min(100, Math.max(10, S.qCount + delta));
   refreshOrderUI();
 }
+function stepSecretCount(delta){
+  S.secretCount = Math.min(99, Math.max(9, S.secretCount + delta));
+  refreshOrderUI();
+}
+document.querySelectorAll("[data-scount]").forEach(function(b){
+  var delta = parseInt(b.getAttribute("data-scount"), 10);
+  var t1 = null, t2 = null;
+  function clearTimers(){ if (t1){ clearTimeout(t1); t1 = null; } if (t2){ clearInterval(t2); t2 = null; } }
+  b.addEventListener("pointerdown", function(e){
+    e.preventDefault();
+    stepSecretCount(delta);
+    t1 = setTimeout(function(){ t2 = setInterval(function(){ stepSecretCount(delta); }, 90); }, 450);
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(function(ev){
+    b.addEventListener(ev, clearTimers);
+  });
+  b.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+});
 document.querySelectorAll("[data-count]").forEach(function(b){
   var delta = parseInt(b.getAttribute("data-count"), 10);
   var t1 = null, t2 = null;
@@ -683,6 +766,15 @@ function startSession(order){
       }
       combos = picked.slice(0, S.qCount);
     }
+  } else if (S.dan === "secret") {
+    var baseS = [];
+    for (var n = 1; n <= 9; n++) baseS.push([n, n]);
+    var blocks = S.secretCount / 9;
+    for (var bi = 0; bi < blocks; bi++){
+      var block = order === "gyaku" ? baseS.slice().reverse() : baseS.slice();
+      if (order === "random") shuffleArr(block);
+      combos = combos.concat(block);
+    }
   } else {
     var ks = [1,2,3,4,5,6,7,8,9];
     if (order === "gyaku") ks.reverse();
@@ -708,7 +800,8 @@ function startSession(order){
 var countTimer = null, countStartAt = 0, countShown = 3, counting = false;
 var CD_OPTICAL_EM = { "3": 0.05, "2": 0.055, "1": 0.03 };
 function cdCaption(){
-  var dan = S.dan === "all" ? "1〜9だん ぜんぶ" : S.dan + "のだん";
+  var dan = S.dan === "all" ? "1〜9だん ぜんぶ"
+    : (S.dan === "secret" ? secretName() : S.dan + "のだん");
   var order = { junban: "じゅんばん", gyaku: "ぎゃくじゅん",
                 random: "ランダム" }[S.order] || "";
   var txt = (S.playMode === "exam" ? "しけん　" : "") + dan + "　" + order;
@@ -817,7 +910,7 @@ function startNaoshi(){
   S.idx = 0; S.input = ""; S.acCount = 0; S.topVisible = false; S.finished = false;
   show("scr-calc"); renderCalc();
 }
-function currentAnswer(){ var it = S.items[S.idx]; return it.dan * it.k; }
+function currentAnswer(){ var it = S.items[S.idx]; return correctAnswer(it.dan, it.k); }
 var tabsBuiltFor = null;  // タブを作ったときの S.items (同じなら作り直さない)
 function renderCalc(){
   var tabs = $("tabs");
@@ -850,6 +943,12 @@ function renderCalc(){
   $("probDan").textContent = S.items[S.idx].dan;
   $("probK").textContent = S.items[S.idx].k;
   $("inputBox").textContent = S.input;
+  var dot = $("btnDot");
+  if (secretLevel === 1 && !S.topVisible){
+    dot.style.display = ""; $("btnTop").style.display = "none";
+  } else {
+    dot.style.display = "none"; $("btnTop").style.display = "";
+  }
   $("btnTop").classList.toggle("show", S.topVisible);
   $("btnSaiten").classList.toggle("show", S.mode === "normal" && S.finished);
 }
@@ -863,7 +962,7 @@ function gotoQuestion(j){
     $("status").textContent = "";
     renderCalc(); return;
   }
-  S.answers[S.idx] = S.input === "" ? null : parseInt(S.input, 10);
+  S.answers[S.idx] = S.input === "" ? null : parseAns(S.input);
   S.idx = j;
   var saved = S.answers[j];
   S.input = saved === null ? "" : String(saved);
@@ -876,6 +975,15 @@ function pressDigit(d){
   if (S.mode === "normal" && S.finished) return;
   if (S.input.length >= 6) return;
   S.input = (S.input === "" && d === "0") ? "0" : S.input + d;
+  S.acCount = 0;
+  $("status").textContent = "";
+  $("inputBox").textContent = S.input;
+}
+function pressDot(){
+  if (secretLevel !== 1) return;
+  if (S.mode === "normal" && S.finished) return;
+  if (S.input.indexOf(".") >= 0 || S.input.length >= 6) return;
+  S.input = S.input === "" ? "0." : S.input + ".";
   S.acCount = 0;
   $("status").textContent = "";
   $("inputBox").textContent = S.input;
@@ -896,7 +1004,7 @@ function pressAC(){
 function pressOK(){
   if (S.mode === "naoshi"){ okNaoshi(); return; }
   if (S.finished) return;
-  S.answers[S.idx] = S.input === "" ? null : parseInt(S.input, 10);
+  S.answers[S.idx] = S.input === "" ? null : parseAns(S.input);
   if (S.idx >= S.items.length - 1){
     S.finished = true;
     S.elapsed = (Date.now() - S.startTime) / 1000;
@@ -911,7 +1019,7 @@ function pressOK(){
 }
 function okNaoshi(){
   if (S.input === "") return;
-  if (parseInt(S.input, 10) === currentAnswer()){
+  if (parseAns(S.input) === currentAnswer()){
     S.naoshiCleared.add(S.idx);
     S.naoshiDrafts[S.idx] = S.input;
     S.input = ""; $("status").textContent = "";
@@ -949,6 +1057,7 @@ function onPress(el, fn){
 document.querySelectorAll("[data-digit]").forEach(function(b){
   onPress(b, function(){ pressDigit(b.getAttribute("data-digit")); });
 });
+onPress($("btnDot"), pressDot);
 onPress($("btnBack"), pressBack);
 onPress($("btnAC"), pressAC);
 onPress($("btnOK"), pressOK);
@@ -963,7 +1072,7 @@ function showResult(){
     var wrong = [], score = 0;
     S.resultItems.forEach(function(it, i){
       var ans = S.resultAnswers[i];
-      if (ans !== null && ans === it.dan * it.k) score++;
+      if (ans !== null && ans === correctAnswer(it.dan, it.k)) score++;
       else wrong.push(it);
     });
     S.resultScore = score; S.resultWrong = wrong;
@@ -985,13 +1094,16 @@ function showResult(){
       var esec = S.qCount * 6;
       timeName = "カウントダウン " + Math.floor(esec / 60) + "分" + (esec % 60) + "秒";
     } else if (S.dan === "all") timeName = "カウントダウン 8分";
+    else if (S.dan === "secret") timeName = "カウントダウン " + (S.secretCount / 9) + "分";
     else timeName = "カウントダウン 1分";
   } else {
     timeName = S.timeMode === "down" ? "カウントダウン " + S.cdMin + "分" + S.cdSec + "秒" : "カウントアップ";
   }
   var danText = S.dan === "all"
     ? "ぜんぶ" + (S.order === "random" ? " " + S.qCount + "問" : "")
-    : S.dan + " のだん";
+    : (S.dan === "secret"
+      ? secretName() + (S.secretCount !== 9 ? " " + S.secretCount + "問" : "")
+      : S.dan + " のだん");
   $("settingsText").innerHTML = danText + "（" + (S.playMode === "exam" ? "しけん" : "れんしゅう") + "）<br>"
     + (orderNames[S.order] || "") + "／" + timeName;
   $("scoreText").textContent = S.resultScore + "点／" + S.resultItems.length + "点";
@@ -1026,7 +1138,7 @@ function showResult(){
 }
 $("btnNaoshi").addEventListener("click", startNaoshi);
 $("btnResultOK").addEventListener("click", function(){
-  show(S.playMode === "exam" ? "scr-main" : "scr-dan");
+  show(S.playMode === "exam" || S.dan === "secret" ? "scr-main" : "scr-dan");
 });
 /* ---------- 物理キーボード（PC確認用・テンキー対応） ---------- */
 document.addEventListener("keydown", function(e){
@@ -1035,6 +1147,9 @@ document.addEventListener("keydown", function(e){
   if (/^[0-9]$/.test(e.key)) digit = e.key;
   else if (/^Numpad[0-9]$/.test(e.code || "")) digit = e.code.slice(6);
   if (digit !== null){ pressDigit(digit); e.preventDefault(); return; }
+  if (secretLevel === 1 && (e.key === "." || e.code === "NumpadDecimal")){
+    pressDot(); e.preventDefault(); return;
+  }
   if (e.key === "Backspace" || e.key === "Delete" || e.code === "NumpadDecimal"){
     if (e.key !== "Delete" || e.code === "NumpadDecimal") { /* NumpadDecimal=消去扱い */ }
     pressBack(); e.preventDefault(); return;
@@ -1186,13 +1301,13 @@ document.addEventListener("keydown", function(e){
   if (scr.id === "scr-calc"){
     stopTimer();  // 進行中のセッションを止める
     if (S.mode === "naoshi") showResult();
-    else selectDan(S.dan);
+    else openOrderForDan();
   } else if (scr.id === "scr-count"){
     if (countTimer){ clearTimeout(countTimer); countTimer = null; }
     counting = false;
-    selectDan(S.dan);
+    openOrderForDan();
   } else if (scr.id === "scr-order"){
-    show("scr-dan");
+    show(S.dan === "secret" ? "scr-main" : "scr-dan");
   } else if (scr.id === "scr-dan" || scr.id === "scr-result" ||
              scr.id === "scr-end"){
     show("scr-main");
@@ -1214,7 +1329,10 @@ window.__KD = { S: S, selectDan: selectDan, startSession: startSession,
     if (counting){ countStartAt -= 10000; countTick(); }
   },
   isCounting: function(){ return counting; },
-  startNaoshi: startNaoshi, pressDigit: pressDigit, pressBack: pressBack,
+  startNaoshi: startNaoshi, pressDigit: pressDigit, pressDot: pressDot,
+  getSecretLevel: function(){ return secretLevel; },
+  stepSecretCount: stepSecretCount,
+  pressBack: pressBack,
   pressAC: pressAC, pressOK: pressOK, gotoQuestion: gotoQuestion,
   showResult: showResult, formatElapsed: formatElapsed,
   stepCd: stepCd, refreshOrderUI: refreshOrderUI, mmss: mmss,
