@@ -1319,22 +1319,20 @@ function renderSpeedRow(){
 }
 /* count 個の数字の [{show, blank}, ...] を返す。
    1つ目の時間は「全体の秒数 ÷ 口数」（表示秒数）。加速が 0 でない
-   ときは、そこから1つ進むごとに設定した accel % ずつ短く
-   （マイナスのときは長く）なる。合計は全体の秒数とは一致しない
-   （この方式では出せない組合せは無く、調整も要らない）。
-   どの数字も短すぎて見えなくならないよう、1つ分の時間は最低0.15秒を
-   確保する（数字表示の音が0.1秒あるため、それより短いと最後の数字が
-   一瞬で消え、音も途中で切れてしまう） */
+   ときは、最後の数字に向けて、設定した accel % ぶんの変化を均等に
+   割りながらだんだん短く（マイナスのときは長く）していく。
+   例: 表示秒数1秒・15口・加速50% → 1.00秒から0.53秒まで均等に短縮。
+   どの数字の時間も 0 にはならないので、出せない組合せは無く、
+   下限での頭打ちもしない（調整も注意書きも要らない） */
 function computeCycles(count){
   const c = playCfg || cfg;
-  const n = Math.max(1, count);
+  const n = Math.max(1, count | 0);
   const accel = c.accelOn ? (c.accel || 0) : 0;
   const base = c.totalSeconds / n;
-  const r = 1 - accel / 100;
+  const p = accel / 100;
   const out = [];
   for(let k = 0; k < n; k++){
-    let cy = r > 0 ? base * Math.pow(r, k) : (k === 0 ? base : 0);
-    cy = Math.max(0.15, cy);
+    const cy = n > 1 ? base * (1 - p * k / n) : base;
     const blank = Math.min(0.3, cy * 0.25);
     out.push({ show: cy - blank, blank });
   }
