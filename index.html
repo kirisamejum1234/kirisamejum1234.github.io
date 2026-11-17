@@ -119,7 +119,10 @@
     padding:12px 12px calc(12px + env(safe-area-inset-bottom)); background:#000;
   }
   .bottom-buttons button { flex:1; padding:12px 2px; font-size:12px; white-space:nowrap; }
-  #toResultBtn { background:#00b84f; font-weight:bold; padding:14px 30px; }
+  #judgeSpeedRow { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
+  #judgeSpeedRow button { padding:9px 13px; font-size:14px; }
+  #judgeSpeedRow button.speed-sel { background:#00b84f; color:#fff; font-weight:bold; }
+  .judge-act-btn { min-width:230px; padding:13px 0; font-size:16px; font-weight:bold; }
   /* リザルト: 他の画面と同じ内側ラッパー方式にそろえる（下記コメント参照）。
      結果画面だけ flex のままだと、行が多いときに実機で下までたどれないことがあるため */
   #resultScreen .screen-inner { justify-content:flex-start; padding-top:34px; }
@@ -157,7 +160,7 @@
   /* 解答画面の画面内キーパッド（タブレットPC等、キーボードが出ない環境用） */
   .pad-grid { display:grid; grid-template-columns:repeat(3,76px) 88px; gap:8px; justify-content:center; }
   .pad-grid [data-key="next"] { grid-column: 4; grid-row: 1 / span 4; }
-  .pad-grid button { padding:14px 0; font-size:20px; font-weight:bold; touch-action:manipulation; }
+  .pad-grid button { height:48px; padding:0; line-height:1; font-size:20px; font-weight:bold; touch-action:manipulation; }
   table { border-collapse:collapse; margin:14px 0; font-size:16px; }
   th, td { padding:7px 16px; text-align:center; }
   th { color:#999; font-size:13px; }
@@ -347,10 +350,9 @@
       <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button>
       <button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button>
       <button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button>
-      <button type="button" data-key="minus">−</button><button type="button" data-key="0">0</button><button type="button" data-key="back">⌫</button><button type="button" data-key="next">次へ</button>
+      <button type="button" data-key="minus">−</button><button type="button" data-key="0">0</button><button type="button" data-key="back">⌫</button><button type="button" class="primary" data-key="next">決定</button>
     </div>
   </div>
-  <div class="answer-bar"><button class="primary" id="answerBtn">決定</button></div>
   </div>
 </section>
 
@@ -360,17 +362,16 @@
   <div class="mark" id="judgeMark">〇</div>
   <div style="font-size:28px;font-weight:bold" id="judgeText">正解！</div>
   <div class="judge-detail" id="judgeDetail"></div>
-  <div id="judgeHintArea" style="margin-top:10px;text-align:center"></div>
+  <div id="judgeActionArea" style="margin-top:14px;text-align:center"></div>
+  <div id="judgeSpeedRow"></div>
   </div>
   <div class="bottom-area">
-    <div class="result-row" id="resultRow"><button id="toResultBtn">次へ ▶</button></div>
     <div class="bottom-buttons">
-      <button id="newBtn">新しい問題</button>
       <button id="sameBtn">同じ問題</button>
-      <button id="shuffleBtn">順番を変える</button>
       <button id="reverseBtn">逆順でやる</button>
-      <button id="nextBtn">次の問題へ</button>
-      <button id="homeBtn1">最初に戻る</button>
+      <button id="shuffleBtn">順番を変える</button>
+      <button id="nextBtn">次へ</button>
+      <button id="stopBtn">止める</button>
     </div>
   </div>
 </section>
@@ -385,8 +386,8 @@
   <div class="btnrow-settings">
     <button id="resultNewBtn">新しい問題</button>
     <button id="resultSameBtn">同じ問題</button>
-    <button id="resultShuffleBtn">順番を変える</button>
     <button id="resultReverseBtn">逆順でやる</button>
+    <button id="resultShuffleBtn">順番を変える</button>
     <button id="homeBtn2">最初に戻る</button>
   </div>
   </div>
@@ -950,6 +951,7 @@ function startCustom(){
     unlockAudio();
     pendingCfg.questions = parseInt(qSel.value, 10) || 1;   // 連続出題数は確認画面で選んだ値を使う
     cfg = pendingCfg; problemIndex = 0; records = {}; queuedSeries = null;
+    resetSpeed();
     makeSeries();
     sessionStart = Date.now();
     countdownThenFlash();
@@ -1204,13 +1206,56 @@ refreshDigitModeState();
 
 /* 1つの数字の表示秒数と、消えてから次までの間隔（秒）を返す。
    total の場合は全体が totalSeconds になるよう口数で等分する */
+/* ---------- 判定画面の速度ボタン ----------
+   遅く(+1秒)／少し遅く(+0.5)／そのまま／少し早く(−0.5)／早く(−1)／おまかせ。
+   調整は「全体の秒数」として計算し、次の出題（次の問題・同じ問題・
+   順番を変える・逆順）から反映する。設定が数字ごとの秒数でも、
+   全体の時間（秒数×口数）に直してから増減する。
+   手動の選択は判定画面ごとに「そのまま」へ戻る。おまかせだけは
+   選んだまま残り、正解で0.5秒早く・不正解で0.5秒遅くが累積する。
+   変動した秒数は設定には記憶せず、リザルト画面へ行った時点で元に戻る */
+let speedMode = "manual", speedDelta = 0, omakaseTotal = null;
+let lastPlayTotal = null, playCfg = null, judgeAllCorrect = false;
+const SPEED_BTNS = [["slow", "遅く", 1], ["slows", "少し遅く", 0.5], ["same", "そのまま", 0], ["fasts", "少し早く", -0.5], ["fast", "早く", -1]];
+function baseTotalOf(c){ return c.timingMode === "total" ? c.totalSeconds : c.seconds * c.mouth; }
+function clampTotal(t){ return Math.max(0.05 * cfg.mouth, Math.round(t * 100) / 100); }
+function effectivePlayCfg(){
+  if(speedMode === "omakase" && omakaseTotal !== null)
+    return Object.assign({}, cfg, { timingMode: "total", totalSeconds: omakaseTotal });
+  if(speedDelta !== 0)
+    return Object.assign({}, cfg, { timingMode: "total", totalSeconds: clampTotal(baseTotalOf(cfg) + speedDelta) });
+  return cfg;
+}
+function resetSpeed(){ speedMode = "manual"; speedDelta = 0; omakaseTotal = null; playCfg = null; }
+function renderSpeedRow(){
+  const row = $("judgeSpeedRow");
+  if(!row) return;
+  const sel = speedMode === "omakase" ? "omakase"
+    : (SPEED_BTNS.find(b => b[2] === speedDelta) || SPEED_BTNS[2])[0];
+  row.innerHTML = SPEED_BTNS.map(([k, label]) =>
+    `<button type="button" data-speed="${k}" class="${k === sel ? "speed-sel" : ""}">${label}</button>`).join("") +
+    `<button type="button" data-speed="omakase" class="${sel === "omakase" ? "speed-sel" : ""}">おまかせ</button>`;
+  row.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    const k = b.dataset.speed;
+    if(k === "omakase"){
+      speedMode = "omakase";
+      const base = lastPlayTotal !== null ? lastPlayTotal : baseTotalOf(cfg);
+      omakaseTotal = clampTotal(base + (judgeAllCorrect ? -0.5 : 0.5));
+    } else {
+      speedMode = "manual"; omakaseTotal = null;
+      speedDelta = SPEED_BTNS.find(x => x[0] === k)[2];
+    }
+    renderSpeedRow();
+  }));
+}
 function computeTiming(count){
-  if(cfg.timingMode === "total"){
-    const cycle = cfg.totalSeconds / Math.max(1, count);
+  const c = playCfg || cfg;
+  if(c.timingMode === "total"){
+    const cycle = c.totalSeconds / Math.max(1, count);
     const blank = Math.min(0.3, cycle * 0.25);
     return { show: cycle - blank, blank };
   }
-  return { show: cfg.seconds, blank: 0.3 };
+  return { show: c.seconds, blank: 0.3 };
 }
 
 function readConfig(){
@@ -1460,6 +1505,8 @@ function setCountDigit(d){
 }
 function countdownThenFlash(){
   if(_runStartBusy) return;   // フォント待ちの間の二重スタート防止
+  playCfg = effectivePlayCfg();
+  lastPlayTotal = playCfg.timingMode === "total" ? playCfg.totalSeconds : playCfg.seconds * playCfg.mouth;
   clearTimers();
   const begin = () => {
     _runStartBusy = false;
@@ -1872,12 +1919,6 @@ document.querySelectorAll("#keypad [data-key]").forEach(btn => {
   });
 });
 
-$("answerBtn").addEventListener("click", submitAnswer);
-/* iPhoneでは入力欄にフォーカスがある状態でのタップが、環境によって
-   「キーボードを閉じるだけ」で消費されることがある。指が触れた瞬間にも
-   解答できるようにする（判定へ進んだ後は下のガードで二重実行を防ぐ） */
-$("answerBtn").addEventListener("pointerdown", e => { e.preventDefault(); submitAnswer(); });
-
 function parseAnswer(v){
   const neg = v.includes("-");
   const raw = v.replace(/[^0-9]/g, "");
@@ -1900,6 +1941,46 @@ function fitJudgeVals(){
   document.querySelectorAll("#judgeDetail .val").forEach(el => {
     el.style.fontSize = fitSizePx(el, el.textContent, 30, window.innerWidth * 0.58) + "px";
   });
+}
+let judgeResultsCache = [], judgeHiddenHtml = "", judgeShownHtml = "";
+let judgeAnswerShown = false, judgeHintShown = false;
+/* 判定画面の「ヒントを見る」と「答えを見る」。ヒントが上で、間を空けて
+   答えを見るを置く。どちらも同じ大きさで、色は緑にしない。
+   押すと「〜を見ますか？」のはい/いいえ確認を出し、いいえなら元通り、
+   はいなら中身に置き換わる */
+function renderJudgeActions(){
+  const area = $("judgeActionArea");
+  if(!area) return;
+  const results = judgeResultsCache;
+  let html = "";
+  if(cfg && cfg.hint){
+    if(judgeHintShown){
+      if(results.length === 1){
+        html += `<div style="font-size:19px;margin-bottom:16px">ヒント： ${makeHint(results[0].answer, results[0].user)}</div>`;
+      } else {
+        const positions = layoutPositions(cfg.series, cfg.layout);
+        html += results.map((r, s) =>
+          `<div style="font-size:17px;margin-top:4px">${positions[s][4]}： ヒント： ${makeHint(r.answer, r.user)}</div>`).join("") +
+          `<div style="margin-bottom:16px"></div>`;
+      }
+    } else {
+      html += `<div style="margin-bottom:16px"><button type="button" class="judge-act-btn" id="showHintBtn">ヒントを見る</button></div>`;
+    }
+  }
+  if(!judgeAnswerShown)
+    html += `<div><button type="button" class="judge-act-btn" id="showAnswerBtn">答えを見る</button></div>`;
+  area.innerHTML = html;
+  const hb = $("showHintBtn");
+  if(hb) hb.addEventListener("click", () =>
+    showReorderConfirm("ヒントを見ますか？", () => { judgeHintShown = true; renderJudgeActions(); }));
+  const ab = $("showAnswerBtn");
+  if(ab) ab.addEventListener("click", () =>
+    showReorderConfirm("答えを見ますか？", () => {
+      judgeAnswerShown = true;
+      $("judgeDetail").innerHTML = judgeShownHtml;
+      fitJudgeVals();
+      renderJudgeActions();
+    }));
 }
 function showJudge(results){
   clearTimers(); show("judgeScreen");
@@ -1925,35 +2006,21 @@ function showJudge(results){
     hiddenHtml = rowHtml(false);
     shownHtml = rowHtml(true);
   }
-  $("judgeDetail").innerHTML = hiddenHtml +
-    `<div style="margin-top:16px;text-align:center"><button type="button" class="primary" id="showAnswerBtn">答えを見る</button></div>`;
+  judgeResultsCache = results;
+  judgeHiddenHtml = hiddenHtml;
+  judgeShownHtml = shownHtml;
+  judgeAnswerShown = false;
+  judgeHintShown = false;
+  $("judgeDetail").innerHTML = hiddenHtml;
   fitJudgeVals();
-  $("showAnswerBtn").addEventListener("click", () => {
-    $("judgeDetail").innerHTML = shownHtml;
-    fitJudgeVals();
-  });
-  /* ヒント（設定で「あり」のときだけ）: 答えを見るボタンの下に置く。
-     押すと「ヒントを見ますか？」のはい/いいえ確認を出し、いいえなら
-     元通り、はいならヒントを表示する（ボタンはヒントに置き換わる） */
-  const hintArea = $("judgeHintArea");
-  hintArea.innerHTML = "";
-  if(cfg && cfg.hint){
-    hintArea.innerHTML = `<button type="button" id="showHintBtn">ヒントを見る</button>`;
-    $("showHintBtn").addEventListener("click", () => {
-      showReorderConfirm("ヒントを見ますか？", () => {
-        if(results.length === 1){
-          hintArea.innerHTML = `<div style="font-size:19px">ヒント： ${makeHint(results[0].answer, results[0].user)}</div>`;
-        } else {
-          const positions = layoutPositions(cfg.series, cfg.layout);
-          hintArea.innerHTML = results.map((r, s) =>
-            `<div style="font-size:17px;margin-top:4px">${positions[s][4]}： ヒント： ${makeHint(r.answer, r.user)}</div>`).join("");
-        }
-      });
-    });
-  }
-  const isLast = problemIndex >= cfg.questions - 1;
-  $("nextBtn").style.display = isLast ? "none" : "";        // 次の問題へは最終問題以外
-  $("resultRow").style.display = isLast ? "flex" : "none";  // 全問題終了時は右下の次へ→リザルト（4ボタン行の上の段に表示）
+  renderJudgeActions();
+  /* 速度ボタン: おまかせ継続中は今回の結果でさらに増減させる。
+     手動の選択は毎回「そのまま」に戻す（おまかせだけ選んだまま残る） */
+  judgeAllCorrect = allCorrect;
+  if(speedMode === "omakase" && omakaseTotal !== null)
+    omakaseTotal = clampTotal(omakaseTotal + (allCorrect ? -0.5 : 0.5));
+  if(speedMode !== "omakase") speedDelta = 0;
+  renderSpeedRow();
   /* 答えモードの条件を満たす並び替えプランを先に計算し、作れない場合は
      ボタンをグレー表示にする（押せはする。押すと警告が出る） */
   const recJ = records[problemIndex];
@@ -1969,7 +2036,6 @@ function showJudge(results){
   $("shuffleBtn").classList.toggle("btn-grey", judgeShufflePlan === "warn");
   $("reverseBtn").classList.toggle("btn-grey", !judgeReverseOk);
 }
-$("newBtn").addEventListener("click", restartNew);
 $("sameBtn").addEventListener("click", () => countdownThenFlash());
 /* 元の数字の集合を一切変えず（新しい数字は作らず）、並びだけを変える。
    今までと同じ並びにはせず、できれば全ての位置が違う並びにする */
@@ -2144,9 +2210,14 @@ $("shuffleBtn").addEventListener("click", () => {
   }
   countdownThenFlash();
 });
-$("nextBtn").addEventListener("click", nextProblem);
-$("toResultBtn").addEventListener("click", showResult);
-$("homeBtn1").addEventListener("click", goHome);
+/* 次へ: 残りの問題があれば次の問題へ、最後の問題ならリザルトへ */
+$("nextBtn").addEventListener("click", () => {
+  if(problemIndex >= cfg.questions - 1) showResult();
+  else nextProblem();
+});
+/* 止める: 確認してからトップへ戻る（速度の変動も元に戻す） */
+$("stopBtn").addEventListener("click", () =>
+  showReorderConfirm("途中ですがやめますか？", () => { resetSpeed(); goHome(); }));
 $("homeBtn2").addEventListener("click", goHome);
 $("reverseBtn").addEventListener("click", () => {
   // 記録済みの数字を逆順にする（新しい数字は作らない）。並列計算では組ごとに逆順。
@@ -2248,7 +2319,7 @@ function navRect(el){
 function navCandidates(screen){
   if(screen.id === "answerScreen"){
     const list = answerBlocks.map(b => b.input);
-    const btn = $("answerBtn");
+    const btn = document.querySelector('.pad-grid [data-key="next"]');
     if(btn) list.push(btn);
     return list.filter(el => !el.disabled && el.getClientRects().length);
   }
@@ -2411,6 +2482,7 @@ function goHome(){ clearTimers(); show("startScreen"); }
 
 /* ---------- リザルト ---------- */
 function showResult(){
+  resetSpeed();   // 変動した秒数はリザルトで元の設定に戻す
   clearTimers(); show("resultScreen");
   /* 全問ぶんの並び替えプランを先に計算し、作れない問題があればボタンを
      グレー表示にする（押せはする。押すと警告が出る） */
