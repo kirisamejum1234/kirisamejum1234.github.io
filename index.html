@@ -80,6 +80,7 @@
   #resultScreen .btnrow-settings button { padding:12px 8px; font-size:13px; white-space:nowrap; }
   /* 数字表示 */
   #flashScreen, #countScreen { padding:0; }
+  #countInfo { text-align:center; color:#fff; font-size:20px; margin-top:26px; }
   .circle-wrap { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
   .oval {
     border:5px solid #00b84f; border-radius:50%;
@@ -243,13 +244,7 @@
     <div class="row" id="minDigitsRow"><label>最小桁数 <span class="note">例:2→21</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="minDigits" data-step="-1">−</button><input id="minDigits" type="number" inputmode="numeric" min="1" value="2"><button type="button" class="stepbtn" data-target="minDigits" data-step="1">＋</button></div></div>
     <div class="row"><label>最大桁数 <span class="note">例:3→123</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="maxDigits" data-step="-1">−</button><input id="maxDigits" type="number" inputmode="numeric" min="1" value="3"><button type="button" class="stepbtn" data-target="maxDigits" data-step="1">＋</button></div></div>
     <div class="row"><label>口数 <span class="note">数字の個数</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="mouth" data-step="-1">−</button><input id="mouth" type="number" inputmode="numeric" min="1" value="5"><button type="button" class="stepbtn" data-target="mouth" data-step="1">＋</button></div></div>
-    <div class="row"><label>時間の決め方</label>
-      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
-        <label><input type="radio" name="timingMode" value="total" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 全体の秒数で決める</label>
-        <label><input type="radio" name="timingMode" value="per" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 1つの数字の秒数で決める</label>
-      </div></div>
     <div class="row sec-row" id="totalSecondsRow"><label>全体の秒数 <span class="note">小数可</span></label><div class="stepper sec"><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="-0.1">−0.1</button><input id="totalSeconds" type="text" inputmode="decimal" value="5.0"><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="1">＋1</button></div></div>
-    <div class="row sec-row" id="secondsRow"><label>数字表示秒数 <span class="note">小数可</span></label><div class="stepper sec"><button type="button" class="stepbtn lbl" data-target="seconds" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="seconds" data-step="-0.1">−0.1</button><input id="seconds" type="text" inputmode="decimal" value="1.0"><button type="button" class="stepbtn lbl" data-target="seconds" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="seconds" data-step="1">＋1</button></div></div>
     <p class="note" style="margin:-2px 0 10px">全体の秒数 = カウントダウンが終わってから、最後の数字が終わるまでの時間です</p>
     <div class="row"><label>桁数の出し方</label>
       <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
@@ -302,6 +297,12 @@
         <label><input type="radio" name="layoutMode" value="col" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 縦並び</label>
         <label><input type="radio" name="layoutMode" value="shape" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> <span id="layoutShapeLabel">三角</span></label>
       </div></div>
+    <div class="row"><label>加速</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
+        <label><input type="radio" name="accelMode" value="off" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オフ</label>
+        <label><input type="radio" name="accelMode" value="on" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オン</label>
+      </div></div>
+    <div class="row sec-row" id="accelTimeRow" style="display:none"><label>加速時間 <span class="note">マイナス可</span></label><div class="stepper sec"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-0.1">−0.1</button><input id="accelTime" type="text" inputmode="decimal" value="0.5"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="1">＋1</button></div></div>
     <div class="row"><label>フォント</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
         <label><input type="radio" name="fontChoice" value="soroban" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> そろばん</label>
@@ -333,6 +334,7 @@
 <!-- カウントダウン -->
 <section id="countScreen" class="screen">
   <div class="circle-wrap"><div class="oval" id="countOval"><div id="countNum" class="numfont">3</div></div></div>
+  <div id="countInfo"></div>
 </section>
 
 <!-- 数字表示 -->
@@ -426,13 +428,13 @@ document.querySelectorAll(".stepbtn").forEach(btn => {
   const stepOnce = () => {
     const el = $(btn.dataset.target);
     if(!el || el.disabled || btn.disabled) return;
-    const isFloat = btn.dataset.target === "seconds" || btn.dataset.target === "totalSeconds";
+    const isFloat = btn.dataset.target === "totalSeconds" || btn.dataset.target === "accelTime";
     let cur = parseFloat(zenNum(el.value));
     if(isNaN(cur)) cur = 0;
     let v = cur + parseFloat(btn.dataset.step);
     if(isFloat){
       v = Math.round(v * 100) / 100;
-      if(v < 0.1) v = 0.1;
+      if(btn.dataset.target !== "accelTime" && v < 0.1) v = 0.1;   // 加速時間だけマイナス可
       el.value = String(v);
     } else {
       v = Math.round(v);
@@ -933,7 +935,7 @@ function selectGrade(g){
 }
 function customSummary(c){
   const digits = c.vary ? `${c.minD}〜${c.maxD}桁` : `${c.maxD}桁`;
-  const timing = c.timingMode === "total" ? `全体で${c.totalSeconds}秒` : `1つ${c.seconds}秒`;
+  const timing = `全体で${c.totalSeconds}秒`;
   let s = `${digits}　${c.mouth}口　${timing}`;
   if(c.series > 1) s += `　${c.series}組`;
   if(c.sub){
@@ -965,10 +967,11 @@ function startGrade(){
     unlockAudio();
     const g = selectedGrade;
     cfg = { minD: g.digits, maxD: g.digits, mouth: g.mouth, seconds: g.seconds,
-            totalSeconds: g.seconds, timingMode: "total", vary: false, sub: false,
+            totalSeconds: g.seconds, accelOn: false, accel: 0, vary: false, sub: false,
             answerMode: "never", allowRepeat: true, questions: parseInt($("confirmQuestions").value, 10) || 1,
             series: 1, present: "simul", layout: "single", gradeSpec: g };
     problemIndex = 0; records = {}; queuedSeries = null;
+    resetSpeed();
     makeSeries();
     sessionStart = Date.now();
     countdownThenFlash();
@@ -1174,19 +1177,13 @@ $("maxDigits").addEventListener("change", refreshAnswerSignState);
 document.querySelectorAll('input[name="layoutMode"]').forEach(r => r.addEventListener("click", () => { layoutPref = r.value; }));
 refreshAnswerSignState();
 
-/* 時間設定は選んだ決め方の方だけ入力できるようにする（矛盾防止） */
-function refreshTimingState(){
-  const per = checkedVal("timingMode", "total") === "per";
-  $("seconds").disabled = !per;
-  $("totalSeconds").disabled = per;
-  setStepEnabled("seconds", per);
-  setStepEnabled("totalSeconds", !per);
-  // 選んでいない方の行は隠す（値はそのまま残る）
-  $("totalSecondsRow").style.display = per ? "none" : "";
-  $("secondsRow").style.display = per ? "" : "none";
+/* 加速がオフの間は加速時間の行を隠す（値はそのまま残る） */
+function refreshAccelState(){
+  const on = checkedVal("accelMode", "off") === "on";
+  $("accelTimeRow").style.display = on ? "" : "none";
 }
-document.querySelectorAll('input[name="timingMode"]').forEach(r => r.addEventListener("change", refreshTimingState));
-refreshTimingState();
+document.querySelectorAll('input[name="accelMode"]').forEach(r => r.addEventListener("change", refreshAccelState));
+refreshAccelState();
 
 /* 「最大桁数のみ」のときは最小桁数を使わないので、入力できないようにする */
 function refreshDigitModeState(){
@@ -1217,7 +1214,7 @@ refreshDigitModeState();
 let speedMode = "manual", speedDelta = 0, omakaseTotal = null;
 let lastPlayTotal = null, playCfg = null, judgeAllCorrect = false;
 const SPEED_BTNS = [["slow", "遅く", 1], ["slows", "少し遅く", 0.5], ["same", "そのまま", 0], ["fasts", "少し早く", -0.5], ["fast", "早く", -1]];
-function baseTotalOf(c){ return c.timingMode === "total" ? c.totalSeconds : c.seconds * c.mouth; }
+function baseTotalOf(c){ return c.totalSeconds; }
 function clampTotal(t){ return Math.max(0.05 * cfg.mouth, Math.round(t * 100) / 100); }
 function effectivePlayCfg(){
   if(speedMode === "omakase" && omakaseTotal !== null)
@@ -1248,22 +1245,32 @@ function renderSpeedRow(){
     renderSpeedRow();
   }));
 }
-function computeTiming(count){
+/* 全体の秒数を count 個の数字へ配分した [{show, blank}, ...] を返す。
+   加速が 0 でないときは等差数列で配分する（合計は全体の秒数のまま、
+   1つずつ accel 秒ずつ短く/長くなる）。どの数字も短すぎて見えなく
+   ならないよう、1つ分の時間は最低0.05秒を確保する */
+function computeCycles(count){
   const c = playCfg || cfg;
-  if(c.timingMode === "total"){
-    const cycle = c.totalSeconds / Math.max(1, count);
-    const blank = Math.min(0.3, cycle * 0.25);
-    return { show: cycle - blank, blank };
+  const n = Math.max(1, count);
+  const base = c.totalSeconds / n;
+  const accel = c.accelOn ? (c.accel || 0) : 0;
+  const out = [];
+  for(let k = 0; k < n; k++){
+    let cy = base + accel * ((n - 1) / 2 - k);
+    cy = Math.max(0.05, cy);
+    const blank = Math.min(0.3, cy * 0.25);
+    out.push({ show: cy - blank, blank });
   }
-  return { show: c.seconds, blank: 0.3 };
+  return out;
 }
 
 function readConfig(){
   const c = {
     minD: intOf("minDigits"), maxD: intOf("maxDigits"),
-    mouth: intOf("mouth"), seconds: floatOf("seconds"),
+    mouth: intOf("mouth"),
     totalSeconds: floatOf("totalSeconds"),
-    timingMode: checkedVal("timingMode", "total"),
+    accelOn: checkedVal("accelMode", "off") === "on",
+    accel: floatOf("accelTime"),
     vary: checkedVal("digitMode", "maxonly") === "random",
     sub: checkedVal("subMode", "off") === "on",
     answerMode: checkedVal("answerSignMode", "never"),
@@ -1313,13 +1320,11 @@ function readConfig(){
     c.subArrangeNote = `※引き算${subCount}口を連続させない並びは、この口数では作れません。なるべく連続させません`;
   else if(subCount > 0 && c.answerMode === "mid" && subCount >= c.mouth - 1)
     c.subArrangeNote = "※この設定では「途中だけマイナス（答えはプラス）」を完全には満たせません。なるべく条件に近づけて作ります";
-  // 時間設定は選んだ決め方の方だけを検証する
-  if(c.timingMode === "per" && !(c.seconds > 0)) return startError("数字表示秒数には0より大きい数値を入力してください。");
-  if(c.timingMode === "total" && !(c.totalSeconds > 0)) return startError("全体の秒数には0より大きい数値を入力してください。");
+  if(!(c.totalSeconds > 0)) return startError("全体の秒数には0より大きい数値を入力してください。");
+  if(c.accelOn && isNaN(c.accel)) return startError("加速時間には数値を入力してください。");
   // 物理的に表示できない速さは弾く（1つの数字の表示時間が短すぎると、
   // 画面に出る前に消えてしまい、数字として見えないため）
-  if(c.timingMode === "per" && c.seconds < 0.05) return startError("この設定では設定できません（数字表示秒数が短すぎて、数字が表示されません）。0.05秒以上にしてください。");
-  if(c.timingMode === "total" && c.totalSeconds / c.mouth < 0.05) return startError(`この設定では設定できません（${c.mouth}口を${c.totalSeconds}秒で出すと、1つの数字は約${(c.totalSeconds / c.mouth).toFixed(2)}秒しか表示されず見えません）。全体の秒数を増やすか、口数を減らしてください。`);
+  if(c.totalSeconds / c.mouth < 0.05) return startError(`この設定では設定できません（${c.mouth}口を${c.totalSeconds}秒で出すと、1つの数字は約${(c.totalSeconds / c.mouth).toFixed(2)}秒しか表示されず見えません）。全体の秒数を増やすか、口数を減らしてください。`);
   return c;
 }
 
@@ -1352,9 +1357,9 @@ function saveSettings(){
   try{
     const data = {
       minDigits: $("minDigits").value, maxDigits: $("maxDigits").value,
-      mouth: $("mouth").value, seconds: $("seconds").value, totalSeconds: $("totalSeconds").value,
-      seriesCount: $("seriesCount").value,
-      timingMode: checkedVal("timingMode", "total"), digitMode: checkedVal("digitMode", "maxonly"),
+      mouth: $("mouth").value, totalSeconds: $("totalSeconds").value,
+      seriesCount: $("seriesCount").value, accelTime: $("accelTime").value,
+      accelMode: checkedVal("accelMode", "off"), digitMode: checkedVal("digitMode", "maxonly"),
       subMode: checkedVal("subMode", "off"), answerSignMode: checkedVal("answerSignMode", "never"),
       repeatMode: checkedVal("repeatMode", "off"),
       presentMode: checkedVal("presentMode", "simul"), layoutPref,
@@ -1377,9 +1382,10 @@ function loadSettings(){
   // 旧バージョンの「交互」は「連続しない」に読み替える
   setRadio("subArrange", data.subArrange === "alternate" ? "separate" : data.subArrange);
   setVal("minDigits", data.minDigits); setVal("maxDigits", data.maxDigits);
-  setVal("mouth", data.mouth); setVal("seconds", data.seconds); setVal("totalSeconds", data.totalSeconds);
+  setVal("mouth", data.mouth); setVal("totalSeconds", data.totalSeconds);
   setVal("seriesCount", data.seriesCount);
-  setRadio("timingMode", data.timingMode); setRadio("digitMode", data.digitMode);
+  setVal("accelTime", data.accelTime);
+  setRadio("accelMode", data.accelMode); setRadio("digitMode", data.digitMode);
   setRadio("subMode", data.subMode); setRadio("answerSignMode", data.answerSignMode);
   /* 引き算の出し方は記憶しない: 開いたときは必ず「ふつう」から始める
      （覚えてしまうと次回も「引き続ける」になり、「途中だけマイナス」が
@@ -1393,7 +1399,7 @@ function loadSettings(){
   setRadio("numSize", data.numSize);
   setRadio("hintMode", data.hintMode);
   numSizeChoice = NUM_SIZE_SCALES[data.numSize] ? data.numSize : "medium";
-  refreshSeriesState(); refreshTimingState(); refreshDigitModeState(); refreshAnswerSignState();
+  refreshSeriesState(); refreshAccelState(); refreshDigitModeState(); refreshAnswerSignState();
 }
 loadSettings();
 ["settingsScreen", "confirmScreen"].forEach(id => {
@@ -1503,14 +1509,23 @@ function setCountDigit(d){
     el.style.transform = "";
   }
 }
+function countInfoText(){
+  const c = playCfg || cfg;
+  const digits = c.vary ? `${c.minD}〜${c.maxD}桁` : `${c.maxD}桁`;
+  const total = Math.round(c.totalSeconds * 100) / 100;
+  return `${digits}　${c.mouth}口　${total}秒`;
+}
 function countdownThenFlash(){
   if(_runStartBusy) return;   // フォント待ちの間の二重スタート防止
   playCfg = effectivePlayCfg();
-  lastPlayTotal = playCfg.timingMode === "total" ? playCfg.totalSeconds : playCfg.seconds * playCfg.mouth;
+  lastPlayTotal = playCfg.totalSeconds;
   clearTimers();
   const begin = () => {
     _runStartBusy = false;
     clearTimers(); show("countScreen");
+    // カウントダウンの間だけ現在の設定（桁数・口数・秒数）を出す。
+    // 秒数は速度ボタンで調整された後の実効値。画面が切り替われば消える
+    $("countInfo").textContent = countInfoText();
     /* 絶対時刻ベースで1秒ごとの境界にそろえる（タイマーの遅れが累積して
        3・2・1 の間隔がずれないように。マス計算と同じ方式） */
     const t0 = performance.now();
@@ -1748,17 +1763,20 @@ function flashNumbers(){
     for(let k = 0; k < mouth; k++) events.push(currentSeries.map((nums, s) => [s, nums[k]]));
     totalNumbers = mouth;
   }
-  const t = computeTiming(totalNumbers);
-  const showMs = t.show * 1000, blankMs = t.blank * 1000;
+  const cycles = computeCycles(totalNumbers);
+  const offsets = [];
+  { let acc = 0;
+    for(const cy of cycles){ offsets.push(acc); acc += (cy.show + cy.blank) * 1000; }
+    var totalMs = acc; }
   events.forEach((items, i) => {
     later(() => {
       flashCells.forEach(d => { d.style.visibility = "hidden"; });
       items.forEach(([s, n]) => { flashCells[s].textContent = fmt(n); flashCells[s].style.visibility = "visible"; });
       beepFlash();
-    }, i * (showMs + blankMs));
-    later(() => { flashCells.forEach(d => { d.style.visibility = "hidden"; }); }, i * (showMs + blankMs) + showMs);
+    }, offsets[i]);
+    later(() => { flashCells.forEach(d => { d.style.visibility = "hidden"; }); }, offsets[i] + cycles[i].show * 1000);
   });
-  later(showAnswer, events.length * (showMs + blankMs));
+  later(showAnswer, totalMs);
 }
 
 /* ---------- 解答入力 ---------- */
@@ -2056,7 +2074,7 @@ function placeName(i){
   return ["", "十", "百", "千"][r] + PLACE_UNITS[g] + "の位";
 }
 function makeHint(answer, user){
-  if(user === null) return "桁数が違います";
+  if(user === null) return "答えが入力されてません";
   const a = (answer < 0n ? -answer : answer).toString();
   const u = (user < 0n ? -user : user).toString();
   if(a.length !== u.length) return "桁数が違います";
