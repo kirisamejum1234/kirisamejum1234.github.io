@@ -58,6 +58,16 @@
   .row .stepper input { width:78px; padding-left:6px; padding-right:6px; }
   /* 秒数の行はボタンが4つ並ぶため、狭い画面でも収まるよう一回り小さくする */
   .stepper.sec .stepbtn { width:38px; height:42px; }
+  /* 加速の行はボタンが多いので、見出しと操作を2段に分ける */
+  #accelTimeRow { flex-direction:column; align-items:stretch; gap:6px; }
+  #accelTimeRow > label { min-width:0; }
+  #accelTimeRow .stepper { flex-wrap:wrap; justify-content:flex-end; }
+  #accelTimeRow .stepbtn { width:34px; font-size:11px; }
+  #accelTimeRow .stepper input { width:62px; }
+  /* 符号ボタン（iPhoneの数字キーボードには「−」キーが無いため） */
+  .signbtn { width:34px; height:42px; flex:none; font-size:15px; font-weight:bold; line-height:1; padding:0;
+    background:#263238; color:#fff; border:1px solid #455a64; border-radius:10px; cursor:pointer; }
+  .signbtn.on { background:#00b84f; border-color:#00b84f; }
   .stepper.sec { gap:3px; }
   .row .stepper.sec input { width:94px; padding-left:6px; padding-right:6px; }
   .row.sec-row { flex-wrap:wrap; }
@@ -302,7 +312,7 @@
         <label><input type="radio" name="accelMode" value="off" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オフ</label>
         <label><input type="radio" name="accelMode" value="on" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オン</label>
       </div></div>
-    <div class="row sec-row" id="accelTimeRow" style="display:none"><label>加速（%） <span class="note">マイナスは減速</span></label><div class="stepper sec"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-0.1">−0.1</button><input id="accelTime" type="text" inputmode="decimal" value="10"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="1">＋1</button></div></div>
+    <div class="row sec-row" id="accelTimeRow" style="display:none"><label>加速（%） <span class="note">マイナスは減速</span></label><div class="stepper sec accel-step"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-10">−10</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-0.1">−0.1</button><button type="button" class="signbtn" id="accelSignBtn">−</button><input id="accelTime" type="text" inputmode="decimal" value="10"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="1">＋1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="10">＋10</button></div></div>
     <div class="row"><label>フォント</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
         <label><input type="radio" name="fontChoice" value="soroban" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> そろばん</label>
@@ -1179,9 +1189,23 @@ document.querySelectorAll('input[name="layoutMode"]').forEach(r => r.addEventLis
 refreshAnswerSignState();
 
 /* 加速がオフの間は加速時間の行を隠す（値はそのまま残る） */
+function syncAccelSign(){
+  const b = $("accelSignBtn");
+  if(b) b.classList.toggle("on", String($("accelTime").value).trim().startsWith("-"));
+}
+$("accelSignBtn").addEventListener("click", () => {
+  const el = $("accelTime");
+  let v = String(el.value).trim();
+  el.value = v.startsWith("-") ? v.slice(1) : "-" + v;
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+  syncAccelSign();
+});
+$("accelTime").addEventListener("input", syncAccelSign);
 function refreshAccelState(){
   const on = checkedVal("accelMode", "off") === "on";
   $("accelTimeRow").style.display = on ? "" : "none";
+  syncAccelSign();
 }
 document.querySelectorAll('input[name="accelMode"]').forEach(r => r.addEventListener("change", refreshAccelState));
 refreshAccelState();
@@ -1439,6 +1463,14 @@ function loadSettings(){
   refreshSeriesState(); refreshAccelState(); refreshDigitModeState(); refreshAnswerSignState();
 }
 loadSettings();
+/* 設定画面の入力欄: タップした欄がキーボードの裏に隠れたままに
+   ならないよう、キーボードが出た後にその欄までスクロールする */
+document.querySelectorAll('#settingsScreen input[type="text"], #settingsScreen input[type="number"]').forEach(el => {
+  el.addEventListener("focus", () => {
+    const go = () => { try{ el.scrollIntoView({ block: "center" }); }catch(e){} };
+    setTimeout(go, 350); setTimeout(go, 700);
+  });
+});
 ["settingsScreen", "confirmScreen"].forEach(id => {
   $(id).addEventListener("input", saveSettings);
   $(id).addEventListener("change", saveSettings);
