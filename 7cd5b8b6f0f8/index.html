@@ -341,7 +341,7 @@
         <label><input type="radio" name="accelMode" value="off" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オフ</label>
         <label><input type="radio" name="accelMode" value="on" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オン</label>
       </div></div>
-    <div class="row sec-row" id="accelTimeRow" style="display:none"><label>加速時間 <span class="note">マイナス可</span></label><div class="stepper sec"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-0.1">−0.1</button><input id="accelTime" type="text" inputmode="decimal" value="0.5"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="1">＋1</button></div></div>
+    <div class="row sec-row" id="accelTimeRow" style="display:none"><label>加速（%） <span class="note">マイナスは減速</span></label><div class="stepper sec"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-0.1">−0.1</button><input id="accelTime" type="text" inputmode="decimal" value="10"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="1">＋1</button></div></div>
     <div class="row"><label>フォント</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
         <label><input type="radio" name="fontChoice" value="soroban" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> そろばん</label>
@@ -473,7 +473,8 @@ document.querySelectorAll(".stepbtn").forEach(btn => {
     let v = cur + parseFloat(btn.dataset.step);
     if(isFloat){
       v = Math.round(v * 100) / 100;
-      if(btn.dataset.target !== "accelTime" && v < 0.1) v = 0.1;   // 加速時間だけマイナス可
+      if(btn.dataset.target === "accelTime"){ if(v < -100) v = -100; if(v > 100) v = 100; }   // 加速は-100〜100%
+      else if(v < 0.1) v = 0.1;
       el.value = String(v);
     } else {
       v = Math.round(v);
@@ -1254,7 +1255,19 @@ let speedMode = "manual", speedDelta = 0, omakaseTotal = null;
 let lastPlayTotal = null, playCfg = null, judgeAllCorrect = false;
 const SPEED_BTNS = [["slow", "遅く", 1], ["slows", "少し遅く", 0.5], ["same", "そのまま", 0], ["fasts", "少し早く", -0.5], ["fast", "早く", -1]];
 function baseTotalOf(c){ return c.totalSeconds; }
-function clampTotal(t){ return Math.max(0.15 * cfg.mouth, Math.round(t * 100) / 100); }
+function clampTotal(t){
+  let floor = 0.15 * cfg.mouth;
+  const accel = cfg.accelOn ? (cfg.accel || 0) : 0;
+  if(accel && cfg.mouth >= 2){
+    const r = 1 - accel / 100;
+    if(r > 0){
+      const need = r < 1 ? 0.15 * (1 - Math.pow(r, cfg.mouth)) / ((1 - r) * Math.pow(r, cfg.mouth - 1))
+                         : 0.15 * (Math.pow(r, cfg.mouth) - 1) / (r - 1);
+      floor = Math.max(floor, need);
+    }
+  }
+  return Math.max(floor, Math.round(t * 100) / 100);
+}
 function effectivePlayCfg(){
   if(speedMode === "omakase" && omakaseTotal !== null)
     return Object.assign({}, cfg, { timingMode: "total", totalSeconds: omakaseTotal });
@@ -1286,18 +1299,21 @@ function renderSpeedRow(){
 }
 /* 全体の秒数を count 個の数字へ配分した [{show, blank}, ...] を返す。
    加速が 0 でないときは等差数列で配分する（合計は全体の秒数のまま、
-   1つずつ accel 秒ずつ短く/長くなる）。どの数字も短すぎて見えなく
-   ならないよう、1つ分の時間は最低0.15秒を確保する（数字表示の音が
-   0.1秒あるため、それより短いと最後の数字が一瞬で消え、音も途中で
-   切れてしまう） */
+   accel % ずつ短く（マイナスのときは長く）なる等比配分にする。どの
+   数字も短すぎて見えなくならないよう、1つ分の時間は最低0.15秒を
+   確保する（数字表示の音が0.1秒あるため、それより短いと最後の数字が
+   一瞬で消え、音も途中で切れてしまう） */
 function computeCycles(count){
   const c = playCfg || cfg;
   const n = Math.max(1, count);
-  const base = c.totalSeconds / n;
   const accel = c.accelOn ? (c.accel || 0) : 0;
+  const r = 1 - accel / 100;
+  const weights = [];
+  for(let k = 0; k < n; k++) weights.push(r <= 0 ? (k === 0 ? 1 : 0) : Math.pow(r, k));
+  const wsum = weights.reduce((a, b) => a + b, 0) || 1;
   const out = [];
   for(let k = 0; k < n; k++){
-    let cy = base + accel * ((n - 1) / 2 - k);
+    let cy = c.totalSeconds * weights[k] / wsum;
     cy = Math.max(0.15, cy);
     const blank = Math.min(0.3, cy * 0.25);
     out.push({ show: cy - blank, blank });
@@ -1352,7 +1368,7 @@ function readConfig(){
     notes.push(`口数を${minMouth}口に調整しました（この作り方では${minMouth}口以上が必要です）`);
     c.mouth = minMouth; $("mouth").value = String(minMouth);
   }
-  if(c.totalSeconds > 0 && c.totalSeconds / c.mouth < 0.15){
+  if(c.totalSeconds > 0 && !(c.accelOn && c.mouth >= 2 && c.accel) && c.totalSeconds / c.mouth < 0.15){
     const cap = Math.floor(c.totalSeconds / 0.15);
     if(cap >= minMouth){
       notes.push(`口数を${cap}口に調整しました（${c.totalSeconds}秒で出せる上限です）`);
@@ -1369,13 +1385,21 @@ function readConfig(){
     notes.push(`最大桁数を${nm}桁に調整しました（「引き続ける・マイナスにならない」を作れるようにするためです）`);
     c.maxD = nm; $("maxDigits").value = String(nm);
   }
+  if(c.accelOn && !isNaN(c.accel) && (c.accel < -100 || c.accel > 100)){
+    c.accel = Math.max(-100, Math.min(100, c.accel));
+    $("accelTime").value = String(c.accel);
+    notes.push(`加速を${c.accel}%に調整しました（設定できる範囲は-100〜100%です）`);
+  }
   if(c.accelOn && c.mouth >= 2 && c.accel){
-    const base = c.totalSeconds / c.mouth;
-    if(base - Math.abs(c.accel) * (c.mouth - 1) / 2 < 0.15){
-      const need = c.mouth * (0.15 + Math.abs(c.accel) * (c.mouth - 1) / 2);
-      c.totalSeconds = Math.ceil(need * 100) / 100;
-      $("totalSeconds").value = String(c.totalSeconds);
-      notes.push(`全体の秒数を${c.totalSeconds}秒に設定しました（加速${c.accel}秒で出せるギリギリの秒数です）`);
+    const r = 1 - c.accel / 100;
+    if(r > 0){
+      const need = r < 1 ? 0.15 * (1 - Math.pow(r, c.mouth)) / ((1 - r) * Math.pow(r, c.mouth - 1))
+                         : 0.15 * (Math.pow(r, c.mouth) - 1) / (r - 1);
+      if(c.totalSeconds < need){
+        c.totalSeconds = Math.ceil(need * 100) / 100;
+        $("totalSeconds").value = String(c.totalSeconds);
+        notes.push(`全体の秒数を${c.totalSeconds}秒に設定しました（加速${c.accel}%で出せるギリギリの秒数です）`);
+      }
     }
   }
   c.adjustNotes = notes;
@@ -1395,7 +1419,7 @@ function readConfig(){
   else if(subCount > 0 && c.answerMode === "mid" && subCount >= c.mouth - 1)
     c.subArrangeNote = "※この設定では「途中だけマイナス（答えはプラス）」を完全には満たせません。なるべく条件に近づけて作ります";
   if(!(c.totalSeconds > 0)) return startError("全体の秒数には0より大きい数値を入力してください。");
-  if(c.accelOn && isNaN(c.accel)) return startError("加速時間には数値を入力してください。");
+  if(c.accelOn && isNaN(c.accel)) return startError("加速には数値を入力してください。");
   // 物理的に表示できない速さは弾く（1つの数字の表示時間が短すぎると、
   // 画面に出る前に消えてしまい、数字として見えないため）
 
@@ -1433,7 +1457,7 @@ function saveSettings(){
       minDigits: $("minDigits").value, maxDigits: $("maxDigits").value,
       mouth: $("mouth").value, totalSeconds: $("totalSeconds").value,
       seriesCount: $("seriesCount").value, accelTime: $("accelTime").value,
-      accelMode: checkedVal("accelMode", "off"), digitMode: checkedVal("digitMode", "maxonly"),
+      accelMode: checkedVal("accelMode", "off"), accelPct: true, digitMode: checkedVal("digitMode", "maxonly"),
       subMode: checkedVal("subMode", "off"), answerSignMode: checkedVal("answerSignMode", "never"),
       repeatMode: checkedVal("repeatMode", "off"),
       presentMode: checkedVal("presentMode", "simul"), layoutPref,
@@ -1458,7 +1482,7 @@ function loadSettings(){
   setVal("minDigits", data.minDigits); setVal("maxDigits", data.maxDigits);
   setVal("mouth", data.mouth); setVal("totalSeconds", data.totalSeconds);
   setVal("seriesCount", data.seriesCount);
-  setVal("accelTime", data.accelTime);
+  if(data.accelPct) setVal("accelTime", data.accelTime);   // 旧バージョンの秒の値は読み捨てる
   setRadio("accelMode", data.accelMode); setRadio("digitMode", data.digitMode);
   setRadio("subMode", data.subMode); setRadio("answerSignMode", data.answerSignMode);
   /* 引き算の出し方は記憶しない: 開いたときは必ず「ふつう」から始める
