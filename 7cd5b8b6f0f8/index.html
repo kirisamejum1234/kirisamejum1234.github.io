@@ -350,6 +350,11 @@
         <label><input type="radio" name="numSize" value="medium" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 中</label>
         <label><input type="radio" name="numSize" value="large" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 大</label>
       </div></div>
+    <div class="row"><label>ヒント</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
+        <label><input type="radio" name="hintMode" value="off" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> なし</label>
+        <label><input type="radio" name="hintMode" value="on" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> あり</label>
+      </div></div>
     <div id="startError" style="display:none;background:#5a1a1a;color:#ffd7d7;border:1px solid #ff5252;border-radius:10px;padding:10px 14px;margin:18px 0 0;font-size:14px;line-height:1.6"></div>
     <div class="btnrow-settings">
       <button id="settingsBackBtn">戻る</button>
@@ -394,6 +399,7 @@
   <div class="mark" id="judgeMark">〇</div>
   <div style="font-size:28px;font-weight:bold" id="judgeText">正解！</div>
   <div class="judge-detail" id="judgeDetail"></div>
+  <div id="judgeHintArea" style="margin-top:10px;text-align:center"></div>
   </div>
   <div class="bottom-area">
     <div class="result-row" id="resultRow"><button id="toResultBtn">次へ ▶</button></div>
@@ -1257,6 +1263,7 @@ function readConfig(){
     answerMode: checkedVal("answerSignMode", "never"),
     subStyle: checkedVal("subStyle", "normal"),
     allowRepeat: checkedVal("repeatMode", "off") === "on",
+    hint: checkedVal("hintMode", "off") === "on",
     questions: parseInt(qSel.value, 10),
     series: intOf("seriesCount"),
     present: checkedVal("presentMode", "simul"),
@@ -1348,7 +1355,8 @@ function saveSettings(){
       subCount: $("subCount").value, subArrange: checkedVal("subArrange", "random"),
       confirmQuestions: $("confirmQuestions").value,
       fontChoice: checkedVal("fontChoice", "soroban"),
-      numSize: checkedVal("numSize", "medium")
+      numSize: checkedVal("numSize", "medium"),
+      hintMode: checkedVal("hintMode", "off")
     };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
   }catch(e){ /* 保存できない環境では何もしない */ }
@@ -1377,6 +1385,7 @@ function loadSettings(){
   setRadio("fontChoice", data.fontChoice);
   applyFontChoice(data.fontChoice || "soroban");
   setRadio("numSize", data.numSize);
+  setRadio("hintMode", data.hintMode);
   numSizeChoice = NUM_SIZE_SCALES[data.numSize] ? data.numSize : "medium";
   refreshSeriesState(); refreshTimingState(); refreshDigitModeState(); refreshAnswerSignState();
 }
@@ -1962,6 +1971,25 @@ function showJudge(results){
     $("judgeDetail").innerHTML = shownHtml;
     fitJudgeVals();
   });
+  /* ヒント（設定で「あり」のときだけ）: 答えを見るボタンの下に置く。
+     押すと「ヒントを見ますか？」のはい/いいえ確認を出し、いいえなら
+     元通り、はいならヒントを表示する（ボタンはヒントに置き換わる） */
+  const hintArea = $("judgeHintArea");
+  hintArea.innerHTML = "";
+  if(cfg && cfg.hint){
+    hintArea.innerHTML = `<button type="button" id="showHintBtn">ヒントを見る</button>`;
+    $("showHintBtn").addEventListener("click", () => {
+      showReorderConfirm("ヒントを見ますか？", () => {
+        if(results.length === 1){
+          hintArea.innerHTML = `<div style="font-size:19px">ヒント： ${makeHint(results[0].answer, results[0].user)}</div>`;
+        } else {
+          const positions = layoutPositions(cfg.series, cfg.layout);
+          hintArea.innerHTML = results.map((r, s) =>
+            `<div style="font-size:17px;margin-top:4px">${positions[s][4]}： ヒント： ${makeHint(r.answer, r.user)}</div>`).join("");
+        }
+      });
+    });
+  }
   const isLast = problemIndex >= cfg.questions - 1;
   $("nextBtn").style.display = isLast ? "none" : "";        // 次の問題へは最終問題以外
   $("resultRow").style.display = isLast ? "flex" : "none";  // 全問題終了時は右下の次へ→リザルト（4ボタン行の上の段に表示）
@@ -1988,6 +2016,35 @@ $("sameBtn").addEventListener("click", () => countdownThenFlash());
    never: 累計が一度もマイナスにならず答えはプラス /
    mid: 途中で一度は沈み、答えはプラス、1口目がプラス /
    negative: 答えがマイナスで、1口目がプラス */
+/* ---------- ヒント（判定画面） ----------
+   答えと入力の桁数が違えば「桁数が違います」だけ。同じ桁数なら、
+   あっている位だけを知らせる。ただし、あっている位の方が間違っている
+   位より多いときは、間違っている位だけを知らせる（あってる場所を全部
+   言うと答えがほぼ分かってしまうため）。どれだけ違うかは言わない */
+const PLACE_UNITS = ["", "万", "億", "兆", "京", "垓", "秭", "穣", "溝", "澗", "正", "載", "極", "恒河沙", "阿僧祇", "那由他", "不可思議", "無量大数"];
+function placeName(i){
+  if(i === 0) return "一の位";
+  const g = Math.floor(i / 4), r = i % 4;
+  if(g >= PLACE_UNITS.length) return `右から${i + 1}番目の位`;
+  return ["", "十", "百", "千"][r] + PLACE_UNITS[g] + "の位";
+}
+function makeHint(answer, user){
+  if(user === null) return "桁数が違います";
+  const a = (answer < 0n ? -answer : answer).toString();
+  const u = (user < 0n ? -user : user).toString();
+  if(a.length !== u.length) return "桁数が違います";
+  const matches = [], wrongs = [];
+  for(let i = 0; i < a.length; i++){
+    const name = placeName(i);
+    if(a[a.length - 1 - i] === u[u.length - 1 - i]) matches.unshift(name);
+    else wrongs.unshift(name);
+  }
+  if(!wrongs.length)
+    return (answer < 0n) !== (user < 0n) ? "マイナスの有無が違います" : "全部あってます";
+  if(!matches.length) return "あっている場所はありません";
+  if(matches.length > wrongs.length) return wrongs.join("と") + "のみちがいます";
+  return matches.join("と") + "はあってます";
+}
 function sequenceModeOk(numbers, answerMode){
   if(!numbers.length) return true;
   const prefs = [];
