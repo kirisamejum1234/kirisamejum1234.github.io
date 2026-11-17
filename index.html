@@ -1280,20 +1280,20 @@ function renderSpeedRow(){
 }
 /* count 個の数字の [{show, blank}, ...] を返す。
    1つ目の時間は「全体の秒数 ÷ 口数」（表示秒数）。加速が 0 でない
-   ときは、最後の数字に向けて、設定した accel % ぶんの変化を均等に
-   割りながらだんだん短く（マイナスのときは長く）していく。
-   例: 表示秒数1秒・15口・加速50% → 1.00秒から0.53秒まで均等に短縮。
-   どの数字の時間も 0 にはならないので、出せない組合せは無く、
-   下限での頭打ちもしない（調整も注意書きも要らない） */
+   ときは、1つ進むごとに時間が accel % ずつ短く（マイナスのときは
+   長く）なる。時間に下限は設けない（下限で頭打ちにすると、途中から
+   一定の速さになってしまうため）。100% では2つ目以降が 0 秒に
+   なるが、再生側で全ての数字を必ず1フレーム描画してから消すので、
+   数字が飛ぶことはない */
 function computeCycles(count){
   const c = playCfg || cfg;
   const n = Math.max(1, count | 0);
   const accel = c.accelOn ? (c.accel || 0) : 0;
   const base = c.totalSeconds / n;
-  const p = accel / 100;
+  const r = 1 - accel / 100;
   const out = [];
   for(let k = 0; k < n; k++){
-    const cy = n > 1 ? base * (1 - p * k / n) : base;
+    const cy = r > 0 ? base * Math.pow(r, k) : (k === 0 ? base : 0);
     const blank = Math.min(0.3, cy * 0.25);
     out.push({ show: cy - blank, blank });
   }
@@ -1844,15 +1844,31 @@ function flashNumbers(){
   { let acc = 0;
     for(const cy of cycles){ offsets.push(acc); acc += (cy.show + cy.blank) * 1000; }
     var totalMs = acc; }
-  events.forEach((items, i) => {
-    later(() => {
+  /* 数字は1つずつ順番に再生する（PC版と同じ連鎖方式）。
+     表示時間が短い数字でも、必ず1フレーム描画されてから消える
+     ようにする。あらかじめ一括でタイマーを登録する方式では、
+     次の数字の表示が前の数字の描画より先に来てしまい、画面に
+     一度も出ないまま飛んでしまうため */
+  const t0 = performance.now();
+  const playStep = (i) => {
+    if(!$("flashScreen").classList.contains("active")) return;
+    if(i >= events.length){ showAnswer(); return; }
+    flashCells.forEach(d => { d.style.visibility = "hidden"; });
+    events[i].forEach(([s, n]) => { flashCells[s].textContent = fmt(n); flashCells[s].style.visibility = "visible"; });
+    beepFlash();
+    let painted = false;
+    requestAnimationFrame(() => { painted = true; });
+    const showEnd = t0 + offsets[i] + cycles[i].show * 1000;
+    const hideStep = () => {
+      if(!$("flashScreen").classList.contains("active")) return;
+      if(!painted || performance.now() < showEnd){ later(hideStep, 2); return; }
       flashCells.forEach(d => { d.style.visibility = "hidden"; });
-      items.forEach(([s, n]) => { flashCells[s].textContent = fmt(n); flashCells[s].style.visibility = "visible"; });
-      beepFlash();
-    }, offsets[i]);
-    later(() => { flashCells.forEach(d => { d.style.visibility = "hidden"; }); }, offsets[i] + cycles[i].show * 1000);
-  });
-  later(showAnswer, totalMs);
+      const nextAt = t0 + offsets[i] + (cycles[i].show + cycles[i].blank) * 1000;
+      later(() => playStep(i + 1), Math.max(0, nextAt - performance.now()));
+    };
+    later(hideStep, Math.max(0, showEnd - performance.now()));
+  };
+  playStep(0);
 }
 
 /* ---------- 解答入力 ---------- */
