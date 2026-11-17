@@ -1198,14 +1198,26 @@ function refreshSeriesState(){
   $("layoutRow").style.display = n < 2 ? "none" : "";
   $("layoutShapeLabel").textContent = n === 4 ? "四角" : (n >= 5 ? "多角形" : "三角");
 }
-/* 小数: オンなら「小数第何位まで」の行を出す。オフにしたら、0に
-   なっていた桁数を1へ戻す（小数オフでは桁数0は使えないため） */
+/* 小数: オンなら「小数第何位まで」の行を出す。オンの間、最小桁数は
+   0で固定（変更できない）。オフに戻すと、オンにする前の最小桁数へ
+   戻り、0になっていた最大桁数は1へ戻す */
+let decPrevMin = null;
 function refreshDecState(){
   const on = checkedVal("decMode", "off") === "on";
   $("decPlacesRow").style.display = on ? "" : "none";
-  if(!on){
-    if($("minDigits").value === "0") $("minDigits").value = "1";
+  const minEl = $("minDigits");
+  if(on){
+    if(decPrevMin === null) decPrevMin = minEl.value;
+    minEl.value = "0";
+    minEl.disabled = true;
+    setStepEnabled("minDigits", false);
+  } else {
+    if(decPrevMin !== null){
+      minEl.value = (decPrevMin === "" || decPrevMin === "0") ? "1" : decPrevMin;
+      decPrevMin = null;
+    } else if(minEl.value === "0") minEl.value = "1";
     if($("maxDigits").value === "0") $("maxDigits").value = "1";
+    refreshDigitModeState();
   }
 }
 document.querySelectorAll('input[name="decMode"]').forEach(r => r.addEventListener("change", refreshDecState));
@@ -1345,6 +1357,11 @@ function refreshDigitModeState(){
   setStepEnabled("minDigits", useMin);
   // 使わない間は最小桁数の行を隠す（値はそのまま残る）
   $("minDigitsRow").style.display = useMin ? "" : "none";
+  // 小数オンの間は最小桁数0で固定（上の判定より優先する）
+  if(checkedVal("decMode", "off") === "on"){
+    $("minDigits").disabled = true;
+    setStepEnabled("minDigits", false);
+  }
 }
 document.querySelectorAll('input[name="digitMode"]').forEach(r => r.addEventListener("change", refreshDigitModeState));
 refreshDigitModeState();
@@ -1435,6 +1452,7 @@ function readConfig(){
     present: checkedVal("presentMode", "simul"),
     layout: "single"
   };
+  if(c.decOn) c.minD = 0;   // 小数オンの間、最小桁数は0で固定
   if(isNaN(c.series)) return startError("並列計算数には数値を入力してください。");
   if(c.series < 1 || c.series > 12) return startError("並列計算数は1〜12にしてください。");
   // 配置は組数と選択から確定させる（「形」は3組=三角、4組=四角、5組以上=多角形）
@@ -1549,7 +1567,7 @@ document.querySelectorAll('input[name="numSize"]').forEach(r =>
 function saveSettings(){
   try{
     const data = {
-      minDigits: $("minDigits").value, maxDigits: $("maxDigits").value,
+      minDigits: (checkedVal("decMode", "off") === "on" && decPrevMin !== null) ? decPrevMin : $("minDigits").value, maxDigits: $("maxDigits").value,
       mouth: $("mouth").value, totalSeconds: $("totalSeconds").value,
       seriesCount: $("seriesCount").value, seriesMode: checkedVal("seriesMode", "on"), accelTime: $("accelTime").value,
       accelMode: checkedVal("accelMode", "off"), accelPct: true, digitMode: checkedVal("digitMode", "maxonly"),
