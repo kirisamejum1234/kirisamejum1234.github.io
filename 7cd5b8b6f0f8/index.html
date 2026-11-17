@@ -332,7 +332,12 @@
         <label><input type="radio" name="repeatMode" value="off" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オフ（連続させない）</label>
       </div></div>
     <p class="note" style="margin:-2px 0 10px">オフにすると、同じ数字は続けて出ません。まえの数字で使った数字も、なるべく出ないようにします</p>
-    <div class="row"><label>並列計算数 <span class="note">組の数 1〜12</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="seriesCount" data-step="-1">−</button><input id="seriesCount" type="number" inputmode="numeric" min="1" max="12" value="1"><button type="button" class="stepbtn" data-target="seriesCount" data-step="1">＋</button></div></div>
+    <div class="row"><label>並列計算</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
+        <label><input type="radio" name="seriesMode" value="off" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オフ</label>
+        <label><input type="radio" name="seriesMode" value="on" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オン</label>
+      </div></div>
+    <div class="row" id="seriesCountRow"><label>並列計算数 <span class="note">組の数 1〜12</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="seriesCount" data-step="-1">−</button><input id="seriesCount" type="number" inputmode="numeric" min="1" max="12" value="1"><button type="button" class="stepbtn" data-target="seriesCount" data-step="1">＋</button></div></div>
     <p class="note" style="margin:-2px 0 10px">1=シングル、2=ダブル、3=トリプル、4=クワッド。5以上も入力できます</p>
     <div class="row" id="presentRow"><label>出し方 <span class="note">2組以上の時</span></label>
       <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
@@ -1106,8 +1111,10 @@ function layoutPositions(count, layout, w, h){
 let lastSeries = 1;
 let layoutPref = "row";   // 選んだ配置は組数が変わっても記憶する
 function refreshSeriesState(){
+  const seriesOn = checkedVal("seriesMode", "on") === "on";
+  $("seriesCountRow").style.display = seriesOn ? "" : "none";
   let n = parseInt(zenNum($("seriesCount").value), 10);
-  if(isNaN(n)) n = 1;
+  if(isNaN(n) || !seriesOn) n = 1;
   const rowR = document.querySelector('input[name="layoutMode"][value="row"]');
   const colR = document.querySelector('input[name="layoutMode"][value="col"]');
   const shapeR = document.querySelector('input[name="layoutMode"][value="shape"]');
@@ -1128,6 +1135,7 @@ function refreshSeriesState(){
 }
 $("seriesCount").addEventListener("input", refreshSeriesState);
 $("seriesCount").addEventListener("change", refreshSeriesState);
+document.querySelectorAll('input[name="seriesMode"]').forEach(r => r.addEventListener("change", refreshSeriesState));
 refreshSeriesState();
 let timers = [];
 const later = (fn, ms) => timers.push(setTimeout(fn, ms));
@@ -1347,7 +1355,7 @@ function readConfig(){
     allowRepeat: checkedVal("repeatMode", "off") === "on",
     hint: checkedVal("hintMode", "off") === "on",
     questions: parseInt(qSel.value, 10),
-    series: intOf("seriesCount"),
+    series: checkedVal("seriesMode", "on") === "on" ? intOf("seriesCount") : 1,
     present: checkedVal("presentMode", "simul"),
     layout: "single"
   };
@@ -1458,7 +1466,7 @@ function saveSettings(){
     const data = {
       minDigits: $("minDigits").value, maxDigits: $("maxDigits").value,
       mouth: $("mouth").value, totalSeconds: $("totalSeconds").value,
-      seriesCount: $("seriesCount").value, accelTime: $("accelTime").value,
+      seriesCount: $("seriesCount").value, seriesMode: checkedVal("seriesMode", "on"), accelTime: $("accelTime").value,
       accelMode: checkedVal("accelMode", "off"), accelPct: true, digitMode: checkedVal("digitMode", "maxonly"),
       subMode: checkedVal("subMode", "off"), answerSignMode: checkedVal("answerSignMode", "never"),
       repeatMode: checkedVal("repeatMode", "off"),
@@ -1483,7 +1491,7 @@ function loadSettings(){
   setRadio("subArrange", data.subArrange === "alternate" ? "separate" : data.subArrange);
   setVal("minDigits", data.minDigits); setVal("maxDigits", data.maxDigits);
   setVal("mouth", data.mouth); setVal("totalSeconds", data.totalSeconds);
-  setVal("seriesCount", data.seriesCount);
+  setVal("seriesCount", data.seriesCount); setRadio("seriesMode", data.seriesMode);
   if(data.accelPct) setVal("accelTime", data.accelTime);   // 旧バージョンの秒の値は読み捨てる
   setRadio("accelMode", data.accelMode); setRadio("digitMode", data.digitMode);
   setRadio("subMode", data.subMode); setRadio("answerSignMode", data.answerSignMode);

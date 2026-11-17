@@ -4,7 +4,7 @@
    CACHE の版数はアプリの版数（flash_anzan.py の APP_VERSION）と必ず
    そろえること。版数が変わると新しいキャッシュに切り替わり、古い
    キャッシュは activate のときに削除される */
-const CACHE = "flash-anzan-20261117-15";
+const CACHE = "flash-anzan-20261117-16";
 const ASSETS = [
   "/",
   "/index.html",
