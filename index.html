@@ -1150,7 +1150,7 @@ function refreshAnswerSignState(){
     const minD = parseInt(zenNum($("minDigits").value), 10);
     const maxD = parseInt(zenNum($("maxDigits").value), 10);
     if(!isNaN(minD) && !isNaN(maxD) && !hikiNeverPossible(minD, maxD, mouth))
-      warnText = "※この設定では「マイナスにならない」問題を作れません（口数を減らすか、最大桁数を上げてください）";
+      warnText = "※この設定では「マイナスにならない」問題を作れないため、「次へ」を押すと最大桁数を自動で調整します";
   }
   warn.textContent = warnText;
   /* 引き続ける時だけ、桁数の出し方の意味を補足する */
@@ -1300,11 +1300,44 @@ function readConfig(){
   if(!c.vary && !hikiCfg) c.minD = c.maxD;
   if(hikiCfg && !c.vary && (isNaN(c.minD) || c.minD < 1 || c.minD > c.maxD)) return startError("桁数の設定を確認してください。最小桁数は1以上で、最大桁数以下にしてください。");
   if(c.mouth < 1) return startError("口数は1以上にしてください。");
-  if(c.sub && c.answerMode === "mid" && c.mouth < 3) return startError("「途中だけマイナス（答えはプラス）」は口数3以上で設定してください。");
-  if(c.sub && c.subStyle === "hikitsuzukeru" && c.mouth < 2) return startError("「引き続ける」は口数2以上で設定してください。");
   if(c.sub && c.subStyle === "hikitsuzukeru" && c.answerMode === "mid") return startError("「引き続ける」は「途中だけマイナス（答えはプラス）」と組み合わせできません。");
-  if(c.sub && c.subStyle === "hikitsuzukeru" && c.answerMode === "negative" && c.mouth < 3) return startError("「引き続ける」で「答えがマイナスになる」は口数3以上で設定してください（口数2では最初の数字が大きいため、答えはマイナスになりません）。");
-  if(c.sub && c.subStyle === "hikitsuzukeru" && c.answerMode === "never" && !hikiNeverPossible(c.minD, c.maxD, c.mouth)) return startError("この設定では「引き続ける・マイナスにならない」問題を作れません（口数を減らすか、最大桁数を上げてください）。");
+  /* 作れない組合せは止めずに、作れるギリギリの値へ自動で調整する
+     （優先して動かすのは桁数と口数）。調整した値は入力欄にも戻す */
+  const notes = [];
+  let minMouth = 1;
+  if(c.sub && c.answerMode === "mid") minMouth = 3;
+  if(c.sub && c.subStyle === "hikitsuzukeru") minMouth = Math.max(minMouth, c.answerMode === "negative" ? 3 : 2);
+  if(c.mouth < minMouth){
+    notes.push(`口数を${minMouth}口に調整しました（この作り方では${minMouth}口以上が必要です）`);
+    c.mouth = minMouth; $("mouth").value = String(minMouth);
+  }
+  if(c.totalSeconds > 0 && c.totalSeconds / c.mouth < 0.05){
+    const cap = Math.floor(c.totalSeconds / 0.05);
+    if(cap >= minMouth){
+      notes.push(`口数を${cap}口に調整しました（${c.totalSeconds}秒で出せる上限です）`);
+      c.mouth = cap; $("mouth").value = String(cap);
+    } else {
+      c.totalSeconds = Math.ceil(0.05 * c.mouth * 100) / 100;
+      $("totalSeconds").value = String(c.totalSeconds);
+      notes.push(`全体の秒数を${c.totalSeconds}秒に調整しました（${c.mouth}口を出すために必要です）`);
+    }
+  }
+  if(c.sub && c.subStyle === "hikitsuzukeru" && c.answerMode === "never" && !hikiNeverPossible(c.minD, c.maxD, c.mouth)){
+    let nm = c.maxD;
+    while(!hikiNeverPossible(c.minD, nm, c.mouth)) nm++;
+    notes.push(`最大桁数を${nm}桁に調整しました（「引き続ける・マイナスにならない」を作れるようにするためです）`);
+    c.maxD = nm; $("maxDigits").value = String(nm);
+  }
+  if(c.accelOn && c.mouth >= 2 && c.accel){
+    const base = c.totalSeconds / c.mouth;
+    if(base - Math.abs(c.accel) * (c.mouth - 1) / 2 < 0.05){
+      const need = c.mouth * (0.05 + Math.abs(c.accel) * (c.mouth - 1) / 2);
+      c.totalSeconds = Math.ceil(need * 100) / 100;
+      $("totalSeconds").value = String(c.totalSeconds);
+      notes.push(`全体の秒数を${c.totalSeconds}秒に設定しました（加速${c.accel}秒で出せるギリギリの秒数です）`);
+    }
+  }
+  c.adjustNotes = notes;
   // 引き算の数（ふつうの時のみ）: 空欄・不正値なら0=おまかせ。口数-1を超えたら口数-1に丸める
   let subCount = 0;
   const subArrange = checkedVal("subArrange", "random");
@@ -1324,17 +1357,7 @@ function readConfig(){
   if(c.accelOn && isNaN(c.accel)) return startError("加速時間には数値を入力してください。");
   // 物理的に表示できない速さは弾く（1つの数字の表示時間が短すぎると、
   // 画面に出る前に消えてしまい、数字として見えないため）
-  if(c.totalSeconds / c.mouth < 0.05) return startError(`この設定では設定できません（${c.mouth}口を${c.totalSeconds}秒で出すと、1つの数字は約${(c.totalSeconds / c.mouth).toFixed(2)}秒しか表示されず見えません）。全体の秒数を増やすか、口数を減らしてください。`);
-  // 加速が大きすぎると端の数字の時間が無くなる（マイナスになる）ので弾く
-  if(c.accelOn && c.mouth >= 2 && c.accel){
-    const base = c.totalSeconds / c.mouth;
-    const worst = base - Math.abs(c.accel) * (c.mouth - 1) / 2;
-    if(worst < 0.05){
-      const which = c.accel > 0 ? "最後" : "最初";
-      const maxA = Math.floor(((base - 0.05) * 2 / (c.mouth - 1)) * 100) / 100;
-      return startError(`この設定では設定できません（${c.mouth}口を${c.totalSeconds}秒で出す設定で加速${c.accel}秒にすると、${which}の数字の時間が約${worst.toFixed(2)}秒になってしまいます）。加速は${maxA}秒以内にするか、全体の秒数を増やしてください。`);
-    }
-  }
+
   return c;
 }
 
@@ -1430,6 +1453,7 @@ $("startBtn").addEventListener("click", () => {
     $("confirmTitle").textContent = "自分で設定";
     $("confirmSpec").textContent = customSummary(c);
     const notes = [];
+    if(c.adjustNotes) for(const n of c.adjustNotes) notes.push("※" + n);
     if(c.subArrangeNote) notes.push(c.subArrangeNote);
     if(c.sub && c.subStyle === "hikitsuzukeru"){
       if(c.answerMode === "negative"){
