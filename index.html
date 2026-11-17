@@ -1325,6 +1325,16 @@ function readConfig(){
   // 物理的に表示できない速さは弾く（1つの数字の表示時間が短すぎると、
   // 画面に出る前に消えてしまい、数字として見えないため）
   if(c.totalSeconds / c.mouth < 0.05) return startError(`この設定では設定できません（${c.mouth}口を${c.totalSeconds}秒で出すと、1つの数字は約${(c.totalSeconds / c.mouth).toFixed(2)}秒しか表示されず見えません）。全体の秒数を増やすか、口数を減らしてください。`);
+  // 加速が大きすぎると端の数字の時間が無くなる（マイナスになる）ので弾く
+  if(c.accelOn && c.mouth >= 2 && c.accel){
+    const base = c.totalSeconds / c.mouth;
+    const worst = base - Math.abs(c.accel) * (c.mouth - 1) / 2;
+    if(worst < 0.05){
+      const which = c.accel > 0 ? "最後" : "最初";
+      const maxA = Math.floor(((base - 0.05) * 2 / (c.mouth - 1)) * 100) / 100;
+      return startError(`この設定では設定できません（${c.mouth}口を${c.totalSeconds}秒で出す設定で加速${c.accel}秒にすると、${which}の数字の時間が約${worst.toFixed(2)}秒になってしまいます）。加速は${maxA}秒以内にするか、全体の秒数を増やしてください。`);
+    }
+  }
   return c;
 }
 
