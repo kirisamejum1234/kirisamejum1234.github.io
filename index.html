@@ -1215,7 +1215,7 @@ let speedMode = "manual", speedDelta = 0, omakaseTotal = null;
 let lastPlayTotal = null, playCfg = null, judgeAllCorrect = false;
 const SPEED_BTNS = [["slow", "遅く", 1], ["slows", "少し遅く", 0.5], ["same", "そのまま", 0], ["fasts", "少し早く", -0.5], ["fast", "早く", -1]];
 function baseTotalOf(c){ return c.totalSeconds; }
-function clampTotal(t){ return Math.max(0.05 * cfg.mouth, Math.round(t * 100) / 100); }
+function clampTotal(t){ return Math.max(0.15 * cfg.mouth, Math.round(t * 100) / 100); }
 function effectivePlayCfg(){
   if(speedMode === "omakase" && omakaseTotal !== null)
     return Object.assign({}, cfg, { timingMode: "total", totalSeconds: omakaseTotal });
@@ -1248,7 +1248,9 @@ function renderSpeedRow(){
 /* 全体の秒数を count 個の数字へ配分した [{show, blank}, ...] を返す。
    加速が 0 でないときは等差数列で配分する（合計は全体の秒数のまま、
    1つずつ accel 秒ずつ短く/長くなる）。どの数字も短すぎて見えなく
-   ならないよう、1つ分の時間は最低0.05秒を確保する */
+   ならないよう、1つ分の時間は最低0.15秒を確保する（数字表示の音が
+   0.1秒あるため、それより短いと最後の数字が一瞬で消え、音も途中で
+   切れてしまう） */
 function computeCycles(count){
   const c = playCfg || cfg;
   const n = Math.max(1, count);
@@ -1257,7 +1259,7 @@ function computeCycles(count){
   const out = [];
   for(let k = 0; k < n; k++){
     let cy = base + accel * ((n - 1) / 2 - k);
-    cy = Math.max(0.05, cy);
+    cy = Math.max(0.15, cy);
     const blank = Math.min(0.3, cy * 0.25);
     out.push({ show: cy - blank, blank });
   }
@@ -1311,13 +1313,13 @@ function readConfig(){
     notes.push(`口数を${minMouth}口に調整しました（この作り方では${minMouth}口以上が必要です）`);
     c.mouth = minMouth; $("mouth").value = String(minMouth);
   }
-  if(c.totalSeconds > 0 && c.totalSeconds / c.mouth < 0.05){
-    const cap = Math.floor(c.totalSeconds / 0.05);
+  if(c.totalSeconds > 0 && c.totalSeconds / c.mouth < 0.15){
+    const cap = Math.floor(c.totalSeconds / 0.15);
     if(cap >= minMouth){
       notes.push(`口数を${cap}口に調整しました（${c.totalSeconds}秒で出せる上限です）`);
       c.mouth = cap; $("mouth").value = String(cap);
     } else {
-      c.totalSeconds = Math.ceil(0.05 * c.mouth * 100) / 100;
+      c.totalSeconds = Math.ceil(0.15 * c.mouth * 100) / 100;
       $("totalSeconds").value = String(c.totalSeconds);
       notes.push(`全体の秒数を${c.totalSeconds}秒に調整しました（${c.mouth}口を出すために必要です）`);
     }
@@ -1330,8 +1332,8 @@ function readConfig(){
   }
   if(c.accelOn && c.mouth >= 2 && c.accel){
     const base = c.totalSeconds / c.mouth;
-    if(base - Math.abs(c.accel) * (c.mouth - 1) / 2 < 0.05){
-      const need = c.mouth * (0.05 + Math.abs(c.accel) * (c.mouth - 1) / 2);
+    if(base - Math.abs(c.accel) * (c.mouth - 1) / 2 < 0.15){
+      const need = c.mouth * (0.15 + Math.abs(c.accel) * (c.mouth - 1) / 2);
       c.totalSeconds = Math.ceil(need * 100) / 100;
       $("totalSeconds").value = String(c.totalSeconds);
       notes.push(`全体の秒数を${c.totalSeconds}秒に設定しました（加速${c.accel}秒で出せるギリギリの秒数です）`);
