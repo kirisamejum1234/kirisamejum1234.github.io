@@ -141,6 +141,7 @@
   #judgeSpeedRow button.speed-sel { background:#ffd400; color:#000; font-weight:bold; }
   #judgeSpeedRow button:disabled { opacity:.4; }
   .judge-act-btn { min-width:230px; padding:13px 0; font-size:16px; font-weight:bold; }
+  .judge-act-btn:disabled { opacity:.4; }
   /* 「答えを見る」で出す正解: 中央に、計算の数字くらいの大きさで緑色に */
   .big-answer { color:#00b84f; font-weight:bold; line-height:1.15; white-space:nowrap; }
   /* リザルト: 他の画面と同じ内側ラッパー方式にそろえる（下記コメント参照）。
@@ -2271,7 +2272,7 @@ function renderJudgeActions(){
   const results = judgeResultsCache;
   let html = "";
   if(results.some(r => !r.correct))
-    html += `<div style="margin-bottom:16px"><button type="button" class="judge-act-btn" id="retryInputBtn">もう一度入力する</button></div>`;
+    html += `<div style="margin-bottom:16px"><button type="button" class="judge-act-btn" id="retryInputBtn"${judgeAnswerShown ? " disabled" : ""}>もう一度入力する</button></div>`;
   if(cfg && cfg.hint){
     if(judgeHintShown){
       if(results.length === 1){
@@ -2290,7 +2291,7 @@ function renderJudgeActions(){
     html += `<div><button type="button" class="judge-act-btn" id="showAnswerBtn">答えを見る</button></div>`;
   area.innerHTML = html;
   const rb = $("retryInputBtn");
-  if(rb) rb.addEventListener("click", () => showAnswer());   // 同じ問題のまま解答画面へ（入力し直せる）
+  if(rb) rb.addEventListener("click", () => { if(!judgeAnswerShown) showAnswer(); });   // 同じ問題のまま解答画面へ（入力し直せる）。答えを表示した後は使えない
   const hb = $("showHintBtn");
   if(hb) hb.addEventListener("click", () =>
     showReorderConfirm("ヒントを見ますか？", () => { judgeHintShown = true; renderJudgeActions(); }));
