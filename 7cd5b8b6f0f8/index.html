@@ -1385,9 +1385,10 @@ refreshDigitModeState();
    調整は「全体の秒数」として計算し、次の出題（次の問題・同じ問題・
    順番を変える・逆順）から反映する。設定が数字ごとの秒数でも、
    全体の時間（秒数×口数）に直してから増減する。
-   手動の選択も選んだまま残り、押すたびに今の速さへ加減が累積する
-   （「そのまま」は今の速さを変えない）。おまかせは、正解で0.5秒
-   早く・不正解で0.5秒遅くが累積する。
+   手動の選択は判定画面ごとに「そのまま」へ戻る。ただし速さ自体は
+   引き継がれ、選択は「今出た問題の速さ」を基準に1回分だけ効く
+   （連打しても重ならない）。おまかせは選んだまま残り、正解で
+   0.5秒早く・不正解で0.5秒遅くが累積する。
    変動した秒数は設定には記憶せず、リザルト画面へ行った時点で元に戻る */
 let speedMode = "manual", speedDelta = 0, omakaseTotal = null;
 let speedSel = "same";   // 最後に押した速度ボタン（選択表示用）
@@ -1426,10 +1427,12 @@ function renderSpeedRow(){
       const base = lastPlayTotal !== null ? lastPlayTotal : baseTotalOf(cfg);
       omakaseTotal = clampTotal(base + (judgeAllCorrect ? -0.5 : 0.5));
     } else {
-      /* 手動は「今の速さ」へボタンの分だけ加減し、次もその速さから続ける
-         （押すたびに効く。「そのまま」は今の速さを変えない） */
+      /* 手動の選択は「今出た問題の速さ」を基準に、この判定画面での
+         選択1回分だけが次の問題へ効く。同じボタンを連打しても重なら
+         ず、別のボタンを押せば最後の選択に置き換わる */
       const d = SPEED_BTNS.find(x => x[0] === k)[2];
-      const newTotal = clampTotal(currentSpeedTotal() + d);
+      const anchor = lastPlayTotal !== null ? lastPlayTotal : baseTotalOf(cfg);
+      const newTotal = clampTotal(anchor + d);
       speedMode = "manual"; omakaseTotal = null;
       speedDelta = Math.round((newTotal - baseTotalOf(cfg)) * 100) / 100;
       speedSel = k;
@@ -2395,8 +2398,10 @@ function showJudge(results){
   renderJudgeActions();
   /* 速度ボタン: おまかせ継続中は今回の結果でさらに増減させる（ただし
      同じ問題をもう一度入力して判定し直しても、二重に増減させない）。
-     手動の選択は戻さず、選んだ速さのまま次へ続ける */
+     手動の選択表示は毎回「そのまま」に戻るが、選んだ速さ自体は
+     次の問題へ引き継がれる（基準は常に「今出た問題の速さ」） */
   judgeAllCorrect = allCorrect;
+  if(speedMode !== "omakase") speedSel = "same";
   if(speedMode === "omakase" && omakaseTotal !== null && omakaseAppliedAttempt !== attemptSeq){
     omakaseTotal = clampTotal(omakaseTotal + (allCorrect ? -0.5 : 0.5));
     omakaseAppliedAttempt = attemptSeq;
