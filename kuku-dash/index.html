@@ -140,7 +140,10 @@ button{touch-action:manipulation;}
 .saiten.show{display:block;}
 .keypad{flex:0 0 38%;max-width:350px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
   grid-template-rows:repeat(5,minmax(0,1fr));gap:5px;}
-.keypad button{min-width:0;min-height:0;}
+.keypad button{min-width:0;min-height:0;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
+.key.pressed{background:#444;}
+.key-func.pressed{background:#ffecec;}
+.key-ok.pressed{background:#4040ff;}
 .key{background:var(--key);color:#fff;font-size:clamp(22px,6.4vw,32px);border-color:#555;}
 .key:active{background:#444;}
 .key-func{background:#fff;color:var(--red);font-weight:bold;font-size:clamp(11px,3.2vw,14px);line-height:1.25;}
@@ -283,7 +286,7 @@ if ("serviceWorker" in navigator) {
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-43</span>
+    <span class="ver">ver. 20261110-44</span>
   </div>
 </div>
 
@@ -315,7 +318,7 @@ if ("serviceWorker" in navigator) {
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-43</span>
+    <span class="ver">ver. 20261110-44</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -379,7 +382,7 @@ if ("serviceWorker" in navigator) {
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-43</span>
+    <span class="ver">ver. 20261110-44</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -443,7 +446,7 @@ if ("serviceWorker" in navigator) {
 
 <script>
 "use strict";
-var APP_VERSION = "20261110-43";
+var APP_VERSION = "20261110-44";
 var S = {
   dan: null, order: null, mode: "normal",
   items: [], answers: [], idx: 0, input: "",
@@ -1051,19 +1054,24 @@ function okNaoshi(){
     $("status").textContent = "ちがいます。もう一度！";
   }
 }
-// キーパッドは押した瞬間 (pointerdown) に反応させる。click だと
-// 指を離すまで反応せず、タップの保持時間ぶん遅れて見える。
-// click はキーボードでボタンを押した場合用に残し、直前に
-// pointerdown で処理したものは二重に処理しない
+// キーパッドは押した瞬間 (pointerdown) だけに反応させる。
+// 時間窓やフラグで click との対を管理すると、長押し (500ms超) で
+// click が素通りして二重入力になったり、速い連打で対応がずれたり
+// するので、pointerdown で preventDefault して合成 click 自体を
+// 発生させない。click はキーボード/プログラム経由 (detail===0)
+// のときだけ通す (矢印キーナビの Enter もこの経路)。
+// 押下表示は :active が iOS で不安定なので .pressed クラスで出す。
 function onPress(el, fn){
-  var lastDown = 0;
   el.addEventListener("pointerdown", function(e){
-    lastDown = Date.now();
+    e.preventDefault();
+    el.classList.add("pressed");
     fn(e);
   });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(function(ev){
+    el.addEventListener(ev, function(){ el.classList.remove("pressed"); });
+  });
   el.addEventListener("click", function(e){
-    if (Date.now() - lastDown < 500) return;
-    fn(e);
+    if (e.detail === 0) fn(e);
   });
 }
 document.querySelectorAll("[data-digit]").forEach(function(b){
