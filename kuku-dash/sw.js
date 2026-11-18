@@ -1,6 +1,6 @@
 // くくダッシュ Service Worker (自動生成: tools/build_gated_web.py)
 // キャッシュ名に版数が入っているので、更新時は古いキャッシュが破棄される
-var CACHE = "kuku-dash-20261110-44";
+var CACHE = "kuku-dash-20261110-49";
 var ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
 self.addEventListener("install", function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(ASSETS); })
