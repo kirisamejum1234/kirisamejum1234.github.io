@@ -177,7 +177,10 @@
   /* 解答画面の画面内キーパッド（タブレットPC等、キーボードが出ない環境用） */
   .pad-grid { display:grid; grid-template-columns:repeat(3,76px) 88px; gap:8px; justify-content:center; }
   .pad-grid [data-key="next"] { grid-column: 4; grid-row: 1 / span 4; }
-  .pad-grid button { height:48px; padding:0; line-height:1; font-size:20px; font-weight:bold; touch-action:manipulation; }
+  .pad-grid button { height:48px; padding:0; line-height:1; font-size:20px; font-weight:bold;
+    touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  /* 押した瞬間の見た目（:active だけでは iPhone で出ないことがあるため、pointerdown で付けるクラスでも出す） */
+  .pad-grid button.pressed, .stepbtn.pressed { opacity:.75; }
   table { border-collapse:collapse; margin:14px 0; font-size:16px; }
   th, td { padding:7px 16px; text-align:center; }
   th { color:#999; font-size:13px; }
@@ -485,11 +488,14 @@ document.querySelectorAll(".stepbtn").forEach(btn => {
      アプリ切替(blur/非表示)、そして最大10秒のフェイルセーフ */
   let delayTimer = null, repeatTimer = null, lastPointerAt = 0, holdId = null;
   const stopRepeat = () => {
+    btn.classList.remove("pressed");
     if(delayTimer){ clearTimeout(delayTimer); delayTimer = null; }
     if(repeatTimer){ clearInterval(repeatTimer); repeatTimer = null; }
     holdId = null;
   };
   btn.addEventListener("pointerdown", e => {
+    e.preventDefault();   // ブラウザが合成する click を発生源で止める（対は時間窓では管理しない）
+    btn.classList.add("pressed");
     if(btn.disabled || holdId !== null) return;   // 長押し中の二重開始を防ぐ
     holdId = e.pointerId;
     lastPointerAt = Date.now();
@@ -511,9 +517,10 @@ document.querySelectorAll(".stepbtn").forEach(btn => {
   window.addEventListener("pointercancel", stopRepeat);
   window.addEventListener("blur", stopRepeat);           // アプリ切替・割り込みでも止まる
   document.addEventListener("visibilitychange", () => { if(document.hidden) stopRepeat(); });
-  btn.addEventListener("click", () => {
-    if(Date.now() - lastPointerAt < 1000) return;  // pointerdown で処理済み（二重に増やさない）
-    stepOnce();                                    // キーボード等からのクリック
+  btn.addEventListener("click", e => {
+    if(e.detail !== 0) return;   // 通常のタップは pointerdown で処理済み（二重に入れない）
+    if(btn.disabled) return;
+    stepOnce();                  // キーボード等からのクリック（detail 0）だけ通す
   });
 });
 const intOf = id => parseInt(zenNum($(id).value), 10);
@@ -601,7 +608,7 @@ function playClip(key, b64, onFail){
     const pool = clipPool(key, b64);
     const a = pool[pool.i++ % pool.length];
     delete a.dataset.priming;   // 本番再生がこの要素を引き継いだ印（プライミング側の後始末と競合させない）
-    try{ a.muted = false; a.pause(); a.currentTime = 0; }catch(e){}
+    try{ a.muted = false; a.currentTime = 0; }catch(e){}   // pause() を挟むと再生開始と競合して play() が落ちることがあるため、先頭へ戻すだけにする
     const p = a.play();
     if(p && p.catch) p.catch(() => { if(onFail) onFail(); });   // 再生が拒否されたら予備の音（Web Audio）に切り替える
     return true;
@@ -2141,8 +2148,7 @@ document.addEventListener("focusin", e => {
   if(e.target && e.target.classList && e.target.classList.contains("ans-input")) lastAnswerInput = e.target;
 });
 document.querySelectorAll("#keypad [data-key]").forEach(btn => {
-  btn.addEventListener("pointerdown", e => {
-    e.preventDefault();   // 解答欄のフォーカスを奪わない
+  const handle = () => {
     const inp = (lastAnswerInput && document.contains(lastAnswerInput)) ? lastAnswerInput
       : (answerBlocks[0] && answerBlocks[0].input);
     if(!inp) return;
@@ -2163,6 +2169,7 @@ document.querySelectorAll("#keypad [data-key]").forEach(btn => {
     }
     /* 中身はコンマなしの形で扱い、整形（コンマ付け）は input イベント側に任せる */
     let plain = inp.value.replace(/,/g, "");
+    let beep = false;
     if(key === "back"){
       const body = plain.replace("-", "");
       if(body) plain = (plain.includes("-") ? "-" : "") + body.slice(0, -1);
@@ -2172,7 +2179,7 @@ document.querySelectorAll("#keypad [data-key]").forEach(btn => {
       if(!(cfg && cfg.decOn)) return;
       if(!plain.includes(".")){
         plain = (plain === "" || plain === "-") ? plain + "0." : plain + ".";
-        beepFlash();
+        beep = true;
       }
     }
     else {
@@ -2180,10 +2187,22 @@ document.querySelectorAll("#keypad [data-key]").forEach(btn => {
         const fracLen = plain.slice(plain.indexOf(".") + 1).replace(/[^0-9]/g, "").length;
         if(fracLen >= cfg.decPlaces) return;   // 小数部は設定した桁まで
       }
-      plain += key; beepFlash();   // 物理キー入力の時と同じ音（桁数の上限は設けない）
+      plain += key; beep = true;   // 物理キー入力の時と同じ音（桁数の上限は設けない）
     }
     inp.value = plain;
     inp.dispatchEvent(new Event("input", { bubbles: true }));   // 既存の整形処理を通す
+    if(beep) beepFlash();   // 音は表示を更新してから鳴らす
+  };
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault();   // 解答欄のフォーカスを奪わず、ブラウザが合成する click も発生源で止める
+    btn.classList.add("pressed");
+    handle();
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(t =>
+    btn.addEventListener(t, () => btn.classList.remove("pressed")));
+  btn.addEventListener("click", e => {
+    if(e.detail !== 0) return;   // 通常のタップは pointerdown で処理済み（二重に入れない）
+    handle();                    // キーボード等からのクリック（detail 0）だけ通す
   });
 });
 
