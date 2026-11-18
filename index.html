@@ -140,6 +140,8 @@
   #judgeSpeedRow button { padding:9px 13px; font-size:14px; }
   #judgeSpeedRow button.speed-sel { background:#00b84f; color:#fff; font-weight:bold; }
   .judge-act-btn { min-width:230px; padding:13px 0; font-size:16px; font-weight:bold; }
+  /* 「答えを見る」で出す正解: 中央に、計算の数字くらいの大きさで緑色に */
+  .big-answer { color:#00b84f; font-weight:bold; line-height:1.15; white-space:nowrap; }
   /* リザルト: 他の画面と同じ内側ラッパー方式にそろえる（下記コメント参照）。
      結果画面だけ flex のままだと、行が多いときに実機で下までたどれないことがあるため */
   #resultScreen .screen-inner { justify-content:flex-start; padding-top:34px; }
@@ -395,6 +397,7 @@
   <div class="mark" id="judgeMark">〇</div>
   <div style="font-size:28px;font-weight:bold" id="judgeText">正解！</div>
   <div class="judge-detail" id="judgeDetail"></div>
+  <div id="judgeBigAnswer" style="text-align:center;margin-top:10px"></div>
   <div id="judgeActionArea" style="margin-top:14px;text-align:center"></div>
   <div id="judgeSpeedRow"></div>
   </div>
@@ -1341,10 +1344,13 @@ refreshDigitModeState();
    調整は「全体の秒数」として計算し、次の出題（次の問題・同じ問題・
    順番を変える・逆順）から反映する。設定が数字ごとの秒数でも、
    全体の時間（秒数×口数）に直してから増減する。
-   手動の選択は判定画面ごとに「そのまま」へ戻る。おまかせだけは
-   選んだまま残り、正解で0.5秒早く・不正解で0.5秒遅くが累積する。
+   手動の選択も選んだまま残り、押すたびに今の速さへ加減が累積する
+   （「そのまま」は今の速さを変えない）。おまかせは、正解で0.5秒
+   早く・不正解で0.5秒遅くが累積する。
    変動した秒数は設定には記憶せず、リザルト画面へ行った時点で元に戻る */
 let speedMode = "manual", speedDelta = 0, omakaseTotal = null;
+let speedSel = "same";   // 最後に押した速度ボタン（選択表示用）
+let attemptSeq = 0, omakaseAppliedAttempt = -1;   // おまかせの累積を「1回の出題につき1回」にするための控え
 let lastPlayTotal = null, playCfg = null, judgeAllCorrect = false;
 const SPEED_BTNS = [["slow", "遅く", 1], ["slows", "少し遅く", 0.5], ["same", "そのまま", 0], ["fasts", "少し早く", -0.5], ["fast", "早く", -1]];
 function baseTotalOf(c){ return c.totalSeconds; }
@@ -1356,24 +1362,34 @@ function effectivePlayCfg(){
     return Object.assign({}, cfg, { timingMode: "total", totalSeconds: clampTotal(baseTotalOf(cfg) + speedDelta) });
   return cfg;
 }
-function resetSpeed(){ speedMode = "manual"; speedDelta = 0; omakaseTotal = null; playCfg = null; }
+function resetSpeed(){ speedMode = "manual"; speedDelta = 0; omakaseTotal = null; playCfg = null; speedSel = "same"; omakaseAppliedAttempt = -1; }
+/* 今の実効の全体秒数（速度ボタンで調整中の値。未調整なら設定どおり） */
+function currentSpeedTotal(){
+  if(speedMode === "omakase" && omakaseTotal !== null) return omakaseTotal;
+  if(speedDelta !== 0) return clampTotal(baseTotalOf(cfg) + speedDelta);
+  return baseTotalOf(cfg);
+}
 function renderSpeedRow(){
   const row = $("judgeSpeedRow");
   if(!row) return;
-  const sel = speedMode === "omakase" ? "omakase"
-    : (SPEED_BTNS.find(b => b[2] === speedDelta) || SPEED_BTNS[2])[0];
+  const sel = speedMode === "omakase" ? "omakase" : speedSel;
   row.innerHTML = SPEED_BTNS.map(([k, label]) =>
     `<button type="button" data-speed="${k}" class="${k === sel ? "speed-sel" : ""}">${label}</button>`).join("") +
     `<button type="button" data-speed="omakase" class="${sel === "omakase" ? "speed-sel" : ""}">おまかせ</button>`;
   row.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
     const k = b.dataset.speed;
     if(k === "omakase"){
-      speedMode = "omakase";
+      speedMode = "omakase"; speedSel = "omakase";
       const base = lastPlayTotal !== null ? lastPlayTotal : baseTotalOf(cfg);
       omakaseTotal = clampTotal(base + (judgeAllCorrect ? -0.5 : 0.5));
     } else {
+      /* 手動は「今の速さ」へボタンの分だけ加減し、次もその速さから続ける
+         （押すたびに効く。「そのまま」は今の速さを変えない） */
+      const d = SPEED_BTNS.find(x => x[0] === k)[2];
+      const newTotal = clampTotal(currentSpeedTotal() + d);
       speedMode = "manual"; omakaseTotal = null;
-      speedDelta = SPEED_BTNS.find(x => x[0] === k)[2];
+      speedDelta = Math.round((newTotal - baseTotalOf(cfg)) * 100) / 100;
+      speedSel = k;
     }
     renderSpeedRow();
   }));
@@ -1707,6 +1723,7 @@ function countInfoText(){
   return `${digits}　${c.mouth}口　${total}秒`;
 }
 function countdownThenFlash(){
+  attemptSeq++;
   if(_runStartBusy) return;   // フォント待ちの間の二重スタート防止
   playCfg = effectivePlayCfg();
   lastPlayTotal = playCfg.totalSeconds;
@@ -2250,6 +2267,8 @@ function renderJudgeActions(){
   if(!area) return;
   const results = judgeResultsCache;
   let html = "";
+  if(results.some(r => !r.correct))
+    html += `<div style="margin-bottom:16px"><button type="button" class="judge-act-btn" id="retryInputBtn">もう一度入力する</button></div>`;
   if(cfg && cfg.hint){
     if(judgeHintShown){
       if(results.length === 1){
@@ -2267,6 +2286,8 @@ function renderJudgeActions(){
   if(!judgeAnswerShown)
     html += `<div><button type="button" class="judge-act-btn" id="showAnswerBtn">答えを見る</button></div>`;
   area.innerHTML = html;
+  const rb = $("retryInputBtn");
+  if(rb) rb.addEventListener("click", () => showAnswer());   // 同じ問題のまま解答画面へ（入力し直せる）
   const hb = $("showHintBtn");
   if(hb) hb.addEventListener("click", () =>
     showReorderConfirm("ヒントを見ますか？", () => { judgeHintShown = true; renderJudgeActions(); }));
@@ -2274,13 +2295,31 @@ function renderJudgeActions(){
   if(ab) ab.addEventListener("click", () =>
     showReorderConfirm("答えを見ますか？", () => {
       judgeAnswerShown = true;
-      $("judgeDetail").innerHTML = judgeShownHtml;
-      fitJudgeVals();
+      renderBigAnswers(results);
       renderJudgeActions();
     }));
 }
+/* 正解を中央に大きく出す（大きさは、その問題を出したときの計算数字
+   と同じを基準に、画面幅へ収まるよう調整する） */
+function renderBigAnswers(results){
+  const box = $("judgeBigAnswer");
+  if(!box) return;
+  const base = flashFontSize || 120;
+  if(results.length === 1){
+    box.innerHTML = `<div class="big-answer numfont">${fmt(results[0].answer)}</div>`;
+  } else {
+    const positions = layoutPositions(cfg.series, cfg.layout);
+    box.innerHTML = results.map((r, s) =>
+      `<div style="margin-top:8px"><span style="font-size:17px">${positions[s][4]}：</span>` +
+      `<span class="big-answer numfont">${fmt(r.answer)}</span></div>`).join("");
+  }
+  box.querySelectorAll(".big-answer").forEach(el => {
+    el.style.fontSize = fitSizePx(el, el.textContent, base, window.innerWidth * 0.9) + "px";
+  });
+}
 function showJudge(results){
   clearTimers(); show("judgeScreen");
+  $("judgeBigAnswer").innerHTML = "";
   const allCorrect = results.every(r => r.correct);
   if(allCorrect){ beepCorrect(); $("judgeMark").textContent = "〇"; $("judgeMark").className = "mark ok"; $("judgeText").textContent = "正解！"; }
   else { beepIncorrect(); $("judgeMark").textContent = "×"; $("judgeMark").className = "mark ng"; $("judgeText").textContent = "不正解"; }
@@ -2311,12 +2350,14 @@ function showJudge(results){
   $("judgeDetail").innerHTML = hiddenHtml;
   fitJudgeVals();
   renderJudgeActions();
-  /* 速度ボタン: おまかせ継続中は今回の結果でさらに増減させる。
-     手動の選択は毎回「そのまま」に戻す（おまかせだけ選んだまま残る） */
+  /* 速度ボタン: おまかせ継続中は今回の結果でさらに増減させる（ただし
+     同じ問題をもう一度入力して判定し直しても、二重に増減させない）。
+     手動の選択は戻さず、選んだ速さのまま次へ続ける */
   judgeAllCorrect = allCorrect;
-  if(speedMode === "omakase" && omakaseTotal !== null)
+  if(speedMode === "omakase" && omakaseTotal !== null && omakaseAppliedAttempt !== attemptSeq){
     omakaseTotal = clampTotal(omakaseTotal + (allCorrect ? -0.5 : 0.5));
-  if(speedMode !== "omakase") speedDelta = 0;
+    omakaseAppliedAttempt = attemptSeq;
+  }
   renderSpeedRow();
   /* 答えモードの条件を満たす並び替えプランを先に計算し、作れない場合は
      ボタンをグレー表示にする（押せはする。押すと警告が出る） */
