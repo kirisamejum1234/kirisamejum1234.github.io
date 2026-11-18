@@ -138,7 +138,8 @@
   .bottom-buttons button { flex:1; padding:12px 2px; font-size:12px; white-space:nowrap; }
   #judgeSpeedRow { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
   #judgeSpeedRow button { padding:9px 13px; font-size:14px; }
-  #judgeSpeedRow button.speed-sel { background:#00b84f; color:#fff; font-weight:bold; }
+  #judgeSpeedRow button.speed-sel { background:#ffd400; color:#000; font-weight:bold; }
+  #judgeSpeedRow button:disabled { opacity:.4; }
   .judge-act-btn { min-width:230px; padding:13px 0; font-size:16px; font-weight:bold; }
   /* 「答えを見る」で出す正解: 中央に、計算の数字くらいの大きさで緑色に */
   .big-answer { color:#00b84f; font-weight:bold; line-height:1.15; white-space:nowrap; }
@@ -1412,8 +1413,10 @@ function renderSpeedRow(){
   const row = $("judgeSpeedRow");
   if(!row) return;
   const sel = speedMode === "omakase" ? "omakase" : speedSel;
+  /* これ以上秒数を縮められない（下限に達した）ときは、早く系を選べなくする */
+  const canFaster = currentSpeedTotal() > 0.15 * cfg.mouth + 1e-9;
   row.innerHTML = SPEED_BTNS.map(([k, label]) =>
-    `<button type="button" data-speed="${k}" class="${k === sel ? "speed-sel" : ""}">${label}</button>`).join("") +
+    `<button type="button" data-speed="${k}"${((k === "fasts" || k === "fast") && !canFaster) ? " disabled" : ""} class="${k === sel ? "speed-sel" : ""}">${label}</button>`).join("") +
     `<button type="button" data-speed="omakase" class="${sel === "omakase" ? "speed-sel" : ""}">おまかせ</button>`;
   row.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
     const k = b.dataset.speed;
