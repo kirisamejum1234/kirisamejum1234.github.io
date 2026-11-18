@@ -787,6 +787,25 @@ function hikiNeverPossible(minD, maxD, mouth, places){
   const lo = minD >= 1 ? 10n ** BigInt(minD - 1 + p) : 1n;
   return (10n ** BigInt(maxD + p) - 1n) - BigInt(mouth - 1) * lo >= 1n;
 }
+function digitPlan(minD, maxD, count){
+  /* 桁数の出し方がランダムなときの、各口の桁数の割り当て表。
+     最小〜最大の各桁数が、口数のうちなるべく同じ割合になるようにする
+     （各桁数の個数の差は最大で1つ）。割り当てる口の位置はシャッフル
+     する。1口ずつ独立に抽選すると、最大桁が1つしか出ない問題や
+     最小桁ばかりの問題が普通にできてしまうため、割合を保証する */
+  const kinds = [];
+  for(let d = minD; d <= maxD; d++) kinds.push(d);
+  if(count <= 0 || !kinds.length) return [];
+  const base = Math.floor(count / kinds.length);
+  const extra = count % kinds.length;
+  const order = [...kinds];
+  for(let i = order.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+  const boosted = new Set(order.slice(0, extra));
+  const plan = [];
+  for(const d of kinds) for(let k = 0; k < base + (boosted.has(d) ? 1 : 0); k++) plan.push(d);
+  for(let i = plan.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [plan[i], plan[j]] = [plan[j], plan[i]]; }
+  return plan;
+}
 function hikiSubNumber(minD, maxD, vary){
   /* 引き続けるの引く数（絶対値）。桁数の出し方がランダムのときは
      最小〜最大桁数、そうでないときは最小桁数で出す */
@@ -797,8 +816,10 @@ function makeHikitsuzukeruNever(minD, maxD, mouth, vary, noRepeat){
      途中経過から次に引ける上限を計算しながら決めるので、途中も答えも
      必ずプラスに収まる。作れない設定では null を返す */
   const lo = minD >= 1 ? 10n ** BigInt(minD - 1 + genPlaces) : 1n;
+  let bestBuilt = null;   // (割合の崩れ, 問題) 一番崩れていない完成品
   for(let t = 0; t < 300; t++){
     const first = makeNumber(maxD, maxD, false);
+    const plan = vary ? digitPlan(minD, maxD, mouth - 1) : null;
     const rest = [];
     let remaining = first, ok = true;
     for(let i = 0; i < mouth - 1; i++){
@@ -807,7 +828,9 @@ function makeHikitsuzukeruNever(minD, maxD, mouth, vary, noRepeat){
       if(cap < lo){ ok = false; break; }
       let val = null;
       for(let k = 0; k < 60; k++){
-        const cand = hikiSubNumber(minD, maxD, vary);
+        // まず割り当てられた桁数で探し、残りの上限に収まらない
+        // ときだけ桁数を問わず探す（割合はなるべく守る）
+        const cand = (plan !== null && k < 40) ? makeNumber(plan[i], plan[i], false) : hikiSubNumber(minD, maxD, vary);
         if(cand > cap) continue;
         if(noRepeat && rest.length && cand === rest[rest.length - 1]) continue;
         val = cand; break;
@@ -822,9 +845,27 @@ function makeHikitsuzukeruNever(minD, maxD, mouth, vary, noRepeat){
       rest.push(val);
       remaining -= val;
     }
-    if(ok && remaining > 0) return [first, ...rest.map(v => -v)];
+    if(ok && remaining > 0){
+      const prob = [first, ...rest.map(v => -v)];
+      if(plan === null) return prob;
+      // 割り当てどおりに作れたら即採用。無理だった場合は
+      // 一番崩れていないものを覚えておき、試行を続ける
+      const want = {}; plan.forEach(d => { want[d] = (want[d] || 0) + 1; });
+      const got = {};
+      const scale = 10n ** BigInt(genPlaces);
+      for(const v of rest){
+        const a = v < 0n ? -v : v;
+        const ip = genPlaces > 0 ? a / scale : a;
+        const d = ip > 0n ? String(ip).length : 0;
+        got[d] = (got[d] || 0) + 1;
+      }
+      let spread = 0;
+      for(const d in want) spread = Math.max(spread, Math.abs((got[d] || 0) - want[d]));
+      if(spread === 0) return prob;
+      if(!bestBuilt || spread < bestBuilt.spread) bestBuilt = { spread, prob };
+    }
   }
-  return null;
+  return bestBuilt ? bestBuilt.prob : null;
 }
 /* 引き算にする位置の集合を返す（PC版 _sub_positions と同じ考え方）。
    並び方は「なるべく」の指定: 連続しないは隣り合う組数が一番少ない並びから、
@@ -875,7 +916,12 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyl
     let best = null;
     for(let attempt = 0; attempt < 600; attempt++){
       const cand = [makeNumber(maxD, maxD, false)];
-      for(let i = 1; i < mouth; i++) cand.push(-hikiSubNumber(minD, maxD, vary));
+      if(vary){
+        const plan = digitPlan(minD, maxD, mouth - 1);
+        for(const d of plan) cand.push(-makeNumber(d, d, false));
+      } else {
+        for(let i = 1; i < mouth; i++) cand.push(-hikiSubNumber(minD, maxD, vary));
+      }
       let run = 0n; const prefs = cand.map(n => (run += n));
       if(prefs[prefs.length - 1] > 0n && prefs.reduce((a, b) => a < b ? a : b) >= 0n){
         const hardOk = !noRepeat || !isHardRepeat(cand);
@@ -907,9 +953,19 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyl
       if(subStyle === "hikitsuzukeru"){
         // 最初だけ大きい桁のプラス、あとは全部マイナス
         cand = [makeNumber(maxD + 1, maxD + 1, false)];
-        for(let i = 1; i < mouth; i++) cand.push(-makeNumber(minD, maxD, vary));
+        if(vary){
+          const plan = digitPlan(minD, maxD, mouth - 1);
+          for(const d of plan) cand.push(-makeNumber(d, d, false));
+        } else {
+          for(let i = 1; i < mouth; i++) cand.push(-makeNumber(minD, maxD, vary));
+        }
       } else {
-        cand = Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
+        if(vary){
+          const plan = digitPlan(minD, maxD, mouth);
+          cand = plan.map(d => makeNumber(d, d, false));
+        } else {
+          cand = Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
+        }
         if(positions){
           positions.forEach(i => { cand[i] = -cand[i]; });
         } else {
@@ -950,15 +1006,20 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyl
     if(answerMode === "never" && bestNever) return bestNever.cand;
     // 万一見つからなければ全てプラスの問題にする
   }
-  if(!noRepeat) return Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
+  if(!noRepeat){
+    if(vary) return digitPlan(minD, maxD, mouth).map(d => makeNumber(d, d, false));
+    return Array.from({length: mouth}, () => makeNumber(minD, maxD, vary));
+  }
   /* 同じ数字を続けて出さない: 前の数字と違うものを必ず選び、
      まえの数字で使った数字を使わないもの・数字の中で同じ数字が重ならないものを優先する */
   const out = [];
+  const planNR = vary ? digitPlan(minD, maxD, mouth) : null;
+  const rollNR = i => planNR !== null ? makeNumber(planNR[i], planNR[i], false) : makeNumber(minD, maxD, vary);
   for(let i = 0; i < mouth; i++){
     const prev = i > 0 ? out[i - 1] : null;
     let picked = null, tierDisjoint = null, tierDiff = null;
     for(let t = 0; t < 80 && picked === null; t++){
-      const n = makeNumber(minD, maxD, vary);
+      const n = rollNR(i);
       if(prev !== null && n === prev) continue;   // 同じ数字の連続は絶対に選ばない
       if(tierDiff === null) tierDiff = n;
       const disjoint = prev === null || ![...digitSetOf(n)].some(d => digitSetOf(prev).has(d));
@@ -967,7 +1028,7 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyl
     }
     let chosen = picked !== null ? picked : (tierDisjoint !== null ? tierDisjoint : tierDiff);
     if(chosen === null || chosen === undefined){   // 万一の保険（引き直し続ければ必ず違う数字になる）
-      do { chosen = makeNumber(minD, maxD, vary); } while(prev !== null && chosen === prev);
+      do { chosen = rollNR(i); } while(prev !== null && chosen === prev);
     }
     out.push(chosen);
   }
