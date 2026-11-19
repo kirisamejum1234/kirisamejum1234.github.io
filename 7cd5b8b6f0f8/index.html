@@ -1335,9 +1335,13 @@ function refreshSeriesState(){
   let n = parseInt(zenNum($("seriesCount").value), 10);
   if(seriesOn && n === 1){
     /* 並列オンで1組は意味がないため、オンにした時点で組数が1なら
-       2へ上げる（オフに戻しても値はそのまま保持される） */
+       2へ上げる */
     $("seriesCount").value = "2";
     n = 2;
+  }else if(!seriesOn && $("seriesCount").value !== "1"){
+    /* オフにしたら組数も1へ戻す（保存される値自体を1にする） */
+    $("seriesCount").value = "1";
+    n = 1;
   }
   if(isNaN(n) || !seriesOn) n = 1;
   const rowR = document.querySelector('input[name="layoutMode"][value="row"]');
