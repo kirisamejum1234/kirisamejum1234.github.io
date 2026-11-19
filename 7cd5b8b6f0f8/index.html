@@ -439,8 +439,8 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
         <label><input type="radio" name="seriesMode" value="off" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オフ</label>
         <label><input type="radio" name="seriesMode" value="on" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オン</label>
       </div></div>
-    <div class="row" id="seriesCountRow"><label>並列計算数 <span class="note">組の数 1〜12</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="seriesCount" data-step="-1">−</button><input id="seriesCount" type="number" inputmode="numeric" min="1" max="12" value="1"><button type="button" class="stepbtn" data-target="seriesCount" data-step="1">＋</button></div></div>
-    <p class="note" style="margin:-2px 0 10px">1=シングル、2=ダブル、3=トリプル、4=クワッド。5以上も入力できます</p>
+    <div class="row" id="seriesCountRow"><label>並列計算数 <span class="note">組の数 2〜12</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="seriesCount" data-step="-1">−</button><input id="seriesCount" type="number" inputmode="numeric" min="2" max="12" value="1"><button type="button" class="stepbtn" data-target="seriesCount" data-step="1">＋</button></div></div>
+    <p class="note" style="margin:-2px 0 10px">2=ダブル、3=トリプル、4=クワッド。5以上も入力できます</p>
     <div class="row" id="presentRow"><label>出し方 <span class="note">2組以上の時</span></label>
       <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
         <label><input type="radio" name="presentMode" value="simul" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 同時に全部出す</label>
@@ -1333,6 +1333,12 @@ function refreshSeriesState(){
   const seriesOn = checkedVal("seriesMode", "off") === "on";
   $("seriesCountRow").style.display = seriesOn ? "" : "none";
   let n = parseInt(zenNum($("seriesCount").value), 10);
+  if(seriesOn && n === 1){
+    /* 並列オンで1組は意味がないため、オンにした時点で組数が1なら
+       2へ上げる（オフに戻しても値はそのまま保持される） */
+    $("seriesCount").value = "2";
+    n = 2;
+  }
   if(isNaN(n) || !seriesOn) n = 1;
   const rowR = document.querySelector('input[name="layoutMode"][value="row"]');
   const colR = document.querySelector('input[name="layoutMode"][value="col"]');
@@ -1626,7 +1632,7 @@ function readConfig(){
   };
   if(c.decOn) c.minD = 0;   // 小数オンの間、最小桁数は0で固定
   if(isNaN(c.series)) return startError("並列計算数には数値を入力してください。");
-  if(c.series < 1 || c.series > 12) return startError("並列計算数は1〜12にしてください。");
+  if(checkedVal("seriesMode", "off") === "on" && (c.series < 2 || c.series > 12)) return startError("並列計算数は2〜12にしてください。");
   // 配置は組数と選択から確定させる（「形」は3組=三角、4組=四角、5組以上=多角形）
   if(c.series >= 2){
     const choice = checkedVal("layoutMode", "row");
