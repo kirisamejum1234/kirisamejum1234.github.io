@@ -397,8 +397,8 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
     <p class="note" style="margin:-2px 0 10px">オフにすると、同じ数字は続けて出ません。まえの数字で使った数字も、なるべく出ないようにします</p>
     <div class="row"><label>並列計算</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
-        <label><input type="radio" name="seriesMode" value="off" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オフ</label>
-        <label><input type="radio" name="seriesMode" value="on" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オン</label>
+        <label><input type="radio" name="seriesMode" value="off" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オフ</label>
+        <label><input type="radio" name="seriesMode" value="on" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> オン</label>
       </div></div>
     <div class="row" id="seriesCountRow"><label>並列計算数 <span class="note">組の数 1〜12</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="seriesCount" data-step="-1">−</button><input id="seriesCount" type="number" inputmode="numeric" min="1" max="12" value="1"><button type="button" class="stepbtn" data-target="seriesCount" data-step="1">＋</button></div></div>
     <p class="note" style="margin:-2px 0 10px">1=シングル、2=ダブル、3=トリプル、4=クワッド。5以上も入力できます</p>
@@ -1291,7 +1291,7 @@ function layoutPositions(count, layout, w, h){
 let lastSeries = 1;
 let layoutPref = "row";   // 選んだ配置は組数が変わっても記憶する
 function refreshSeriesState(){
-  const seriesOn = checkedVal("seriesMode", "on") === "on";
+  const seriesOn = checkedVal("seriesMode", "off") === "on";
   $("seriesCountRow").style.display = seriesOn ? "" : "none";
   let n = parseInt(zenNum($("seriesCount").value), 10);
   if(isNaN(n) || !seriesOn) n = 1;
@@ -1581,7 +1581,7 @@ function readConfig(){
     decOn: checkedVal("decMode", "off") === "on",
     decPlaces: intOf("decPlaces"),
     questions: parseInt(qSel.value, 10),
-    series: checkedVal("seriesMode", "on") === "on" ? intOf("seriesCount") : 1,
+    series: checkedVal("seriesMode", "off") === "on" ? intOf("seriesCount") : 1,
     present: checkedVal("presentMode", "simul"),
     layout: "single"
   };
@@ -1722,7 +1722,7 @@ function saveSettings(){
     const data = {
       minDigits: (checkedVal("decMode", "off") === "on" && decPrevMin !== null) ? decPrevMin : $("minDigits").value, maxDigits: $("maxDigits").value,
       mouth: $("mouth").value, totalSeconds: $("totalSeconds").value,
-      seriesCount: $("seriesCount").value, seriesMode: checkedVal("seriesMode", "on"), accelTime: $("accelTime").value,
+      seriesCount: $("seriesCount").value, seriesMode: checkedVal("seriesMode", "off"), seriesDefaultV2: true, accelTime: $("accelTime").value,
       accelMode: checkedVal("accelMode", "off"), accelPct: true, digitMode: checkedVal("digitMode", "maxonly"),
       subMode: checkedVal("subMode", "off"), answerSignMode: checkedVal("answerSignMode", "never"),
       repeatMode: checkedVal("repeatMode", "off"),
@@ -1748,7 +1748,17 @@ function loadSettings(){
   setRadio("subArrange", data.subArrange === "alternate" ? "separate" : data.subArrange);
   setVal("minDigits", data.minDigits); setVal("maxDigits", data.maxDigits);
   setVal("mouth", data.mouth); setVal("totalSeconds", data.totalSeconds);
-  setVal("seriesCount", data.seriesCount); setRadio("seriesMode", data.seriesMode);
+  setVal("seriesCount", data.seriesCount);
+  if(data.seriesDefaultV2){
+    /* デフォルト変更（オン→オフ）後の保存値: 本人の設定をそのまま復元 */
+    setRadio("seriesMode", data.seriesMode);
+  }else{
+    /* 旧デフォルト（オン・組数1）のまま保存された未操作の保存値はオフへ
+       寄せる。組数を2以上にして使っていた人のオンはそのまま尊重する。
+       次回の保存でマーカーが付き、以後は本人の値が復元される（段階移行） */
+    const usedParallel = parseInt(data.seriesCount, 10) > 1;
+    setRadio("seriesMode", (data.seriesMode === "on" && usedParallel) ? "on" : "off");
+  }
   if(data.accelPct) setVal("accelTime", data.accelTime);   // 旧バージョンの秒の値は読み捨てる
   setRadio("accelMode", data.accelMode); setRadio("digitMode", data.digitMode);
   setRadio("subMode", data.subMode); setRadio("answerSignMode", data.answerSignMode);
