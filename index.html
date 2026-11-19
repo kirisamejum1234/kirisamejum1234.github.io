@@ -202,6 +202,69 @@
     .judge-detail { font-size:17px; }
   }
 </style>
+<style id="menuTheme">
+/* ==== 計算前の画面（モード選択・級段位・設定・確認）の子ども向けテーマ ====
+   計算中（カウントダウン〜リザルト）の画面には一切適用しない */
+
+#startScreen,#gradeKindScreen,#gradeListScreen,#settingsScreen,#confirmScreen{
+  min-height:100dvh;
+}
+#startScreen .screen-inner,#gradeKindScreen .screen-inner,#gradeListScreen .screen-inner,
+#settingsScreen .screen-inner,#confirmScreen .screen-inner{ position:relative; z-index:1; }
+#startScreen h1,#gradeKindScreen h1,#gradeListScreen h1,#settingsScreen h1,#confirmScreen h1,
+#startScreen h2,#gradeKindScreen h2,#gradeListScreen h2,#settingsScreen h2,#confirmScreen h2{ letter-spacing:.04em; }
+#startScreen button,#gradeKindScreen button,#gradeListScreen button,
+#settingsScreen button,#confirmScreen button{
+  border-radius:999px !important; box-shadow:0 3px 0 rgba(0,0,0,.18);
+}
+#startScreen button:active,#gradeKindScreen button:active,#gradeListScreen button:active,
+#settingsScreen button:active,#confirmScreen button:active{ transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,.18); }
+#settingsScreen input[type=number],#settingsScreen input[type=text],
+#confirmScreen select{
+  border-radius:12px !important; font-weight:bold;
+}
+#startScreen .note,#gradeKindScreen .note,#gradeListScreen .note,#settingsScreen .note,#confirmScreen .note{ opacity:.75; }
+
+#startScreen,#gradeKindScreen,#gradeListScreen,#settingsScreen,#confirmScreen{
+  background: linear-gradient(180deg,#8fd4ff 0%, #cdefff 55%, #eafcff 100%);
+  color:#1d3a54;
+}
+#startScreen h1,#gradeKindScreen h1,#gradeListScreen h1,#settingsScreen h1,#confirmScreen h1{ color:#12406e; }
+#startScreen h2,#gradeKindScreen h2,#gradeListScreen h2,#settingsScreen h2,#confirmScreen h2{ color:#12406e; }
+#startScreen button.choice,#gradeKindScreen button.choice,#gradeListScreen button.choice{
+  background:#ffffff; color:#12406e; border:3px solid #ffb703;
+}
+#startScreen button.choice:active,#gradeKindScreen button.choice:active,#gradeListScreen button.choice:active{ background:#00b84f; color:#fff; }
+#startScreen button,#gradeKindScreen button,#gradeListScreen button,
+#settingsScreen button,#confirmScreen button{
+  background:#ffffff; color:#1d3a54; border:2px solid #7fc8f8;
+}
+#settingsScreen button.signbtn.on{ background:#00b84f; color:#fff; border-color:#00b84f; }
+#startScreen button.primary,#gradeKindScreen button.primary,#gradeListScreen button.primary,
+#settingsScreen button.primary,#confirmScreen button.primary{
+  background:#00b84f; color:#fff; border:3px solid #00913d;
+}
+#settingsScreen .row,#confirmScreen .row{
+  background:rgba(255,255,255,.88); border-radius:18px; padding:10px 14px;
+  box-shadow:0 2px 6px rgba(18,64,110,.12);
+}
+#settingsScreen input[type=number],#settingsScreen input[type=text],#confirmScreen select{
+  background:#fff; color:#12406e; border:2px solid #7fc8f8;
+}
+#settingsScreen .val{ background:#ffffff; color:#12406e; border:2px solid #7fc8f8; }
+#confirmSpec{ background:#ffffff !important; color:#12406e !important; border:3px solid #ffb703 !important; }
+#startError{ color:#d90429; }
+#startScreen .ver-label,#settingsScreen .ver-label{ color:#46708f; }
+
+/* メイン画面のそろばん装飾（初級用のリアルそろばんと同じ描画。メイン画面だけ） */
+.soroban-hero{ width:min(300px,64vw); margin:0 auto 4px; border:4px solid #ffffff;
+  border-radius:20px; overflow:hidden; box-shadow:0 6px 18px rgba(18,64,110,.22); line-height:0; }
+.soroban-hero svg{ width:100%; height:auto; display:block; }
+/* 計算前の画面が表示されている間は、画面外（オーバースクロール）も水色にする */
+html:has(#startScreen.active) body, html:has(#gradeKindScreen.active) body,
+html:has(#gradeListScreen.active) body, html:has(#settingsScreen.active) body,
+html:has(#confirmScreen.active) body{ background:#d9f2fd; }
+</style>
 </head>
 <body>
 <button id="fsExitBtn" type="button" style="display:none">全画面を終了</button>
@@ -210,6 +273,7 @@
 <!-- モード選択（最初に表示） -->
 <section id="startScreen" class="screen active">
   <div class="screen-inner">
+  <div class="soroban-hero"><svg viewBox="0 0 1000 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="そろばん"><rect x="0" y="0" width="1000" height="460" fill="#181008" stroke="#3A2A18" stroke-width="3"/><line x1="100.0" y1="13.8" x2="100.0" y2="446.2" stroke="#B9BDC4" stroke-width="6"/><line x1="300.0" y1="13.8" x2="300.0" y2="446.2" stroke="#B9BDC4" stroke-width="6"/><line x1="500.0" y1="13.8" x2="500.0" y2="446.2" stroke="#B9BDC4" stroke-width="6"/><line x1="700.0" y1="13.8" x2="700.0" y2="446.2" stroke="#B9BDC4" stroke-width="6"/><line x1="900.0" y1="13.8" x2="900.0" y2="446.2" stroke="#B9BDC4" stroke-width="6"/><rect x="20.0" y="156.4" width="960.0" height="27.6" fill="#D7DADE" stroke="#8F959C"/><polygon points="100.0,161.9 108.3,170.2 100.0,178.5 91.7,170.2" fill="#333333"/><polygon points="84.7,67.3 115.3,67.3 147.9,96.0 52.1,96.0" fill="#DE9A52" stroke="#A66A2C"/><polygon points="52.1,96.0 147.9,96.0 115.3,124.8 84.7,124.8" fill="#C9833C" stroke="#A66A2C"/><line x1="52.1" y1="96.0" x2="147.9" y2="96.0" stroke="#F6C887" stroke-width="4"/><polygon points="84.7,180.6 115.3,180.6 147.9,209.3 52.1,209.3" fill="#DE9A52" stroke="#A66A2C"/><polygon points="52.1,209.3 147.9,209.3 115.3,238.1 84.7,238.1" fill="#C9833C" stroke="#A66A2C"/><line x1="52.1" y1="209.3" x2="147.9" y2="209.3" stroke="#F6C887" stroke-width="4"/><polygon points="84.7,280.6 115.3,280.6 147.9,309.4 52.1,309.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="52.1,309.4 147.9,309.4 115.3,338.1 84.7,338.1" fill="#C9833C" stroke="#A66A2C"/><line x1="52.1" y1="309.4" x2="147.9" y2="309.4" stroke="#F6C887" stroke-width="4"/><polygon points="84.7,334.6 115.3,334.6 147.9,363.4 52.1,363.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="52.1,363.4 147.9,363.4 115.3,392.1 84.7,392.1" fill="#C9833C" stroke="#A66A2C"/><line x1="52.1" y1="363.4" x2="147.9" y2="363.4" stroke="#F6C887" stroke-width="4"/><polygon points="84.7,388.7 115.3,388.7 147.9,417.4 52.1,417.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="52.1,417.4 147.9,417.4 115.3,446.2 84.7,446.2" fill="#C9833C" stroke="#A66A2C"/><line x1="52.1" y1="417.4" x2="147.9" y2="417.4" stroke="#F6C887" stroke-width="4"/><polygon points="300.0,161.9 308.3,170.2 300.0,178.5 291.7,170.2" fill="#333333"/><polygon points="284.7,67.3 315.3,67.3 347.9,96.0 252.1,96.0" fill="#DE9A52" stroke="#A66A2C"/><polygon points="252.1,96.0 347.9,96.0 315.3,124.8 284.7,124.8" fill="#C9833C" stroke="#A66A2C"/><line x1="252.1" y1="96.0" x2="347.9" y2="96.0" stroke="#F6C887" stroke-width="4"/><polygon points="284.7,180.6 315.3,180.6 347.9,209.3 252.1,209.3" fill="#DE9A52" stroke="#A66A2C"/><polygon points="252.1,209.3 347.9,209.3 315.3,238.1 284.7,238.1" fill="#C9833C" stroke="#A66A2C"/><line x1="252.1" y1="209.3" x2="347.9" y2="209.3" stroke="#F6C887" stroke-width="4"/><polygon points="284.7,234.6 315.3,234.6 347.9,263.4 252.1,263.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="252.1,263.4 347.9,263.4 315.3,292.1 284.7,292.1" fill="#C9833C" stroke="#A66A2C"/><line x1="252.1" y1="263.4" x2="347.9" y2="263.4" stroke="#F6C887" stroke-width="4"/><polygon points="284.7,334.6 315.3,334.6 347.9,363.4 252.1,363.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="252.1,363.4 347.9,363.4 315.3,392.1 284.7,392.1" fill="#C9833C" stroke="#A66A2C"/><line x1="252.1" y1="363.4" x2="347.9" y2="363.4" stroke="#F6C887" stroke-width="4"/><polygon points="284.7,388.7 315.3,388.7 347.9,417.4 252.1,417.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="252.1,417.4 347.9,417.4 315.3,446.2 284.7,446.2" fill="#C9833C" stroke="#A66A2C"/><line x1="252.1" y1="417.4" x2="347.9" y2="417.4" stroke="#F6C887" stroke-width="4"/><polygon points="500.0,161.9 508.3,170.2 500.0,178.5 491.7,170.2" fill="#333333"/><polygon points="484.7,67.3 515.3,67.3 547.9,96.0 452.1,96.0" fill="#DE9A52" stroke="#A66A2C"/><polygon points="452.1,96.0 547.9,96.0 515.3,124.8 484.7,124.8" fill="#C9833C" stroke="#A66A2C"/><line x1="452.1" y1="96.0" x2="547.9" y2="96.0" stroke="#F6C887" stroke-width="4"/><polygon points="484.7,180.6 515.3,180.6 547.9,209.3 452.1,209.3" fill="#DE9A52" stroke="#A66A2C"/><polygon points="452.1,209.3 547.9,209.3 515.3,238.1 484.7,238.1" fill="#C9833C" stroke="#A66A2C"/><line x1="452.1" y1="209.3" x2="547.9" y2="209.3" stroke="#F6C887" stroke-width="4"/><polygon points="484.7,234.6 515.3,234.6 547.9,263.4 452.1,263.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="452.1,263.4 547.9,263.4 515.3,292.1 484.7,292.1" fill="#C9833C" stroke="#A66A2C"/><line x1="452.1" y1="263.4" x2="547.9" y2="263.4" stroke="#F6C887" stroke-width="4"/><polygon points="484.7,288.6 515.3,288.6 547.9,317.4 452.1,317.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="452.1,317.4 547.9,317.4 515.3,346.1 484.7,346.1" fill="#C9833C" stroke="#A66A2C"/><line x1="452.1" y1="317.4" x2="547.9" y2="317.4" stroke="#F6C887" stroke-width="4"/><polygon points="484.7,388.7 515.3,388.7 547.9,417.4 452.1,417.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="452.1,417.4 547.9,417.4 515.3,446.2 484.7,446.2" fill="#C9833C" stroke="#A66A2C"/><line x1="452.1" y1="417.4" x2="547.9" y2="417.4" stroke="#F6C887" stroke-width="4"/><polygon points="700.0,161.9 708.3,170.2 700.0,178.5 691.7,170.2" fill="#333333"/><polygon points="684.7,67.3 715.3,67.3 747.9,96.0 652.1,96.0" fill="#DE9A52" stroke="#A66A2C"/><polygon points="652.1,96.0 747.9,96.0 715.3,124.8 684.7,124.8" fill="#C9833C" stroke="#A66A2C"/><line x1="652.1" y1="96.0" x2="747.9" y2="96.0" stroke="#F6C887" stroke-width="4"/><polygon points="684.7,180.6 715.3,180.6 747.9,209.3 652.1,209.3" fill="#DE9A52" stroke="#A66A2C"/><polygon points="652.1,209.3 747.9,209.3 715.3,238.1 684.7,238.1" fill="#C9833C" stroke="#A66A2C"/><line x1="652.1" y1="209.3" x2="747.9" y2="209.3" stroke="#F6C887" stroke-width="4"/><polygon points="684.7,234.6 715.3,234.6 747.9,263.4 652.1,263.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="652.1,263.4 747.9,263.4 715.3,292.1 684.7,292.1" fill="#C9833C" stroke="#A66A2C"/><line x1="652.1" y1="263.4" x2="747.9" y2="263.4" stroke="#F6C887" stroke-width="4"/><polygon points="684.7,288.6 715.3,288.6 747.9,317.4 652.1,317.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="652.1,317.4 747.9,317.4 715.3,346.1 684.7,346.1" fill="#C9833C" stroke="#A66A2C"/><line x1="652.1" y1="317.4" x2="747.9" y2="317.4" stroke="#F6C887" stroke-width="4"/><polygon points="684.7,342.7 715.3,342.7 747.9,371.4 652.1,371.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="652.1,371.4 747.9,371.4 715.3,400.2 684.7,400.2" fill="#C9833C" stroke="#A66A2C"/><line x1="652.1" y1="371.4" x2="747.9" y2="371.4" stroke="#F6C887" stroke-width="4"/><polygon points="900.0,161.9 908.3,170.2 900.0,178.5 891.7,170.2" fill="#333333"/><polygon points="884.7,102.3 915.3,102.3 947.9,131.1 852.1,131.1" fill="#DE9A52" stroke="#A66A2C"/><polygon points="852.1,131.1 947.9,131.1 915.3,159.8 884.7,159.8" fill="#C9833C" stroke="#A66A2C"/><line x1="852.1" y1="131.1" x2="947.9" y2="131.1" stroke="#F6C887" stroke-width="4"/><polygon points="884.7,226.6 915.3,226.6 947.9,255.3 852.1,255.3" fill="#DE9A52" stroke="#A66A2C"/><polygon points="852.1,255.3 947.9,255.3 915.3,284.1 884.7,284.1" fill="#C9833C" stroke="#A66A2C"/><line x1="852.1" y1="255.3" x2="947.9" y2="255.3" stroke="#F6C887" stroke-width="4"/><polygon points="884.7,280.6 915.3,280.6 947.9,309.4 852.1,309.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="852.1,309.4 947.9,309.4 915.3,338.1 884.7,338.1" fill="#C9833C" stroke="#A66A2C"/><line x1="852.1" y1="309.4" x2="947.9" y2="309.4" stroke="#F6C887" stroke-width="4"/><polygon points="884.7,334.6 915.3,334.6 947.9,363.4 852.1,363.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="852.1,363.4 947.9,363.4 915.3,392.1 884.7,392.1" fill="#C9833C" stroke="#A66A2C"/><line x1="852.1" y1="363.4" x2="947.9" y2="363.4" stroke="#F6C887" stroke-width="4"/><polygon points="884.7,388.7 915.3,388.7 947.9,417.4 852.1,417.4" fill="#DE9A52" stroke="#A66A2C"/><polygon points="852.1,417.4 947.9,417.4 915.3,446.2 884.7,446.2" fill="#C9833C" stroke="#A66A2C"/><line x1="852.1" y1="417.4" x2="947.9" y2="417.4" stroke="#F6C887" stroke-width="4"/></svg></div>
   <h1 style="margin-bottom:34px">多機能フラッシュ暗算</h1>
   <div style="display:flex;flex-direction:column;gap:16px;width:min(92vw,340px)">
     <button class="choice" id="gradeModeBtn" style="padding:20px 22px;font-size:19px">級・段位で選ぶ</button>
@@ -263,9 +327,11 @@
     </div></div>
   <div class="row"><label>数字の大きさ</label>
     <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
+      <label><input type="radio" name="confirmNumSize" value="xsmall" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 極小</label>
       <label><input type="radio" name="confirmNumSize" value="small" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 小</label>
       <label><input type="radio" name="confirmNumSize" value="medium" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 中</label>
       <label><input type="radio" name="confirmNumSize" value="large" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 大</label>
+      <label><input type="radio" name="confirmNumSize" value="xlarge" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 特大</label>
     </div></div>
   <div class="btnrow-settings">
     <button id="confirmBackBtn">戻る</button>
@@ -362,9 +428,11 @@
       </div></div>
     <div class="row"><label>数字の大きさ</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
+        <label><input type="radio" name="numSize" value="xsmall" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 極小</label>
         <label><input type="radio" name="numSize" value="small" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 小</label>
         <label><input type="radio" name="numSize" value="medium" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 中</label>
         <label><input type="radio" name="numSize" value="large" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 大</label>
+        <label><input type="radio" name="numSize" value="xlarge" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 特大</label>
       </div></div>
     <div id="startError" style="display:none;background:#5a1a1a;color:#ffd7d7;border:1px solid #ff5252;border-radius:10px;padding:10px 14px;margin:18px 0 0;font-size:14px;line-height:1.6"></div>
     <div class="btnrow-settings">
@@ -1615,8 +1683,10 @@ const SETTINGS_KEY = "flashAnzanSettingsV1";
 const FONT_FAMILY_BY_CHOICE = { soroban: '"abacus2"', kyokasho: '"kleeone"', kyokashoB: '"kleeonebold"' };
 let numFontChoice = "soroban";
 /* 数字の大きさ（フラッシュ表示のみ）: 大=従来の大きさ / 中=公式ソフトの
-   大きさ（3桁・1組で画面高の約19%）/ 小=中からさらに同じ比率で縮小 */
-const NUM_SIZE_SCALES = {small: 0.41, medium: 0.64, large: 1.0};
+   大きさ（3桁・1組で画面高の約19%）/ 小=中からさらに同じ比率で縮小。
+   20261120-1 で両端を同じ 0.64 刻みで延長: 極小=小×0.64 / 特大=大÷0.64。
+   特大でも fitFlashFont＋実測ガードが画面・セル内に収める */
+const NUM_SIZE_SCALES = {xsmall: 0.26, small: 0.41, medium: 0.64, large: 1.0, xlarge: 1.56};
 let numSizeChoice = "medium";
 function applyFontChoice(v){
   numFontChoice = FONT_FAMILY_BY_CHOICE[v] ? v : "soroban";
