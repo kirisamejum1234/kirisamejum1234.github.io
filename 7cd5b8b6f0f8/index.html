@@ -2125,6 +2125,29 @@ function guardText(){
 }
 /* セルに数字を入れる。整数部を箱の中に右揃えで置き、小数部は箱の右端の
    外に付けるので、一の位の位置は小数がない時と完全に同じになる */
+/* 一の位の字面右端をそろえるための実測値（埋め込みフォントのグリフ実測、
+   PC版と同じ）。進み幅は全数字共通だが、字面の右端が進み幅の右端から
+   どれだけ内側にあるか（右ベアリング）は数字ごとに違う。
+   {フォント: [進み幅, {数字: 右余白}]}（フォントの設計単位） */
+const ONES_INK_RSB = {
+  soroban: [700, {0:63, 1:141, 2:46, 3:65, 4:61, 5:61, 6:116, 7:98, 8:65, 9:120}],
+  kyokasho: [600, {0:74, 1:249, 2:62, 3:65, 4:30, 5:65, 6:61, 7:72, 8:69, 9:55}],
+  kyokashoB: [600, {0:72, 1:242, 2:61, 3:63, 4:30, 5:63, 6:59, 7:70, 8:66, 9:49}]
+};
+function onesInkDeltaPx(d, intText){
+  const last = intText.charAt(intText.length - 1);
+  if(!/[0-9]/.test(last) || last === "8") return 0;
+  const ent = ONES_INK_RSB[numFontChoice] || ONES_INK_RSB.soroban;
+  const adv = ent[0], rsb = ent[1];
+  try{
+    const cs = getComputedStyle(d);
+    const sizePx = parseFloat(cs.fontSize) || 0;
+    if(!_measureCtx || sizePx <= 0) return 0;
+    _measureCtx.font = cs.fontWeight + " " + sizePx + "px " + cs.fontFamily;
+    const pxPerUnit = (_measureCtx.measureText("8").width || adv) / adv;
+    return (rsb[last] - rsb["8"]) * pxPerUnit;
+  }catch(e){ return 0; }
+}
 function setCellContent(d, intText, fracText){
   d.textContent = intText;
   if(fracText){
@@ -2133,6 +2156,11 @@ function setCellContent(d, intText, fracText){
     s.textContent = fracText;
     d.appendChild(s);
   }
+  /* 一の位の「字面」の右端が基準（「8」の字面右端）にそろうよう、セル
+     全体を左右へ寄せる（小数部も一緒に動くので一の位との位置関係は
+     変わらない）。字面が内側にある数字（特に「1」）ほど右へ寄せる */
+  const delta = onesInkDeltaPx(d, intText);
+  d.style.transform = "translate(calc(-50% + " + delta.toFixed(1) + "px), -50%)";
 }
 function clampFlashSizeToLayout(){
   const stage = $("flashStage");
@@ -2213,7 +2241,7 @@ function flashNumbers(){
     flashCells.forEach(d => { d.style.visibility = "hidden"; });
     events[i].forEach(([s, n]) => {
       const t = fmt(n), di = t.indexOf(".");
-      if(di < 0) flashCells[s].textContent = t;
+      if(di < 0) setCellContent(flashCells[s], t, "");
       else setCellContent(flashCells[s], t.slice(0, di), t.slice(di));
       flashCells[s].style.visibility = "visible";
     });
