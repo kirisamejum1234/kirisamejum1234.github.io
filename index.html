@@ -250,6 +250,23 @@
   <div id="confirmNotes" style="font-size:13px;color:#9a9a9a;line-height:1.7;text-align:center;margin-top:8px"></div>
   <div class="row" style="margin-top:28px"><label>連続出題数 <span class="note">1〜15</span></label>
     <select id="confirmQuestions"><option value="1">1問</option><option value="2">2問</option><option value="3">3問</option><option value="4">4問</option><option value="5">5問</option><option value="6">6問</option><option value="7">7問</option><option value="8">8問</option><option value="9">9問</option><option value="10">10問</option><option value="11">11問</option><option value="12">12問</option><option value="13">13問</option><option value="14">14問</option><option value="15">15問</option></select></div>
+  <div class="row"><label>ヒント</label>
+    <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
+      <label><input type="radio" name="confirmHintMode" value="off" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> なし</label>
+      <label><input type="radio" name="confirmHintMode" value="on" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> あり</label>
+    </div></div>
+  <div class="row"><label>フォント</label>
+    <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
+      <label><input type="radio" name="confirmFontChoice" value="soroban" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> そろばん</label>
+      <label><input type="radio" name="confirmFontChoice" value="kyokasho" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> きょうかしょ</label>
+      <label><input type="radio" name="confirmFontChoice" value="kyokashoB" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> きょうかしょ（太字）</label>
+    </div></div>
+  <div class="row"><label>数字の大きさ</label>
+    <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
+      <label><input type="radio" name="confirmNumSize" value="small" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 小</label>
+      <label><input type="radio" name="confirmNumSize" value="medium" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 中</label>
+      <label><input type="radio" name="confirmNumSize" value="large" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 大</label>
+    </div></div>
   <div class="btnrow-settings">
     <button id="confirmBackBtn">戻る</button>
     <button class="primary" id="confirmStartBtn">スタート</button>
@@ -349,11 +366,6 @@
         <label><input type="radio" name="numSize" value="medium" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 中</label>
         <label><input type="radio" name="numSize" value="large" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> 大</label>
       </div></div>
-    <div class="row"><label>ヒント</label>
-      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
-        <label><input type="radio" name="hintMode" value="off" checked style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> なし</label>
-        <label><input type="radio" name="hintMode" value="on" style="width:20px;height:20px;accent-color:#00b84f;vertical-align:middle"> あり</label>
-      </div></div>
     <div id="startError" style="display:none;background:#5a1a1a;color:#ffd7d7;border:1px solid #ff5252;border-radius:10px;padding:10px 14px;margin:18px 0 0;font-size:14px;line-height:1.6"></div>
     <div class="btnrow-settings">
       <button id="settingsBackBtn">戻る</button>
@@ -398,10 +410,10 @@
   <div class="screen-inner">
   <div class="mark" id="judgeMark">〇</div>
   <div style="font-size:28px;font-weight:bold" id="judgeText">正解！</div>
+  <div id="judgeSpeedRow"></div>
   <div class="judge-detail" id="judgeDetail"></div>
   <div id="judgeBigAnswer" style="text-align:center;margin-top:10px"></div>
   <div id="judgeActionArea" style="margin-top:14px;text-align:center"></div>
-  <div id="judgeSpeedRow"></div>
   </div>
   <div class="bottom-area">
     <div class="bottom-buttons">
@@ -409,7 +421,7 @@
       <button id="reverseBtn">逆順でやる</button>
       <button id="shuffleBtn">順番を変える</button>
       <button id="nextBtn">次へ</button>
-      <button id="stopBtn">止める</button>
+      <button id="stopBtn">やめる</button>
     </div>
   </div>
 </section>
@@ -444,7 +456,7 @@
 "use strict";
 const $ = id => document.getElementById(id);
 const screens = ["startScreen","gradeKindScreen","gradeListScreen","confirmScreen","settingsScreen","countScreen","flashScreen","answerScreen","judgeScreen","resultScreen"];
-function show(id){ screens.forEach(s => $(s).classList.toggle("active", s === id)); }
+function show(id){ if(id === "confirmScreen" && typeof syncConfirmControls === "function") syncConfirmControls(); screens.forEach(s => $(s).classList.toggle("active", s === id)); }
 /* ラジオの選択値（未選択の環境でも例外にせず既定値で返す） */
 function checkedVal(name, fallback){
   const el = document.querySelector(`input[name="${name}"]:checked`);
@@ -1093,6 +1105,7 @@ function startCustom(){
   try{
     unlockAudio();
     pendingCfg.questions = parseInt(qSel.value, 10) || 1;   // 連続出題数は確認画面で選んだ値を使う
+    pendingCfg.hint = checkedVal("confirmHintMode", "off") === "on";   // ヒントも確認画面で選んだ値を使う
     cfg = pendingCfg; problemIndex = 0; records = {}; queuedSeries = null;
     dispPlaces = cfg.decOn ? cfg.decPlaces : 0;
     resetSpeed();
@@ -1110,7 +1123,7 @@ function startGrade(){
     const g = selectedGrade;
     cfg = { minD: g.digits, maxD: g.digits, mouth: g.mouth, seconds: g.seconds,
             totalSeconds: g.seconds, accelOn: false, accel: 0, vary: false, sub: false,
-            answerMode: "never", allowRepeat: true, questions: parseInt($("confirmQuestions").value, 10) || 1,
+            answerMode: "never", allowRepeat: true, hint: checkedVal("confirmHintMode", "off") === "on", questions: parseInt($("confirmQuestions").value, 10) || 1,
             series: 1, present: "simul", layout: "single", gradeSpec: g };
     dispPlaces = 0;
     problemIndex = 0; records = {}; queuedSeries = null;
@@ -1496,7 +1509,7 @@ function readConfig(){
     answerMode: checkedVal("answerSignMode", "never"),
     subStyle: checkedVal("subStyle", "normal"),
     allowRepeat: checkedVal("repeatMode", "off") === "on",
-    hint: checkedVal("hintMode", "off") === "on",
+    hint: checkedVal("confirmHintMode", "off") === "on",
     decOn: checkedVal("decMode", "off") === "on",
     decPlaces: intOf("decPlaces"),
     questions: parseInt(qSel.value, 10),
@@ -1616,6 +1629,24 @@ document.querySelectorAll('input[name="fontChoice"]').forEach(r =>
   r.addEventListener("change", () => { applyFontChoice(r.value); saveSettings(); }));
 document.querySelectorAll('input[name="numSize"]').forEach(r =>
   r.addEventListener("change", () => { numSizeChoice = r.value; saveSettings(); }));
+/* 確認画面（スタート画面）のヒント/フォント/数字の大きさ。
+   ヒントは確認画面のラジオが正（設定画面からは移動した）。
+   フォントと数字の大きさは設定画面と同じ値を共有し、確認画面で
+   変えたら設定画面側にも反映する（保存もその場で行う） */
+function setRadioChecked(name, v){
+  const r = document.querySelector(`input[name="${name}"][value="${v}"]`);
+  if(r) r.checked = true;
+}
+function syncConfirmControls(){
+  setRadioChecked("confirmFontChoice", checkedVal("fontChoice", "soroban"));
+  setRadioChecked("confirmNumSize", checkedVal("numSize", "medium"));
+}
+document.querySelectorAll('input[name="confirmHintMode"]').forEach(r =>
+  r.addEventListener("change", () => { saveSettings(); }));
+document.querySelectorAll('input[name="confirmFontChoice"]').forEach(r =>
+  r.addEventListener("change", () => { setRadioChecked("fontChoice", r.value); applyFontChoice(r.value); saveSettings(); }));
+document.querySelectorAll('input[name="confirmNumSize"]').forEach(r =>
+  r.addEventListener("change", () => { setRadioChecked("numSize", r.value); numSizeChoice = r.value; saveSettings(); }));
 function saveSettings(){
   try{
     const data = {
@@ -1630,7 +1661,7 @@ function saveSettings(){
       confirmQuestions: $("confirmQuestions").value,
       fontChoice: checkedVal("fontChoice", "soroban"),
       numSize: checkedVal("numSize", "medium"),
-      hintMode: checkedVal("hintMode", "off"),
+      hintMode: checkedVal("confirmHintMode", "off"),
       decMode: checkedVal("decMode", "off"), decPlaces: $("decPlaces").value
     };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
@@ -1662,7 +1693,7 @@ function loadSettings(){
   setRadio("fontChoice", data.fontChoice);
   applyFontChoice(data.fontChoice || "soroban");
   setRadio("numSize", data.numSize);
-  setRadio("hintMode", data.hintMode);
+  setRadio("confirmHintMode", data.hintMode);
   numSizeChoice = NUM_SIZE_SCALES[data.numSize] ? data.numSize : "medium";
   refreshSeriesState(); refreshAccelState(); refreshDigitModeState(); refreshAnswerSignState(); refreshDecState();
 }
@@ -2368,11 +2399,12 @@ function renderJudgeActions(){
     }));
 }
 /* 正解を中央に大きく出す（大きさは、その問題を出したときの計算数字
-   と同じを基準に、画面幅へ収まるよう調整する） */
+   と同じを基準に、画面幅へ収まるよう調整する。ただし大きすぎると
+   下のボタン類が隠れてしまうため、上限を設ける） */
 function renderBigAnswers(results){
   const box = $("judgeBigAnswer");
   if(!box) return;
-  const base = flashFontSize || 120;
+  const base = Math.min(flashFontSize || 120, 120);
   if(results.length === 1){
     box.innerHTML = `<div class="big-answer numfont">${fmt(results[0].answer)}</div>`;
   } else {
@@ -2647,7 +2679,7 @@ $("nextBtn").addEventListener("click", () => {
   if(problemIndex >= cfg.questions - 1) showResult();
   else nextProblem();
 });
-/* 止める: 確認してからトップへ戻る（速度の変動も元に戻す） */
+/* やめる: 確認してからトップへ戻る（速度の変動も元に戻す） */
 $("stopBtn").addEventListener("click", () =>
   showReorderConfirm("途中ですがやめますか？", () => { resetSpeed(); goHome(); }));
 $("homeBtn2").addEventListener("click", goHome);
