@@ -1162,6 +1162,7 @@ let confirmMode = "grade", pendingCfg = null;
 function selectGrade(g){
   selectedGrade = g;
   confirmMode = "grade";
+  $("confirmQuestions").disabled = false;
   $("confirmTitle").textContent = g.name;
   $("confirmSpec").textContent = `${g.digits}桁　${g.mouth}口　全体で${g.seconds}秒`;
   $("confirmNotes").textContent = "";
@@ -1230,8 +1231,15 @@ $("kyuBtn").addEventListener("click", () => buildGradeList("kyu"));
 $("danBtn").addEventListener("click", () => buildGradeList("dan"));
 $("kindBackBtn").addEventListener("click", () => show("startScreen"));
 $("listBackBtn").addEventListener("click", () => show("gradeKindScreen"));
-$("confirmBackBtn").addEventListener("click", () => { if(confirmMode === "grade") show("gradeListScreen"); else show("settingsScreen"); });
-$("confirmStartBtn").addEventListener("click", () => { saveSettings(); if(confirmMode === "grade") startGrade(); else startCustom(); });
+$("confirmBackBtn").addEventListener("click", () => {
+  if(confirmMode === "again"){ pendingStart = null; show(pendingReturn); return; }
+  if(confirmMode === "grade") show("gradeListScreen"); else show("settingsScreen");
+});
+$("confirmStartBtn").addEventListener("click", () => {
+  saveSettings();
+  if(pendingStart){ const p = pendingStart; pendingStart = null; startPending(p); return; }
+  if(confirmMode === "grade") startGrade(); else startCustom();
+});
 $("settingsBackBtn").addEventListener("click", () => show("startScreen"));
 $("fsBtnTop").addEventListener("click", () => $("fsBtn").click());
 
@@ -1548,8 +1556,9 @@ refreshDigitModeState();
    （連打しても重ならない）。おまかせは選んだまま残り、正解で
    0.5秒早く・不正解で0.5秒遅くが累積する。
    変動した秒数は設定には記憶しない。リザルト画面では捨てずに保持し、
-   「新しい問題」で始める次のランに引き継ぐ（設定画面から新規に
-   始める場合は元の設定の速さに戻る） */
+   スタート画面を経由して続けるラン（新しい問題・同じ問題・順番を
+   変える・逆順）に引き継ぐ（設定画面から新規に始める場合は元の
+   設定の速さに戻る） */
 let speedMode = "manual", speedDelta = 0, omakaseTotal = null;
 let speedSel = "same";   // 最後に押した速度ボタン（選択表示用）
 let savedSpeed = null;   // リザルトで保持した速度（「新しい問題」で復元）
@@ -1569,6 +1578,9 @@ function resetSpeed(){ speedMode = "manual"; speedDelta = 0; omakaseTotal = null
 /* 現在の速度ボタンの状態一式（手動の増減・おまかせとも） */
 function snapshotSpeed(){ return { mode: speedMode, delta: speedDelta, sel: speedSel, omakaseTotal, applied: omakaseAppliedAttempt }; }
 function restoreSpeed(s){ if(!s) return; speedMode = s.mode; speedDelta = s.delta; speedSel = s.sel; omakaseTotal = s.omakaseTotal; omakaseAppliedAttempt = s.applied; }
+/* 判定画面で選んだ速さを、続けて始めるランへ引き継ぐ（現在の状態が
+   未調整なら、リザルトで保持しておいた状態を使う） */
+function carrySpeed(){ let snap = snapshotSpeed(); if(speedIsDefault(snap) && savedSpeed) snap = savedSpeed; savedSpeed = null; restoreSpeed(snap); }
 function speedIsDefault(s){ return s.mode === "manual" && !s.delta && s.omakaseTotal === null; }
 /* 今の実効の全体秒数（速度ボタンで調整中の値。未調整なら設定どおり） */
 function currentSpeedTotal(){
@@ -1925,6 +1937,7 @@ $("startBtn").addEventListener("click", () => {
     saveSettings();
     pendingCfg = c;
     confirmMode = "custom";
+    $("confirmQuestions").disabled = false;
     $("confirmTitle").textContent = "自分で設定";
     $("confirmSpec").textContent = customSummary(c);
     const notes = [];
@@ -2708,7 +2721,10 @@ function showJudge(results){
   $("shuffleBtn").classList.toggle("btn-grey", judgeShufflePlan === "warn");
   $("reverseBtn").classList.toggle("btn-grey", !judgeReverseOk);
 }
-$("sameBtn").addEventListener("click", () => countdownThenFlash());
+$("sameBtn").addEventListener("click", () => {
+  pendingStart = { kind: "judge", mode: "same" };
+  showContinuationConfirm("同じ問題", "judgeScreen");
+});
 /* 元の数字の集合を一切変えず（新しい数字は作らず）、並びだけを変える。
    今までと同じ並びにはせず、できれば全ての位置が違う並びにする */
 /* 並びが答えモードの条件を満たすか（生成時の判定と同じ意味）。
@@ -2884,27 +2900,19 @@ function shuffleDifferent(source, avoidOrder){
 $("shuffleBtn").addEventListener("click", () => {
   // 元の問題の数字（記録済みのもの）が土台なので、新しい数字は絶対に出ない。
   // 並列計算では組ごとに並べ替える。条件を満たす並びが作れる場合はそれを
-  // 使い、作れない場合は警告を出してから従来どおり並べ替える
+  // 使い、作れない場合は警告を出してからはじめる。いずれも押しただけでは
+  // 始まらず、スタート画面（確認画面）を経由する。並べ替え自体は
+  // スタートを押したときに行う
   const rec = records[problemIndex];
-  if(rec && rec.series){
-    if(Array.isArray(judgeShufflePlan)){
-      currentSeries = judgeShufflePlan.map(a => [...a]);
-      currentNumbers = currentSeries[0] || [];
-      countdownThenFlash();
-      return;
-    }
-    if(judgeShufflePlan === "warn"){
-      showReorderConfirm(reorderWarnText("shuffle"), () => {
-        currentSeries = rec.series.map((r, s) => shuffleDifferent(r.numbers, currentSeries[s]));
-        currentNumbers = currentSeries[0] || [];
-        countdownThenFlash();
-      });
-      return;
-    }
-    currentSeries = rec.series.map((r, s) => shuffleDifferent(r.numbers, currentSeries[s]));
-    currentNumbers = currentSeries[0] || [];
+  if(rec && rec.series && judgeShufflePlan === "warn"){
+    showReorderConfirm(reorderWarnText("shuffle"), () => {
+      pendingStart = { kind: "judge", mode: "shuffle" };
+      showContinuationConfirm("順番を変える", "judgeScreen");
+    });
+    return;
   }
-  countdownThenFlash();
+  pendingStart = { kind: "judge", mode: "shuffle" };
+  showContinuationConfirm("順番を変える", "judgeScreen");
 });
 /* 次へ: 残りの問題があれば次の問題へ、最後の問題ならリザルトへ */
 $("nextBtn").addEventListener("click", () => {
@@ -2917,40 +2925,53 @@ $("stopBtn").addEventListener("click", () =>
 $("homeBtn2").addEventListener("click", goHome);
 $("reverseBtn").addEventListener("click", () => {
   // 記録済みの数字を逆順にする（新しい数字は作らない）。並列計算では組ごとに逆順。
-  // 逆順が答えモードの条件を満たさない場合は警告を出してから逆順にする
+  // 逆順が答えモードの条件を満たさない場合は警告を出してからはじめる。
+  // いずれも押しただけでは始まらず、スタート画面（確認画面）を経由する
   const rec = records[problemIndex];
-  if(rec && rec.series){
-    if(judgeReverseOk){
-      currentSeries = rec.series.map(r => [...r.numbers].reverse());
-      currentNumbers = currentSeries[0] || [];
-      countdownThenFlash();
-      return;
-    }
+  if(rec && rec.series && !judgeReverseOk){
     showReorderConfirm(reorderWarnText("reverse"), () => {
-      currentSeries = rec.series.map(r => [...r.numbers].reverse());
-      currentNumbers = currentSeries[0] || [];
-      countdownThenFlash();
+      pendingStart = { kind: "judge", mode: "reverse" };
+      showContinuationConfirm("逆順でやる", "judgeScreen");
     });
     return;
   }
-  countdownThenFlash();
+  pendingStart = { kind: "judge", mode: "reverse" };
+  showContinuationConfirm("逆順でやる", "judgeScreen");
 });
-$("resultNewBtn").addEventListener("click", restartNew);
-$("resultSameBtn").addEventListener("click", () => restartAll("same"));
+$("resultNewBtn").addEventListener("click", () => {
+  pendingStart = { kind: "new" };
+  showContinuationConfirm("新しい問題", "resultScreen");
+});
+$("resultSameBtn").addEventListener("click", () => {
+  pendingStart = { kind: "all", mode: "same" };
+  showContinuationConfirm("同じ問題", "resultScreen");
+});
 $("resultShuffleBtn").addEventListener("click", () => {
   if(resultShufflePlan === "warn"){
-    showReorderConfirm(reorderWarnText("shuffle"), () => restartAll("shuffle"));
+    showReorderConfirm(reorderWarnText("shuffle"), () => {
+      pendingStart = { kind: "all", mode: "shuffle" };
+      showContinuationConfirm("順番を変える", "resultScreen");
+    });
     return;
   }
   if(Array.isArray(resultShufflePlan)){
-    restartAll("shuffle", resultShufflePlan);
+    pendingStart = { kind: "all", mode: "shuffle", queue: resultShufflePlan };
+    showContinuationConfirm("順番を変える", "resultScreen");
     return;
   }
-  restartAll("shuffle");
+  pendingStart = { kind: "all", mode: "shuffle" };
+  showContinuationConfirm("順番を変える", "resultScreen");
 });
 $("resultReverseBtn").addEventListener("click", () => {
-  if(resultReverseOk){ restartAll("reverse"); return; }
-  showReorderConfirm(reorderWarnText("reverse"), () => restartAll("reverse"));
+  if(resultReverseOk){
+    pendingStart = { kind: "all", mode: "reverse" };
+    showContinuationConfirm("逆順でやる", "resultScreen");
+    return;
+  }
+  showReorderConfirm(reorderWarnText("reverse"), () => {
+    pendingStart = { kind: "all", mode: "reverse" };
+    showContinuationConfirm("逆順でやる", "resultScreen");
+  });
 });
 document.addEventListener("keydown", e => {
   if(e.key !== "Enter") return;
@@ -3159,14 +3180,54 @@ function nextProblem(){
    表示の時点で保持しておいた速度を使う */
 function restartNew(){
   if(!cfg) return;
-  let snap = snapshotSpeed();
-  if(speedIsDefault(snap) && savedSpeed) snap = savedSpeed;
-  savedSpeed = null;
   problemIndex = 0; records = {}; queuedSeries = null; queuedDraws = null;
   makeSeries();
-  restoreSpeed(snap);
+  carrySpeed();
   sessionStart = Date.now();
   countdownThenFlash();
+}
+/* ---------- 再開ボタンはスタート画面（確認画面）を経由する ----------
+   判定画面・リザルト画面の「同じ問題」「逆順でやる」「順番を変える」
+   「新しい問題」は、押したらすぐ始めず、いったん確認画面を出す。
+   スタートを押したときに、控えておいた続きを実行する。速さの選択は
+   どのボタンからでも引き継ぐ */
+let pendingStart = null, pendingReturn = "resultScreen";
+function showContinuationConfirm(title, from){
+  if(!cfg) return;
+  pendingReturn = from;
+  confirmMode = "again";
+  $("confirmTitle").textContent = title;
+  $("confirmSpec").textContent = cfg.gradeSpec
+    ? `${cfg.gradeSpec.digits}桁　${cfg.gradeSpec.mouth}口　全体で${cfg.gradeSpec.seconds}秒`
+    : customSummary(cfg);
+  $("confirmNotes").textContent = "";
+  /* 連続出題数は、この流れでは変えられない（記録済みの問題に合わせる） */
+  $("confirmQuestions").value = String(cfg.questions);
+  $("confirmQuestions").disabled = true;
+  setRadioChecked("confirmHintMode", cfg.hint ? "on" : "off");
+  show("confirmScreen");
+}
+/* 判定画面の続き: 今の問題をそのまま/並べ替えて/逆順で、もう一度出す */
+function execJudgeReplay(mode){
+  const rec = records[problemIndex];
+  if(rec && rec.series){
+    if(mode === "shuffle"){
+      if(Array.isArray(judgeShufflePlan)) currentSeries = judgeShufflePlan.map(a => [...a]);
+      else currentSeries = rec.series.map((r, s) => shuffleDifferent(r.numbers, currentSeries[s]));
+      currentNumbers = currentSeries[0] || [];
+    } else if(mode === "reverse"){
+      currentSeries = rec.series.map(r => [...r.numbers].reverse());
+      currentNumbers = currentSeries[0] || [];
+    }
+  }
+  countdownThenFlash();
+}
+function startPending(p){
+  if(cfg) cfg.hint = checkedVal("confirmHintMode", "off") === "on";   // ヒントは確認画面の選択を使う
+  if(p.kind === "judge"){ execJudgeReplay(p.mode); return; }
+  if(p.kind === "new"){ restartNew(); return; }
+  carrySpeed();
+  restartAll(p.mode, p.queue);
 }
 function restartAll(mode, queueOverride){
   const total = cfg ? cfg.questions : 0;
@@ -3197,10 +3258,11 @@ function goHome(){ clearTimers(); show("startScreen"); }
 
 /* ---------- リザルト ---------- */
 function showResult(){
-  /* 判定画面で選んだ速さは捨てずに保持する（「新しい問題」で始める
-     次のランに引き継ぐため）。この画面からの同じ問題・順番を変える・
-     逆順の再生は、従来どおり設定の速さで出す */
-  savedSpeed = snapshotSpeed();
+  /* 判定画面で選んだ速さは捨てずに保持する（続けて始めるランに引き
+     継ぐため）。現在の状態が未調整で、保持済みの速さがあるときは
+     そちらを残す（確認画面から戻ってきた場合など） */
+  const snapR = snapshotSpeed();
+  if(!speedIsDefault(snapR) || !savedSpeed) savedSpeed = snapR;
   resetSpeed();
   clearTimers(); show("resultScreen");
   /* 全問ぶんの並び替えプランを先に計算し、作れない問題があればボタンを
