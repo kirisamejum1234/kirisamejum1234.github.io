@@ -253,8 +253,12 @@
 }
 #settingsScreen .val{ background:#ffffff; color:#12406e; border:2px solid #7fc8f8; }
 #confirmSpec{ background:#ffffff !important; color:#12406e !important; border:3px solid #ffb703 !important; }
-#settingsScreen .row > div > label, #confirmScreen .row > div > label{ display:flex; flex-direction:row-reverse; align-items:center; justify-content:space-between; gap:8px; white-space:nowrap; }
-#confirmScreen .optcol{ flex-direction:column; align-items:stretch; }
+#settingsScreen .row > div > label, #confirmScreen .row > div > label{ display:inline-flex; flex-direction:row-reverse; align-items:center; gap:6px; max-width:100%; flex:0 0 auto; }
+#settingsScreen .row.wrap-row, #confirmScreen .row.wrap-row{ flex-wrap:wrap; }
+#settingsScreen .row.wrap-row > div, #confirmScreen .row.wrap-row > div{ flex:1 1 100%; min-width:0; }
+#settingsScreen .row > div > label > input, #confirmScreen .row > div > label > input{ flex:0 0 auto; }
+#subStyleNote, #subStyleWarn{ flex:0 0 100%; }
+@media (max-width:480px){ #confirmScreen .row.wrap-row > div > label{ font-size:11.5px; } #confirmScreen .row.wrap-row > div > label > input{ width:16px !important; height:16px !important; } #confirmScreen .row.wrap-row > div{ gap:6px 8px !important; } }
 #startError{ color:#d90429; }
 #startScreen .ver-label,#settingsScreen .ver-label{ color:#46708f; }
 
@@ -360,8 +364,8 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
       <label><input type="radio" name="confirmHintMode" value="off" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> なし</label>
       <label><input type="radio" name="confirmHintMode" value="on" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> あり</label>
     </div></div>
-  <div class="row"><label>フォント</label>
-    <div class="optcol" style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
+  <div class="row wrap-row"><label>フォント</label>
+    <div style="display:flex;flex-wrap:wrap;gap:6px 10px;font-size:13px">
       <label><input type="radio" name="confirmFontChoice" value="soroban" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> そろばん</label>
       <label><input type="radio" name="confirmFontChoice" value="kyokasho" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> きょうかしょ</label>
       <label><input type="radio" name="confirmFontChoice" value="kyokashoB" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> きょうかしょ（太字）</label>
@@ -399,39 +403,39 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
     <div class="row"><label>口数 <span class="note">数字の個数</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="mouth" data-step="-1">−</button><input id="mouth" type="number" inputmode="numeric" min="1" value="5"><button type="button" class="stepbtn" data-target="mouth" data-step="1">＋</button></div></div>
     <div class="row sec-row" id="totalSecondsRow"><label>全体の秒数 <span class="note">小数可</span></label><div class="stepper sec"><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="-0.1">−0.1</button><input id="totalSeconds" type="text" inputmode="decimal" value="5.0"><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="1">＋1</button></div></div>
     <p class="note" style="margin:-2px 0 10px">全体の秒数 = カウントダウンが終わってから、最後の数字が終わるまでの時間です</p>
-    <div class="row"><label>桁数の出し方</label>
-      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+    <div class="row wrap-row"><label>桁数の出し方</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;align-items:center">
         <label><input type="radio" name="digitMode" value="maxonly" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 最大桁数のみ</label>
         <label><input type="radio" name="digitMode" value="random" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> ランダム（最小〜最大）</label>
       </div></div>
     <p class="note" id="digitModeNote" style="margin:-4px 0 8px"></p>
     <div class="row"><label>引き算</label>
-      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;align-items:center">
         <label><input type="radio" name="subMode" value="off" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オフ</label>
         <label><input type="radio" name="subMode" value="on" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オン</label>
       </div></div>
-    <div class="row" id="answerSignRow"><label>答え <span class="note">引き算オンの時</span></label>
-      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+    <div class="row wrap-row" id="answerSignRow"><label>答え <span class="note">引き算オンの時</span></label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;align-items:center">
         <label><input type="radio" name="answerSignMode" value="never" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> マイナスにならない</label>
         <label><input type="radio" name="answerSignMode" value="mid" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 途中だけマイナス（答えはプラス）</label>
         <label><input type="radio" name="answerSignMode" value="negative" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 答えがマイナスになる</label>
       </div></div>
-    <div class="row" id="subStyleRow"><label>引き算の出し方 <span class="note">引き算オンの時</span></label>
-      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+    <div class="row wrap-row" id="subStyleRow"><label>引き算の出し方 <span class="note">引き算オンの時</span></label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;align-items:center">
         <label><input type="radio" name="subStyle" value="normal" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> ふつう</label>
         <label><input type="radio" name="subStyle" value="hikitsuzukeru" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 引き続ける（最初だけ正数、あとは全部引き算）</label>
         <p class="note" id="subStyleNote" style="margin:0"></p>
         <p id="subStyleWarn" style="margin:0;color:#ff6961;font-size:12px;font-weight:bold"></p>
       </div></div>
-    <div class="row" id="subCountRow"><label>引き算の数 <span class="note">ふつうの時</span></label>
-      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+    <div class="row wrap-row" id="subCountRow"><label>引き算の数 <span class="note">ふつうの時</span></label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;align-items:center">
         <div class="stepper"><button type="button" class="stepbtn" data-target="subCount" data-step="-1">−</button><input id="subCount" type="number" inputmode="numeric" min="1" placeholder="おまかせ"><button type="button" class="stepbtn" data-target="subCount" data-step="1">＋</button> <span class="note">口（空欄＝おまかせ）</span></div>
         <label><input type="radio" name="subArrange" value="random" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> ランダム</label>
         <label><input type="radio" name="subArrange" value="together" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 連続する</label>
         <label><input type="radio" name="subArrange" value="separate" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 連続しない</label>
       </div></div>
     <div class="row"><label>同じ数字の連続</label>
-      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;align-items:center">
         <label><input type="radio" name="repeatMode" value="on" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オン（連続して出る）</label>
         <label><input type="radio" name="repeatMode" value="off" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オフ（連続させない）</label>
       </div></div>
@@ -444,7 +448,7 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
     <div class="row" id="seriesCountRow"><label>並列計算数 <span class="note">組の数 2〜12</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="seriesCount" data-step="-1">−</button><input id="seriesCount" type="number" inputmode="numeric" min="2" max="12" value="1"><button type="button" class="stepbtn" data-target="seriesCount" data-step="1">＋</button></div></div>
     <p class="note" style="margin:-2px 0 10px">2=ダブル、3=トリプル、4=クワッド。5以上も入力できます</p>
     <div class="row" id="presentRow"><label>出し方 <span class="note">2組以上の時</span></label>
-      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;align-items:center">
         <label><input type="radio" name="presentMode" value="simul" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 同時に全部出す</label>
         <label><input type="radio" name="presentMode" value="alt" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 左右と交互に出す</label>
         <label><input type="radio" name="presentMode" value="seq" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 順番に1組ずつ出す</label>
