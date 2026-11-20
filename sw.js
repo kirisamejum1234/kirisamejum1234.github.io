@@ -1,10 +1,10 @@
-/* フラッシュ暗算パーソナル Service Worker
+/* フラッシュ暗算Personal Service Worker
    アプリ本体を端末に保存し、2回目以降は通信なし（機内モード等）でも
    起動・出題・判定まで動くようにする。
    CACHE の版数はアプリの版数（flash_anzan.py の APP_VERSION）と必ず
    そろえること。版数が変わると新しいキャッシュに切り替わり、古い
    キャッシュは activate のときに削除される */
-const CACHE = "flash-anzan-20261120-11";
+const CACHE = "flash-anzan-20261120-12";
 const ASSETS = [
   "/",
   "/index.html",
