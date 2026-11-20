@@ -253,6 +253,8 @@
 }
 #settingsScreen .val{ background:#ffffff; color:#12406e; border:2px solid #7fc8f8; }
 #confirmSpec{ background:#ffffff !important; color:#12406e !important; border:3px solid #ffb703 !important; }
+#settingsScreen .row > div > label, #confirmScreen .row > div > label{ display:flex; flex-direction:row-reverse; align-items:center; justify-content:space-between; gap:8px; white-space:nowrap; }
+#confirmScreen .optcol{ flex-direction:column; align-items:stretch; }
 #startError{ color:#d90429; }
 #startScreen .ver-label,#settingsScreen .ver-label{ color:#46708f; }
 
@@ -320,7 +322,7 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
       <label><input type="radio" name="confirmHintMode" value="on" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> あり</label>
     </div></div>
   <div class="row"><label>フォント</label>
-    <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
+    <div class="optcol" style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
       <label><input type="radio" name="confirmFontChoice" value="soroban" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> そろばん</label>
       <label><input type="radio" name="confirmFontChoice" value="kyokasho" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> きょうかしょ</label>
       <label><input type="radio" name="confirmFontChoice" value="kyokashoB" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> きょうかしょ（太字）</label>
@@ -424,20 +426,6 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
         <label><input type="radio" name="accelChaos" value="off" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オフ</label>
         <label><input type="radio" name="accelChaos" value="on" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オン</label>
-      </div></div>
-    <div class="row"><label>フォント</label>
-      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
-        <label><input type="radio" name="fontChoice" value="soroban" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> そろばん</label>
-        <label><input type="radio" name="fontChoice" value="kyokasho" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> きょうかしょ</label>
-        <label><input type="radio" name="fontChoice" value="kyokashoB" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> きょうかしょ（太字）</label>
-      </div></div>
-    <div class="row"><label>数字の大きさ</label>
-      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
-        <label><input type="radio" name="numSize" value="xsmall" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 極小</label>
-        <label><input type="radio" name="numSize" value="small" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 小</label>
-        <label><input type="radio" name="numSize" value="medium" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 中</label>
-        <label><input type="radio" name="numSize" value="large" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 大</label>
-        <label><input type="radio" name="numSize" value="xlarge" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 特大</label>
       </div></div>
     <div id="startError" style="display:none;background:#5a1a1a;color:#ffd7d7;border:1px solid #ff5252;border-radius:10px;padding:10px 14px;margin:18px 0 0;font-size:14px;line-height:1.6"></div>
     <div class="btnrow-settings">
@@ -1831,28 +1819,24 @@ function applyFontChoice(v){
   try{ if(document.querySelectorAll("#flashStage .flash-cell").length) fitFlashFont(); }catch(e){}
   try{ fitAnswerFont(); }catch(e){}
 }
-document.querySelectorAll('input[name="fontChoice"]').forEach(r =>
-  r.addEventListener("change", () => { applyFontChoice(r.value); saveSettings(); }));
-document.querySelectorAll('input[name="numSize"]').forEach(r =>
-  r.addEventListener("change", () => { numSizeChoice = r.value; saveSettings(); }));
 /* 確認画面（スタート画面）のヒント/フォント/数字の大きさ。
-   ヒントは確認画面のラジオが正（設定画面からは移動した）。
-   フォントと数字の大きさは設定画面と同じ値を共有し、確認画面で
-   変えたら設定画面側にも反映する（保存もその場で行う） */
+   3つとも確認画面のラジオが正（フォントと数字の大きさは
+   20261120-14 で設定画面から削除し、ここに集約した）。
+   現在値は numFontChoice / numSizeChoice が持ち、保存もその場で行う */
 function setRadioChecked(name, v){
   const r = document.querySelector(`input[name="${name}"][value="${v}"]`);
   if(r) r.checked = true;
 }
 function syncConfirmControls(){
-  setRadioChecked("confirmFontChoice", checkedVal("fontChoice", "soroban"));
-  setRadioChecked("confirmNumSize", checkedVal("numSize", "medium"));
+  setRadioChecked("confirmFontChoice", numFontChoice);
+  setRadioChecked("confirmNumSize", numSizeChoice);
 }
 document.querySelectorAll('input[name="confirmHintMode"]').forEach(r =>
   r.addEventListener("change", () => { saveSettings(); }));
 document.querySelectorAll('input[name="confirmFontChoice"]').forEach(r =>
-  r.addEventListener("change", () => { setRadioChecked("fontChoice", r.value); applyFontChoice(r.value); saveSettings(); }));
+  r.addEventListener("change", () => { applyFontChoice(r.value); saveSettings(); }));
 document.querySelectorAll('input[name="confirmNumSize"]').forEach(r =>
-  r.addEventListener("change", () => { setRadioChecked("numSize", r.value); numSizeChoice = r.value; saveSettings(); }));
+  r.addEventListener("change", () => { numSizeChoice = r.value; saveSettings(); }));
 function saveSettings(){
   try{
     const data = {
@@ -1865,8 +1849,8 @@ function saveSettings(){
       presentMode: checkedVal("presentMode", "simul"), layoutPref,
       subCount: $("subCount").value, subArrange: checkedVal("subArrange", "random"),
       confirmQuestions: $("confirmQuestions").value,
-      fontChoice: checkedVal("fontChoice", "soroban"),
-      numSize: checkedVal("numSize", "medium"),
+      fontChoice: numFontChoice,
+      numSize: numSizeChoice,
       hintMode: checkedVal("confirmHintMode", "off"),
       decMode: checkedVal("decMode", "off"), decPlaces: $("decPlaces").value
     };
@@ -1906,9 +1890,7 @@ function loadSettings(){
   if(data.layoutPref){ layoutPref = data.layoutPref; setRadio("layoutMode", data.layoutPref); }
   setVal("confirmQuestions", data.confirmQuestions);
   setRadio("decMode", data.decMode); setVal("decPlaces", data.decPlaces);
-  setRadio("fontChoice", data.fontChoice);
   applyFontChoice(data.fontChoice || "soroban");
-  setRadio("numSize", data.numSize);
   setRadio("confirmHintMode", data.hintMode);
   numSizeChoice = NUM_SIZE_SCALES[data.numSize] ? data.numSize : "medium";
   refreshSeriesState(); refreshAccelState(); refreshDigitModeState(); refreshAnswerSignState(); refreshDecState();
