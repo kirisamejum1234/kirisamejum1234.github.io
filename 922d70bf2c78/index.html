@@ -90,6 +90,11 @@ html{scrollbar-width:thin;scrollbar-color:#b3ac9c transparent}
 /* 全画面のときだけ隅に出る、目立たない終了ボタン */
 #btnFsExit{position:fixed;top:calc(env(safe-area-inset-top, 0px) + 8px);right:calc(env(safe-area-inset-right, 0px) + 10px);z-index:9999;display:none;font-size:12px;padding:6px 12px;border:none;border-radius:999px;background:rgba(35,35,35,.55);color:#fff;opacity:.8}
 #btnFsExit.on{display:block}
+/* スマホ幅では声の選択（4つ）を 2+2 の均等な折り返しにする。
+   幅いっぱいに3つ＋余り1つが横長に伸びる並びを避けるため（はみ出しは無い） */
+@media (max-width:560px){
+ #segPersona button{flex:1 1 40%}
+}
 /* 背の低い画面（横向きスマホ等）では縦を詰めて、入力欄と判定ボタンまで
    スクロールなしで届くようにする。通常の縦長画面には影響しない */
 @media (max-height:520px){
@@ -287,7 +292,7 @@ html{scrollbar-width:thin;scrollbar-color:#b3ac9c transparent}
 
 <script>
 "use strict";
-const APP_VERSION = "20261115-1";
+const APP_VERSION = "20261121-1";
 /* ===== YOMIAGE CORE (portable: 超多機能版へ移植する区画) =====
    yomiage_core.py と同一仕様。共有テストベクトルで一致を検証する。 */
 const MAX_DIGITS = 12;
