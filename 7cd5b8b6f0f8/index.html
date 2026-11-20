@@ -669,6 +669,13 @@ function clearStartError(){
 
 /* ---------- 効果音（Web Audioで合成） ---------- */
 let actx = null;
+/* 割り込み再生: 予備経路（Web Audio）で鳴っている音も、新しい効果音の
+   タイミングで止められるよう、発音中のノードを登録しておく */
+const activeFallbackNodes = new Set();
+function stopFallbackNodes(){
+  activeFallbackNodes.forEach(n => { try{ n.stop(); }catch(e){} });
+  activeFallbackNodes.clear();
+}
 function audio(){
   if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
   return actx;
@@ -697,7 +704,10 @@ function tone(freq, sec, {type="sine", vol=0.5, delay=0} = {}){
       g.gain.setValueAtTime(0.0001, t0);
       g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + sec);
-      o.connect(g).connect(ctx.destination); o.start(t0); o.stop(t0 + sec + 0.05);
+      o.connect(g).connect(ctx.destination);
+      activeFallbackNodes.add(o);
+      o.onended = () => activeFallbackNodes.delete(o);
+      o.start(t0); o.stop(t0 + sec + 0.05);
     };
     if(ctx.state === "running") start();
     else ctx.resume().then(start).catch(start);
@@ -729,11 +739,30 @@ function clipPool(key, b64){
   }
   return CLIP_POOLS[key];
 }
+/* 割り込み再生: 次の効果音を鳴らすタイミングが来たら、鳴っている
+   最中の効果音を止めて、新しい音を最初から鳴らす。連打や高速表示で
+   音の間隔が短くなっても毎回鳴るようにするための方式変更で、音の
+   種類・鳴る場面・音色は変えない。止めるのは他の要素だけで、これから
+   鳴らす要素自身は従来どおり先頭へ戻すだけにする（pause() を挟むと
+   再生開始と競合して play() が落ちることがあるため）。解放（プライミング）
+   中の要素は無音なので止めない */
+function stopOtherClips(except){
+  try{
+    for(const k in CLIP_POOLS){
+      CLIP_POOLS[k].forEach(a => {
+        if(a === except || a.dataset.priming) return;
+        try{ if(!a.paused) a.pause(); a.currentTime = 0; }catch(e){}
+      });
+    }
+  }catch(e){}
+  stopFallbackNodes();
+}
 function playClip(key, b64, onFail){
   try{
     const pool = clipPool(key, b64);
     const a = pool[pool.i++ % pool.length];
     delete a.dataset.priming;   // 本番再生がこの要素を引き継いだ印（プライミング側の後始末と競合させない）
+    stopOtherClips(a);   // 割り込み: 鳴っている最中の他の効果音を止める
     try{ a.muted = false; a.currentTime = 0; }catch(e){}   // pause() を挟むと再生開始と競合して play() が落ちることがあるため、先頭へ戻すだけにする
     const p = a.play();
     if(p && p.catch) p.catch(() => { if(onFail) onFail(); });   // 再生が拒否されたら予備の音（Web Audio）に切り替える
@@ -777,7 +806,7 @@ function webAudioFlash(){
   try{
     if(flashBuffer){
       const ctx = audio();
-      const play = () => { const s = ctx.createBufferSource(); s.buffer = flashBuffer; s.connect(ctx.destination); s.start(); };
+      const play = () => { const s = ctx.createBufferSource(); s.buffer = flashBuffer; s.connect(ctx.destination); activeFallbackNodes.add(s); s.onended = () => activeFallbackNodes.delete(s); s.start(); };
       if(ctx.state === "running") play(); else ctx.resume().then(play).catch(play);
       return;
     }
