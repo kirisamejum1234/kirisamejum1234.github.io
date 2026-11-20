@@ -1644,16 +1644,46 @@ function renderSpeedRow(){
    一定の速さになってしまうため）。100% では2つ目以降が 0 秒に
    なるが、再生側で全ての数字を必ず1フレーム描画してから消すので、
    数字が飛ぶことはない */
+/* カオスで「物理的に表示できる最小間隔」（秒）。
+   1口の間隔は 表示＋空白 で、空白は min(0.3秒, 間隔の25%)。
+   画面の更新は 60Hz（1フレーム約16.7ms）が一般的な下限で、表示と
+   空白の両方が最低1フレームずつ無いと、計画した間隔どおりには
+   再現できない（空白が1フレーム未満だと前後の数字がつながってしまう）。
+   空白＝間隔の25% が1フレーム以上になる条件は 間隔 >= (1/60)/0.25 = 1/15秒。
+   そのとき表示は3フレーム（50ms）確保できる。よって 1/15秒 を最小間隔とする */
+const CHAOS_MIN_CYCLE_S = 1 / 15;
 /* カオスの抽選: イベントの切り替わりごとに1回、-X〜+X の整数%を引く。
    間隔が0秒になる引き方（+100）だけは出さない。全組共通の抽選なので、
-   並列でも足並みはそろったまま進む */
-function genChaosDraws(events, x){
+   並列でも足並みはそろったまま進む。
+   base（1口目の間隔＝全体の秒数÷イベント数）を渡すと、どの口の間隔も
+   CHAOS_MIN_CYCLE_S を下回らない抽選だけを作問の段階で採用する。
+   下回る目が出たらその口ぶんだけ引き直し（最大100回）、それでも
+   収まらないときは試した中で最も間隔が広がる目を使う。再生中に
+   間隔を変えることはしない。base 自体が最小間隔未満の設定では
+   1口目は設定由来で下回るが、抽選がさらに悪化させることはない */
+function genChaosDraws(events, x, base){
   const xr = Math.floor(Math.abs(x) || 0);
   const draws = [];
+  if(base == null || xr === 0){
+    for(let i = 0; i < events - 1; i++){
+      let d = rand(-xr, xr);
+      if(d >= 100) d = 99;
+      draws.push(d);
+    }
+    return draws;
+  }
+  let c = base;
   for(let i = 0; i < events - 1; i++){
-    let d = rand(-xr, xr);
-    if(d >= 100) d = 99;
-    draws.push(d);
+    let chosen = null, bestD = 0, bestC = -1;
+    for(let t = 0; t < 100; t++){
+      let d = rand(-xr, xr);
+      if(d >= 100) d = 99;
+      const nc = c * (1 - d / 100);
+      if(nc > bestC){ bestD = d; bestC = nc; }
+      if(nc >= CHAOS_MIN_CYCLE_S){ chosen = d; c = nc; break; }
+    }
+    if(chosen === null){ chosen = bestD; c = bestC; }
+    draws.push(chosen);
   }
   return draws;
 }
@@ -3142,7 +3172,7 @@ function makeSeries(){
   currentNumbers = currentSeries[0] || [];
   /* カオスの抽選は新しい問題を作るときだけ引き直す（全組共通） */
   const totalEvents = cfg.present === "simul" ? cfg.mouth : cfg.mouth * cfg.series;
-  currentDraws = (cfg.accelOn && cfg.accelChaos && totalEvents > 1) ? genChaosDraws(totalEvents, cfg.accel) : null;
+  currentDraws = (cfg.accelOn && cfg.accelChaos && totalEvents > 1) ? genChaosDraws(totalEvents, cfg.accel, cfg.totalSeconds / totalEvents) : null;
 }
 function nextProblem(){
   problemIndex++;
