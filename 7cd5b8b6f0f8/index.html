@@ -1229,7 +1229,7 @@ function startCustom(){
     pendingCfg.hint = checkedVal("confirmHintMode", "off") === "on";   // ヒントも確認画面で選んだ値を使う
     cfg = pendingCfg; problemIndex = 0; records = {}; queuedSeries = null; queuedDraws = null;
     dispPlaces = cfg.decOn ? cfg.decPlaces : 0;
-    resetSpeed();
+    resetSpeed(); savedSpeed = null;   // 設定からの新規開始では保持した速度は使わない
     makeSeries();
     sessionStart = Date.now();
     countdownThenFlash();
@@ -1248,7 +1248,7 @@ function startGrade(){
             series: 1, present: "simul", layout: "single", gradeSpec: g };
     dispPlaces = 0;
     problemIndex = 0; records = {}; queuedSeries = null;
-    resetSpeed();
+    resetSpeed(); savedSpeed = null;   // 設定からの新規開始では保持した速度は使わない
     makeSeries();
     sessionStart = Date.now();
     countdownThenFlash();
@@ -1586,9 +1586,12 @@ refreshDigitModeState();
    引き継がれ、選択は「今出た問題の速さ」を基準に1回分だけ効く
    （連打しても重ならない）。おまかせは選んだまま残り、正解で
    0.5秒早く・不正解で0.5秒遅くが累積する。
-   変動した秒数は設定には記憶せず、リザルト画面へ行った時点で元に戻る */
+   変動した秒数は設定には記憶しない。リザルト画面では捨てずに保持し、
+   「新しい問題」で始める次のランに引き継ぐ（設定画面から新規に
+   始める場合は元の設定の速さに戻る） */
 let speedMode = "manual", speedDelta = 0, omakaseTotal = null;
 let speedSel = "same";   // 最後に押した速度ボタン（選択表示用）
+let savedSpeed = null;   // リザルトで保持した速度（「新しい問題」で復元）
 let attemptSeq = 0, omakaseAppliedAttempt = -1;   // おまかせの累積を「1回の出題につき1回」にするための控え
 let lastPlayTotal = null, playCfg = null, judgeAllCorrect = false;
 const SPEED_BTNS = [["slow", "遅く", 1], ["slows", "少し遅く", 0.5], ["same", "そのまま", 0], ["fasts", "少し早く", -0.5], ["fast", "早く", -1]];
@@ -1602,6 +1605,10 @@ function effectivePlayCfg(){
   return cfg;
 }
 function resetSpeed(){ speedMode = "manual"; speedDelta = 0; omakaseTotal = null; playCfg = null; speedSel = "same"; omakaseAppliedAttempt = -1; }
+/* 現在の速度ボタンの状態一式（手動の増減・おまかせとも） */
+function snapshotSpeed(){ return { mode: speedMode, delta: speedDelta, sel: speedSel, omakaseTotal, applied: omakaseAppliedAttempt }; }
+function restoreSpeed(s){ if(!s) return; speedMode = s.mode; speedDelta = s.delta; speedSel = s.sel; omakaseTotal = s.omakaseTotal; omakaseAppliedAttempt = s.applied; }
+function speedIsDefault(s){ return s.mode === "manual" && !s.delta && s.omakaseTotal === null; }
 /* 今の実効の全体秒数（速度ボタンで調整中の値。未調整なら設定どおり） */
 function currentSpeedTotal(){
   if(speedMode === "omakase" && omakaseTotal !== null) return omakaseTotal;
@@ -3186,11 +3193,17 @@ function nextProblem(){
 /* リザルトから全問やり直す: 同じ問題（記録どおり）／順番を変える（記録の数字を並べ替え）。
    どちらも新しい数字は作らない */
 /* 判定画面とリザルト画面の「新しい問題」: 同じ設定のまま、新しい問題を
-   作り直して最初から始める */
+   作り直して最初から始める。判定画面で選んだ速さ（手動・おまかせとも）は
+   このボタンで始める次のランに引き継ぐ。リザルト経由のときは、リザルト
+   表示の時点で保持しておいた速度を使う */
 function restartNew(){
   if(!cfg) return;
+  let snap = snapshotSpeed();
+  if(speedIsDefault(snap) && savedSpeed) snap = savedSpeed;
+  savedSpeed = null;
   problemIndex = 0; records = {}; queuedSeries = null; queuedDraws = null;
   makeSeries();
+  restoreSpeed(snap);
   sessionStart = Date.now();
   countdownThenFlash();
 }
@@ -3223,7 +3236,11 @@ function goHome(){ clearTimers(); show("startScreen"); }
 
 /* ---------- リザルト ---------- */
 function showResult(){
-  resetSpeed();   // 変動した秒数はリザルトで元の設定に戻す
+  /* 判定画面で選んだ速さは捨てずに保持する（「新しい問題」で始める
+     次のランに引き継ぐため）。この画面からの同じ問題・順番を変える・
+     逆順の再生は、従来どおり設定の速さで出す */
+  savedSpeed = snapshotSpeed();
+  resetSpeed();
   clearTimers(); show("resultScreen");
   /* 全問ぶんの並び替えプランを先に計算し、作れない問題があればボタンを
      グレー表示にする（押せはする。押すと警告が出る） */
