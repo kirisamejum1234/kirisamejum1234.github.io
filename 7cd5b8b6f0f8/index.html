@@ -263,6 +263,15 @@
 #settingsScreen .row > div.vchoices > label{ display:flex; width:100%; justify-content:space-between; }
 /* 秒数のステッパーは右寄せ（折り返して下の行に出ても右端にそろえる） */
 #settingsScreen .row.sec-row .stepper{ margin-left:auto; }
+/* スタート（確認）画面の白カードは設定画面と同じ幅にそろえる
+   （連続出題数やヒントのカードが内容に合わせて縮んでいた） */
+#confirmScreen .row{ width:min(92vw,420px); box-sizing:border-box; }
+/* 確認画面で見出しの下に流れる選択肢は右寄せ */
+#confirmScreen .row.wrap-row > div{ justify-content:flex-end; }
+/* 縦積みの選択肢（確認画面のフォント）: 各行いっぱいに広げ、
+   文字は左・ラジオは右端（設定画面の桁数の出し方と同じ形） */
+#confirmScreen .vchoices{ display:flex; flex-direction:column; align-items:stretch; gap:6px; }
+#confirmScreen .vchoices > label{ width:100%; justify-content:space-between; }
 /* 右側の選択肢グループは、折り返して縦に積まれた行も右端にそろえる
    （「同じ数字の連続」で、箱は右端まで届いているのに選択肢が左に
    寄ってラジオが右端からずれていた） */
@@ -377,12 +386,12 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
       <label><input type="radio" name="confirmHintMode" value="on" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> あり</label>
     </div></div>
   <div class="row wrap-row"><label>フォント</label>
-    <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
+    <div class="vchoices" style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
       <label><input type="radio" name="confirmFontChoice" value="soroban" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> そろばん</label>
       <label><input type="radio" name="confirmFontChoice" value="kyokasho" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> きょうかしょ</label>
       <label><input type="radio" name="confirmFontChoice" value="kyokashoB" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> きょうかしょ（太字）</label>
     </div></div>
-  <div class="row"><label>数字の大きさ</label>
+  <div class="row wrap-row"><label>数字の大きさ</label>
     <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
       <label><input type="radio" name="confirmNumSize" value="xsmall" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 極小</label>
       <label><input type="radio" name="confirmNumSize" value="small" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 小</label>
