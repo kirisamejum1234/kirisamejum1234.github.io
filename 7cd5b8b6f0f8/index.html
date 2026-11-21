@@ -263,6 +263,10 @@
 #settingsScreen .row > div.vchoices > label{ display:flex; width:100%; justify-content:space-between; }
 /* 秒数のステッパーは右寄せ（折り返して下の行に出ても右端にそろえる） */
 #settingsScreen .row.sec-row .stepper{ margin-left:auto; }
+/* 右側の選択肢グループは、折り返して縦に積まれた行も右端にそろえる
+   （「同じ数字の連続」で、箱は右端まで届いているのに選択肢が左に
+   寄ってラジオが右端からずれていた） */
+#settingsScreen .row:not(.wrap-row) > div:not(.vchoices), #confirmScreen .row:not(.wrap-row) > div:not(.vchoices){ justify-content:flex-end; }
 #settingsScreen .row.wrap-row, #confirmScreen .row.wrap-row{ flex-wrap:wrap; }
 #settingsScreen .row.wrap-row > div, #confirmScreen .row.wrap-row > div{ flex:1 1 100%; min-width:0; }
 #settingsScreen .row > div > label > input, #confirmScreen .row > div > label > input{ flex:0 0 auto; }
