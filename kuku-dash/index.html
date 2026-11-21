@@ -67,8 +67,8 @@ button:active{filter:brightness(1.25);}
 .timer-label{margin-left:auto;color:#2020a0;font-weight:bold;font-size:clamp(15px,4.4vw,19px);}
 .main-area{flex:1;display:flex;gap:10px;padding:6px 14px 14px;}
 .main-btn{flex:1 1 0;min-width:0;min-height:0;color:#fff;font-weight:bold;font-size:clamp(28px,8vw,42px);}
-.quit-row{display:flex;justify-content:space-between;align-items:center;padding:2px 14px 14px;gap:10px;}
-.font-setting{display:flex;align-items:center;gap:8px;min-width:0;}
+.quit-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:2px 14px 14px;gap:10px;}
+.font-setting{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;}
 .font-label{font-weight:bold;color:#2020a0;font-size:15px;white-space:nowrap;}
 .font-btn{background:var(--slate);color:#fff;font-weight:bold;font-size:16px;padding:9px 14px;white-space:nowrap;}
 .font-btn.selected{background:var(--yellow);color:#000;}
@@ -77,7 +77,7 @@ button:active{filter:brightness(1.25);}
   .font-btn{font-size:14px;padding:8px 9px;}
   .btn-quit{font-size:16px;padding:9px 20px;}
 }
-.btn-quit{background:var(--dark);color:#fff;font-weight:bold;font-size:18px;padding:10px 38px;}
+.btn-quit{background:var(--dark);color:#fff;font-weight:bold;font-size:18px;padding:10px 38px;margin-left:auto;}
 /* ---- 全画面 ---- */
 #btnFs{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--slate);color:#fff;font-weight:bold;font-size:13px;padding:7px 12px;}
 body.fs #btnFs{display:none;}
@@ -129,10 +129,13 @@ button{touch-action:manipulation;}
 .naoshi-tag{color:var(--red);font-weight:bold;font-size:18px;margin-left:10px;}
 .calc-main{flex:1;display:flex;gap:8px;min-height:0;}
 .calc-left{flex:7;display:flex;flex-direction:column;padding:4px 2px 0 8px;min-width:0;}
-.problem{font-size:clamp(32px,9vw,52px);line-height:1.15;padding:6px 0 8px;white-space:nowrap;}
+.problem{display:flex;align-items:center;font-size:clamp(32px,9vw,52px);line-height:1.15;padding:6px 0 8px;white-space:nowrap;}
 .problem .sym{font-weight:bold;font-size:.92em;}
 .input-box{background:#fff;border:1px solid #888;min-height:clamp(58px,14vw,84px);
   display:flex;align-items:center;padding:0 12px;font-size:clamp(32px,9vw,52px);}
+.input-box.in-problem{display:inline-flex;width:2.1em;min-height:1.42em;
+  justify-content:center;padding:0 4px;margin:0 4px;vertical-align:middle;flex:none;}
+.problem #probProduct{margin-left:.18em;}
 .status{color:var(--red);font-weight:bold;font-size:clamp(15px,4.4vw,19px);
   padding-top:10px;min-height:32px;}
 .saiten{align-self:flex-start;margin-top:auto;background:var(--red);color:#fff;font-weight:bold;
@@ -286,7 +289,7 @@ if ("serviceWorker" in navigator) {
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-49</span>
+    <span class="ver">ver. 20261110-58</span>
   </div>
 </div>
 
@@ -318,7 +321,7 @@ if ("serviceWorker" in navigator) {
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-49</span>
+    <span class="ver">ver. 20261110-58</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -327,6 +330,13 @@ if ("serviceWorker" in navigator) {
 <!-- 2) 順序選択 -->
 <div id="scr-order" class="screen beige">
   <div class="header" id="orderTitle">○ のだん</div>
+  <div id="ansModeRow">
+    <div class="time-label">こたえの入れ方</div>
+    <div class="time-modes">
+      <button class="tm-btn" id="ansNormal">こたえをいれる</button>
+      <button class="tm-btn" id="ansBlank">□はいくつ？</button>
+    </div>
+  </div>
   <div class="prompt">じゅんばんを選んでください</div>
   <div class="order-area" style="flex:none">
     <div class="order-cell">
@@ -362,6 +372,10 @@ if ("serviceWorker" in navigator) {
   </div>
   <div class="time-label">タイム計測</div>
   <div class="exam-time" id="examTimeRow"><span class="fixed" id="examTimeTxt">カウントダウン 1分</span><span class="note" id="examNoteTxt">しけんは1分固定です</span></div>
+  <div class="time-modes" id="examTimeBtns" style="display:none">
+    <button class="tm-btn" id="exam30">30秒</button>
+    <button class="tm-btn" id="exam60">1分</button>
+  </div>
   <div class="time-modes" id="tmModes">
     <button class="tm-btn" id="tmUp">カウントアップ</button>
     <button class="tm-btn" id="tmDown">カウントダウン</button>
@@ -382,7 +396,7 @@ if ("serviceWorker" in navigator) {
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-49</span>
+    <span class="ver">ver. 20261110-58</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -398,7 +412,7 @@ if ("serviceWorker" in navigator) {
   <div style="display:flex;align-items:center"><div class="tabs" id="tabs" style="flex:1"></div><span class="timer-label" id="timerLabel"></span></div>
   <div class="calc-main">
     <div class="calc-left">
-      <div class="problem"><span class="num" id="probDan"></span><span class="sym"> × </span><span class="num" id="probK"></span><span class="sym"> =</span></div>
+      <div class="problem"><span class="num" id="probDan"></span><span class="sym"> × </span><span class="num" id="probK"></span><span class="sym" id="probEq"> =</span><span class="num" id="probProduct" style="display:none"></span></div>
       <div class="input-box num" id="inputBox"></div>
       <div class="status" id="status"></div>
       <button class="saiten" id="btnSaiten">採点</button>
@@ -446,7 +460,7 @@ if ("serviceWorker" in navigator) {
 
 <script>
 "use strict";
-var APP_VERSION = "20261110-49";
+var APP_VERSION = "20261110-58";
 var S = {
   dan: null, order: null, mode: "normal",
   items: [], answers: [], idx: 0, input: "",
@@ -456,6 +470,7 @@ var S = {
   resultItems: [], resultAnswers: [], resultScore: 0, resultWrong: [],
   selOrder: "junban", timeMode: "up", cdMin: 1, cdSec: 0,
   playMode: "practice", qCount: 20, secretCount: 9,
+  answerMode: "normal", examSeconds: 30, blank: false,
   timeLimit: null, timeUp: false, timerId: null
 };
 function $(id){ return document.getElementById(id); }
@@ -573,6 +588,12 @@ function correctAnswer(d, k){
   if (secretLevel === 2) return d * d * d;
   return d * k;
 }
+function judgeAnswer(d, k){
+  /* 採点・なおしの正解。□はいくつ？形式では □ に入る数 (かける数)
+     が正解で、通常形式では積 (隠しモードは半分／三乗) が正解。 */
+  if (S.blank) return k;
+  return correctAnswer(d, k);
+}
 function parseAns(t){ return t.indexOf(".") >= 0 ? parseFloat(t) : parseInt(t, 10); }
 function applyFontMode(){
   document.body.classList.toggle("soroban", fontMode === "soroban");
@@ -638,6 +659,10 @@ document.querySelectorAll("[data-order]").forEach(function(b){
 });
 $("tmUp").addEventListener("click", function(){ S.timeMode = "up"; refreshOrderUI(); });
 $("tmDown").addEventListener("click", function(){ S.timeMode = "down"; refreshOrderUI(); });
+$("ansNormal").addEventListener("click", function(){ S.answerMode = "normal"; refreshOrderUI(); });
+$("ansBlank").addEventListener("click", function(){ S.answerMode = "blank"; refreshOrderUI(); });
+$("exam30").addEventListener("click", function(){ S.examSeconds = 30; refreshOrderUI(); });
+$("exam60").addEventListener("click", function(){ S.examSeconds = 60; refreshOrderUI(); });
 function examLimit(){
   if (S.dan === "secret"){
     return (S.secretCount / 9) * 60;
@@ -645,11 +670,14 @@ function examLimit(){
   if (S.dan === "all"){
     return S.selOrder === "random" ? S.qCount * 6 : 8 * 60;
   }
-  return 60;
+  return S.examSeconds;
 }
 function refreshOrderUI(){
   var exam = S.playMode === "exam";
-  $("examTimeRow").style.display = exam ? "block" : "none";
+  var singleExam = exam && S.dan !== "all" && S.dan !== "secret";
+  $("ansModeRow").style.display = exam ? "none" : "block";
+  $("examTimeRow").style.display = (exam && !singleExam) ? "block" : "none";
+  $("examTimeBtns").style.display = singleExam ? "flex" : "none";
   $("countRow").style.display =
     (S.dan === "all" && S.selOrder === "random") ? "flex" : "none";
   $("secretCountRow").style.display = S.dan === "secret" ? "flex" : "none";
@@ -684,6 +712,20 @@ function refreshOrderUI(){
   [["tmUp", "up"], ["tmDown", "down"]].forEach(function(pair){
     var el = $(pair[0]);
     var sel = S.timeMode === pair[1];
+    el.classList.toggle("selected", sel);
+    if (el._label === undefined) el._label = el.textContent;
+    el.textContent = sel ? "✓ " + el._label : el._label;
+  });
+  [["ansNormal", "normal"], ["ansBlank", "blank"]].forEach(function(pair){
+    var el = $(pair[0]);
+    var sel = S.answerMode === pair[1];
+    el.classList.toggle("selected", sel);
+    if (el._label === undefined) el._label = el.textContent;
+    el.textContent = sel ? "✓ " + el._label : el._label;
+  });
+  [["exam30", 30], ["exam60", 60]].forEach(function(pair){
+    var el = $(pair[0]);
+    var sel = S.examSeconds === pair[1];
     el.classList.toggle("selected", sel);
     if (el._label === undefined) el._label = el.textContent;
     el.textContent = sel ? "✓ " + el._label : el._label;
@@ -769,6 +811,8 @@ function shuffleArr(a){
 }
 function startSession(order){
   S.order = order;
+  /* □はいくつ？形式は れんしゅう のときだけ (しけんは通常形式) */
+  S.blank = (S.playMode === "practice" && S.answerMode === "blank");
   var combos = [];
   if (S.dan === "all"){
     for (var d = 1; d <= 9; d++)
@@ -925,7 +969,7 @@ function startNaoshi(){
   S.idx = 0; S.input = ""; S.acCount = 0; S.topVisible = false; S.finished = false;
   show("scr-calc"); renderCalc();
 }
-function currentAnswer(){ var it = S.items[S.idx]; return correctAnswer(it.dan, it.k); }
+function currentAnswer(){ var it = S.items[S.idx]; return judgeAnswer(it.dan, it.k); }
 var tabsBuiltFor = null;  // タブを作ったときの S.items (同じなら作り直さない)
 function renderCalc(){
   var tabs = $("tabs");
@@ -955,11 +999,30 @@ function renderCalc(){
   }
   var curTab = tabs.children[S.idx];
   if (curTab && curTab.scrollIntoView) curTab.scrollIntoView({ block: "nearest" });
-  $("probDan").textContent = S.items[S.idx].dan;
-  $("probK").textContent = S.items[S.idx].k;
-  $("inputBox").textContent = S.input;
+  var it2 = S.items[S.idx];
+  $("probDan").textContent = it2.dan;
+  var box = $("inputBox");
+  var prob = document.querySelector(".problem");
+  if (S.blank){
+    /* □はいくつ？形式: 入力欄を問題の行の中 (× と = の間) へ移し、
+       = の後に答え (積) を出す */
+    $("probK").style.display = "none";
+    var prod = $("probProduct");
+    prod.style.display = "";
+    prod.textContent = correctAnswer(it2.dan, it2.k);
+    if (box.parentNode !== prob) prob.insertBefore(box, $("probEq"));
+    box.classList.add("in-problem");
+  } else {
+    $("probK").style.display = "";
+    $("probK").textContent = it2.k;
+    $("probProduct").style.display = "none";
+    var left = document.querySelector(".calc-left");
+    if (box.parentNode !== left) left.insertBefore(box, prob.nextSibling);
+    box.classList.remove("in-problem");
+  }
+  box.textContent = S.input;
   var dot = $("btnDot");
-  if (secretLevel === 1 && !S.topVisible){
+  if (secretLevel === 1 && !S.topVisible && !S.blank){
     dot.style.display = ""; $("btnTop").style.display = "none";
   } else {
     dot.style.display = "none"; $("btnTop").style.display = "";
@@ -988,6 +1051,14 @@ function gotoQuestion(j){
 /* ---------- キー操作 ---------- */
 function pressDigit(d){
   if (S.mode === "normal" && S.finished) return;
+  if (S.blank){
+    /* □ は1桁だけ: 押した数字でそのまま置き換える */
+    S.input = d;
+    S.acCount = 0;
+    $("status").textContent = "";
+    $("inputBox").textContent = S.input;
+    return;
+  }
   if (S.input.length >= 6) return;
   S.input = (S.input === "" && d === "0") ? "0" : S.input + d;
   S.acCount = 0;
@@ -996,6 +1067,7 @@ function pressDigit(d){
 }
 function pressDot(){
   if (secretLevel !== 1) return;
+  if (S.blank) return;  /* □形式の答えは整数のみ */
   if (S.mode === "normal" && S.finished) return;
   if (S.input.indexOf(".") >= 0 || S.input.length >= 6) return;
   S.input = S.input === "" ? "0." : S.input + ".";
@@ -1004,11 +1076,13 @@ function pressDot(){
   $("inputBox").textContent = S.input;
 }
 function pressBack(){
+  if (S.mode === "normal" && S.finished) return;  /* 採点待ちの間は最後の答えをそのまま見せる */
   S.input = S.input.slice(0, -1);
   S.acCount = 0;
   $("inputBox").textContent = S.input;
 }
 function pressAC(){
+  if (S.mode === "normal" && S.finished) return;  /* 採点待ちの間は最後の答えをそのまま見せる */
   S.input = ""; $("inputBox").textContent = "";
   S.acCount += 1;
   if (S.acCount >= 5 && !S.topVisible){
@@ -1021,9 +1095,10 @@ function pressOK(){
   if (S.finished) return;
   S.answers[S.idx] = S.input === "" ? null : parseAns(S.input);
   if (S.idx >= S.items.length - 1){
+    /* 入れた答えは採点を押すまで入力欄に残して見せる
+       (消してしまうと「入れたかどうか分からない」ため) */
     S.finished = true;
     S.elapsed = (Date.now() - S.startTime) / 1000;
-    S.input = "";
     renderCalc();
     return;
   }
@@ -1092,7 +1167,7 @@ function showResult(){
     var wrong = [], score = 0;
     S.resultItems.forEach(function(it, i){
       var ans = S.resultAnswers[i];
-      if (ans !== null && ans === correctAnswer(it.dan, it.k)) score++;
+      if (ans !== null && ans === judgeAnswer(it.dan, it.k)) score++;
       else wrong.push(it);
     });
     S.resultScore = score; S.resultWrong = wrong;
@@ -1115,7 +1190,7 @@ function showResult(){
       timeName = "カウントダウン " + Math.floor(esec / 60) + "分" + (esec % 60) + "秒";
     } else if (S.dan === "all") timeName = "カウントダウン 8分";
     else if (S.dan === "secret") timeName = "カウントダウン " + (S.secretCount / 9) + "分";
-    else timeName = "カウントダウン 1分";
+    else timeName = (S.examSeconds === 60 ? "カウントダウン 1分" : "カウントダウン 30秒");
   } else {
     timeName = S.timeMode === "down" ? "カウントダウン " + S.cdMin + "分" + S.cdSec + "秒" : "カウントアップ";
   }
@@ -1148,9 +1223,12 @@ function showResult(){
     line.innerHTML = "";
     var s1 = document.createElement("span"); s1.className = "num"; s1.textContent = it.dan;
     var s2 = document.createElement("span"); s2.className = "sym"; s2.textContent = " × ";
-    var s3 = document.createElement("span"); s3.className = "num"; s3.textContent = it.k;
+    /* □形式の行は 段 × 入れた数 = 積 の形で出す */
+    var s3 = document.createElement("span"); s3.className = "num";
+    s3.textContent = S.blank ? (ans === null ? "" : ans) : it.k;
     var s4 = document.createElement("span"); s4.className = "sym"; s4.textContent = " = ";
-    var s5 = document.createElement("span"); s5.className = "num"; s5.textContent = (ans === null ? "" : ans);
+    var s5 = document.createElement("span"); s5.className = "num";
+    s5.textContent = S.blank ? correctAnswer(it.dan, it.k) : (ans === null ? "" : ans);
     [s1, s2, s3, s4, s5].forEach(function(s){ line.appendChild(s); });
     list.appendChild(line);
   });
@@ -1241,6 +1319,9 @@ document.querySelectorAll(".screen").forEach(makeWindowDragScroll);
 var NAV_SCREEN_IDS = ["scr-main", "scr-dan", "scr-order", "scr-result",
   "scr-end"];
 var kbEl = null;
+// 枠 (赤いアウトライン) は矢印キーを押して初めて出す。
+// 画面を開いた直後とマウス/タッチ操作では出さない
+var kbArmed = false;
 function navTargets(){
   var scr = document.querySelector(".screen.active");
   if (!scr || NAV_SCREEN_IDS.indexOf(scr.id) < 0) return [];
@@ -1253,9 +1334,10 @@ function navTargets(){
 function setKbFocus(el){
   if (kbEl) kbEl.classList.remove("kb-focus");
   kbEl = el || null;
-  if (kbEl) kbEl.classList.add("kb-focus");
+  if (kbEl && kbArmed) kbEl.classList.add("kb-focus");
 }
 function kbInit(){
+  kbArmed = false;  // 画面を開いた直後は枠を出さない
   var t = navTargets();
   if (!t.length){ setKbFocus(null); return; }
   var scr = document.querySelector(".screen.active");
@@ -1300,7 +1382,9 @@ document.addEventListener("keydown", function(e){
   if (!scr || NAV_SCREEN_IDS.indexOf(scr.id) < 0) return;
   if (e.key && e.key.indexOf("Arrow") === 0){
     e.preventDefault();
+    kbArmed = true;  // 矢印キーを押したら枠を出す
     kbMove(e.key.slice(5));
+    if (kbEl) kbEl.classList.add("kb-focus");
   } else if (e.key === "Enter"){
     if (kbEl && navTargets().indexOf(kbEl) >= 0){
       e.preventDefault();
@@ -1334,12 +1418,13 @@ document.addEventListener("keydown", function(e){
   }
 });
 
-// マウスで押した項目にフォーカスを同期 (対象外を押したら解除)
+// マウス/タッチで押した項目にフォーカス位置だけ同期 (枠は出さない。
+// 対象外を押したら解除)。枠は矢印キーを押したときだけ出る
 document.addEventListener("pointerdown", function(e){
   var b = e.target.closest ? e.target.closest("button") : null;
   if (!b) return;
-  if (navTargets().indexOf(b) >= 0) setKbFocus(b);
-  else setKbFocus(null);
+  if (kbEl) kbEl.classList.remove("kb-focus");
+  kbEl = navTargets().indexOf(b) >= 0 ? b : null;
 }, true);
 kbInit();
 
