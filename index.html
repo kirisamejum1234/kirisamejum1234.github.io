@@ -2322,6 +2322,7 @@ function clampFlashSizeToLayout(){
     setCellBoxes(size);   /* 箱幅もそのサイズの実寸に合わせ、最終配置の形で測る */
     const sr = stage.getBoundingClientRect();
     const rs = flashCells.map(d => inkRectOf(d));
+    const bs = flashCells.map(d => d.getBoundingClientRect());
     const cx = i => (rs[i].left + rs[i].right) / 2, cy = i => (rs[i].top + rs[i].bottom) / 2;
     /* 組と組の間隔は、最低でも数字1個分の幅（縦は数字の高さの3割）を空ける。
        間隔が詰まっていると別々の組の数字が続けて読めてしまい、1つの大きな
@@ -2329,8 +2330,17 @@ function clampFlashSizeToLayout(){
     const gapX = Math.max(inkWidthOf(flashCells[0], "9"), 1);
     let k = 1;
     for(let i = 0; i < rs.length; i++){
-      k = Math.min(k, 2 * (cx(i) - sr.left - GAP) / rs[i].width, 2 * (sr.right - cx(i) - GAP) / rs[i].width);
-      k = Math.min(k, 2 * (cy(i) - sr.top - GAP) / rs[i].height, 2 * (sr.bottom - cy(i) - GAP) / rs[i].height);
+      /* 画面端へのはみ出しは、字面の中心ではなく「セルの箱の中心から
+         字面の端までの距離」で見る。小数部は箱の右外に付くため字面の
+         中心は箱の中心から右へずれ、中心基準の計算だと端までの距離を
+         短く見積もって縮めすぎる（小数オン＋大きさ大で数字が消えた原因） */
+      const ax = (bs[i].left + bs[i].right) / 2, ay = (bs[i].top + bs[i].bottom) / 2;
+      const dl = ax - rs[i].left, dr = rs[i].right - ax;
+      const dt = ay - rs[i].top, db = rs[i].bottom - ay;
+      if(dl > 0) k = Math.min(k, (ax - sr.left - GAP) / dl);
+      if(dr > 0) k = Math.min(k, (sr.right - GAP - ax) / dr);
+      if(dt > 0) k = Math.min(k, (ay - sr.top - GAP) / dt);
+      if(db > 0) k = Math.min(k, (sr.bottom - GAP - ay) / db);
       const gapY = Math.max(GAP, rs[i].height * 0.30);
       for(let j = i + 1; j < rs.length; j++){
         const dxj = Math.abs(cx(i) - cx(j)), dyj = Math.abs(cy(i) - cy(j));
