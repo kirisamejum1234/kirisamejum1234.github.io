@@ -416,6 +416,12 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
   <div class="form">
     <div class="row" id="minDigitsRow"><label>最小桁数 <span class="note">例:2→21</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="minDigits" data-step="-1">−</button><input id="minDigits" type="number" inputmode="numeric" min="1" value="2"><button type="button" class="stepbtn" data-target="minDigits" data-step="1">＋</button></div></div>
     <div class="row"><label>最大桁数 <span class="note">例:3→123</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="maxDigits" data-step="-1">−</button><input id="maxDigits" type="number" inputmode="numeric" min="1" value="3"><button type="button" class="stepbtn" data-target="maxDigits" data-step="1">＋</button></div></div>
+    <div class="row"><label>桁数の出し方</label>
+      <div class="vchoices" style="font-size:14px">
+        <label><input type="radio" name="digitMode" value="maxonly" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 最大桁数のみ</label>
+        <label><input type="radio" name="digitMode" value="random" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 混合（最小〜最大）</label>
+      </div></div>
+    <p class="note" id="digitModeNote" style="margin:-4px 0 8px"></p>
     <div class="row"><label>小数</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
         <label><input type="radio" name="decMode" value="off" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オフ</label>
@@ -425,12 +431,6 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
     <div class="row"><label>口数 <span class="note">数字の個数</span></label><div class="stepper"><button type="button" class="stepbtn" data-target="mouth" data-step="-1">−</button><input id="mouth" type="number" inputmode="numeric" min="1" value="5"><button type="button" class="stepbtn" data-target="mouth" data-step="1">＋</button></div></div>
     <div class="row sec-row" id="totalSecondsRow"><label>全体の秒数 <span class="note">小数可</span></label><div class="stepper sec"><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="-0.1">−0.1</button><input id="totalSeconds" type="text" inputmode="decimal" value="5.0"><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="totalSeconds" data-step="1">＋1</button></div></div>
     <p class="note" style="margin:-2px 0 10px">全体の秒数 = カウントダウンが終わってから、最後の数字が終わるまでの時間です</p>
-    <div class="row"><label>桁数の出し方</label>
-      <div class="vchoices" style="font-size:14px">
-        <label><input type="radio" name="digitMode" value="maxonly" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> 最大桁数のみ</label>
-        <label><input type="radio" name="digitMode" value="random" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> ランダム（最小〜最大）</label>
-      </div></div>
-    <p class="note" id="digitModeNote" style="margin:-4px 0 8px"></p>
     <div class="row"><label>引き算</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;align-items:center">
         <label><input type="radio" name="subMode" value="off" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オフ</label>
