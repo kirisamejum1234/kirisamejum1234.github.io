@@ -110,8 +110,18 @@
   #answerGrid { margin:18px 0 26px; max-width:96vw; }
   .ans-block { display:flex; flex-direction:column; align-items:center; gap:8px; }
   .ans-label { color:#9e9e9e; font-size:14px; font-weight:bold; }
+  /* 解答欄の土台: 目印（.current）と同じ太さの border を常に付けておき、
+     目印が付いても欄の大きさ・レイアウトがずれないようにする */
+  .ans-input { border:3px solid #5a5a5a; border-radius:10px; background:#ffffff; box-sizing:border-box; }
   /* 再入力でロックされた欄: 緑の枠で示し、変更できない */
-  .ans-input.locked { border:2px solid #00b84f !important; background:#0c2d1b !important; }
+  .ans-input.locked { border:3px solid #00b84f !important; background:#0c2d1b !important; box-shadow:none !important; }
+  /* 入力中の欄の目印（緑枠）: 付け外しはフォーカスではなくアプリ側の
+     状態（.current）で行う。フォーカス依存（:focus-visible）だと、
+     プログラムが次の欄へ移したときに目印が付かないことがあった。
+     また outline の細い線は実機で見えなかったため、太い緑の border＋
+     薄い緑の背景＋box-shadow のリングで、誰が見ても分かる形にする
+     （ユーザー実機報告） */
+  .ans-input.current { border:3px solid #00b84f; background:#e7fbef; box-shadow:0 0 0 3px rgba(0,184,79,.45); }
   .ans-mark { color:#00b84f; font-size:17px; font-weight:bold; margin-left:6px; }
   #flashNum, #countNum {
     color:#00b84f; font-weight:bold; line-height:1.05; white-space:nowrap;
@@ -195,7 +205,10 @@
   #fsEnterBtn { position:fixed; top:calc(10px + env(safe-area-inset-top)); left:calc(10px + env(safe-area-inset-left)); z-index:9999; background:rgba(28,28,28,.85); color:#bbb; border:1px solid #444; border-radius:6px; font-size:12px; padding:7px 12px; opacity:.55; }
   #fsEnterBtn:hover { opacity:.95; }
   /* 解答画面の画面内キーパッド（タブレットPC等、キーボードが出ない環境用） */
-  .pad-grid { display:grid; grid-template-columns:repeat(3,76px) 88px; gap:8px; justify-content:center; }
+  /* キーパッドは通常 340px 幅（76px×3＋決定キー88px）。それより狭い
+     画面では、列の比率（決定キーだけ少し広い）を保ったまま全体を
+     画面幅に収まる大きさにする（はみ出させない） */
+  .pad-grid { display:grid; grid-template-columns:repeat(3,1fr) 1.16fr; gap:8px; justify-content:center; width:min(340px,calc(100vw - 40px)); margin:0 auto; box-sizing:border-box; }
   .pad-grid [data-key="next"] { grid-column: 4; grid-row: 1 / span 4; }
   .pad-grid button { height:48px; padding:0; line-height:1; font-size:20px; font-weight:bold;
     touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
@@ -2471,7 +2484,9 @@ function flashNumbers(){
 
 /* ---------- 解答入力 ---------- */
 let answerBlocks = [];   // [{block, input}, ...] 組の順番どおり
+let editingInput = null;   // 欄タップで直接入力中（編集モード）の欄。それ以外は null
 function buildAnswerBlocks(retry){
+  editingInput = null;   // 欄を作り直すので、前の編集モードは引き継がない
   const grid = $("answerGrid");
   grid.innerHTML = "";
   grid.style.cssText = "";
@@ -2491,11 +2506,21 @@ function buildAnswerBlocks(retry){
     }
     const rowEl = document.createElement("div");
     rowEl.style.cssText = "display:flex;gap:8px;align-items:stretch;width:100%";
-    const inp = document.createElement("input");
-    inp.className = "numfont ans-input"; inp.type = "text";
-    inp.setAttribute("inputmode", "numeric"); inp.autocomplete = "off";
-    inp.style.cssText = "flex:1 1 0;min-width:0;width:0;margin:0;text-align:center";
-    rowEl.appendChild(inp);
+    /* 解答欄は表示専用にし、入力は画面内キーパッドだけに統一する。
+       編集できる欄のままだと、欄を移るたびにスマホ標準のキーボードが
+       出入りして邪魔になる（ユーザー実機報告）。
+       例外は「欄を自分でタップしたとき」だけ: その欄だけ readonly を
+       外してスマホ標準のキーボードで直接打ち直せるようにする
+       （enterEditMode。ユーザー実機の希望、ver.20261123-4）。
+       自動で次の欄へ進む経路では絶対に編集モードへ入らない。
+       readonly と inputmode="none" は、生成するHTML文字列の属性として
+       最初から持たせる。要素を作ってからJSのプロパティで付け直す形だと、
+       属性が付く前の要素が一瞬でも存在することになり、iPhone実機では
+       それでもキーボードが一瞬出ることがあった（ver.20261123-1 の実機
+       報告を受けて、生成時点で属性を持たせる形に変更）。
+       値の書き換えはキーパッド側が .value へ直接入れるので問題ない */
+    rowEl.innerHTML = '<input class="numfont ans-input" type="text" readonly inputmode="none" autocomplete="off" style="flex:1 1 0;min-width:0;width:0;margin:0;text-align:center">';
+    const inp = rowEl.firstElementChild;
     block.appendChild(rowEl);
     /* 再入力: 前回の入力をそのまま残し、合っていた組は〇印を付けて
        ロックする（変更できない）。間違った組だけ入力し直せる */
@@ -2505,7 +2530,6 @@ function buildAnswerBlocks(retry){
       inp.value = prev.rawText || "";
       if(prev.correct){
         locked = true;
-        inp.readOnly = true;
         inp.classList.add("locked");
         if(!mark){
           mark = document.createElement("span");
@@ -2523,17 +2547,25 @@ function buildAnswerBlocks(retry){
     answerBlocks[0].block.style.width = "100%";
     grid.appendChild(answerBlocks[0].block);
   } else if(cfg.layout === "row"){
-    /* 1列に押し込めると欄が潰れて使えなくなるため、最小幅を保って
-       入りきらない分は次の行へ折り返す */
-    grid.style.cssText = "display:flex;flex-wrap:wrap;gap:12px;width:min(96vw,900px)";
-    answerBlocks.forEach(b => { b.block.style.flex = "1 1 150px"; b.block.style.minWidth = "120px"; grid.appendChild(b.block); });
+    /* 1列に押し込めると欄が潰れて使えなくなるため、最小幅（150px）を
+       保って入りきらない分は次の行へ折り返す。
+       ただし flex の伸縮だと、折り返した最終行の欄だけが横に伸びて
+       大きくなり不自然だった（ユーザー実機報告、ver.20261123-4）。
+       そこで、1行に入る列数を箱の幅から先に決めるグリッドにし、
+       どの行でも全ての欄が同じ大きさになるようにする（最終行は
+       左寄せで、上の行と同じ欄サイズ） */
+    const gw = Math.min(window.innerWidth * 0.96, 900);
+    const cols = Math.max(1, Math.min(cfg.series, Math.floor((gw + 12) / (150 + 12))));
+    grid.style.cssText = `display:grid;grid-template-columns:repeat(${cols},1fr);gap:12px;width:min(96vw,900px)`;
+    answerBlocks.forEach(b => grid.appendChild(b.block));
   } else if(cfg.layout === "col"){
     grid.style.cssText = "display:flex;flex-direction:column;gap:14px;width:min(92vw,520px)";
     answerBlocks.forEach(b => grid.appendChild(b.block));
   } else if(cfg.layout === "tri"){
     grid.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:14px;width:min(96vw,760px)";
     answerBlocks[0].block.style.gridColumn = "1 / 3";
-    answerBlocks[0].block.style.width = "50%";
+    /* 先頭の欄も下の2欄と正確に同じ幅にする（列幅は (全体-間隔)/2） */
+    answerBlocks[0].block.style.width = "calc((100% - 14px) / 2)";
     answerBlocks[0].block.style.justifySelf = "center";
     answerBlocks.forEach(b => grid.appendChild(b.block));
   } else { /* square / poly: ます目状に並べる */
@@ -2566,16 +2598,91 @@ function buildAnswerBlocks(retry){
     b.input.addEventListener("keydown", e => {
       if(e.key !== "Enter") return;
       e.stopPropagation();   // document側のEnter判定に伝播させない（二重発火防止）
+      exitEditMode();   // 編集モード中に Enter を押したら、編集を終えてから次へ進む
       let nxt = i + 1;   // Enterで次の欄へ（ロックされた欄は飛ばす）
       while(nxt < answerBlocks.length && answerBlocks[nxt].locked) nxt++;
-      if(nxt < answerBlocks.length) answerBlocks[nxt].input.focus();
+      if(nxt < answerBlocks.length){ setCurrentAnswer(nxt); }   // フォーカスは移さない（移すと iOS でキーボードが一瞬出る。現在の欄はアプリ側の状態だけで管理する）
       else submitAnswer();
     });
     b.input.addEventListener("focus", () => {
       try{ const end = b.input.value.length; b.input.setSelectionRange(end, end); }catch(e){}
-      setTimeout(() => { try{ b.block.scrollIntoView({ block: "nearest" }); }catch(e){} syncViewportHeight(); }, 380);
+      /* キーボード表示に合わせて380ms後にスクロールする処理は外した。
+         解答欄では標準キーボードは出ない前提になったので、遅れての
+         スクロールは不要な画面ジャンプになるだけである */
     });
+    /* 欄を自分でタップ（クリック）したときだけ、その欄を直接入力
+       できる編集モードにする。click はユーザーの操作の中で発火する
+       ので、この中でフォーカスすればスマホ標準のキーボードが開く。
+       ロックされた欄は enterEditMode 側で弾く */
+    b.input.addEventListener("click", () => { enterEditMode(b.input); });
+    /* 編集モードの欄からフォーカスが外れたら（別の場所を触った等）、
+       編集モードを閉じて readonly に戻す。閉じる処理の本体は
+       exitEditMode に一本化し、ここはその受け口 */
+    b.input.addEventListener("blur", () => { if(editingInput === b.input) exitEditMode(); });
   });
+}
+/* 「今どの欄に入力するか」の目印（緑枠 .current）は、フォーカスの
+   当たり方に任せず、アプリ側の状態で付け外しする。解答画面に入った
+   時点と、「決定」や Enter で次の欄へ進んだ直後に、現在の欄へ自動で
+   付く。フォーカス依存（:focus-visible）だと、プログラムが移した
+   フォーカスには目印が付かないことがあり、自分で欄をタップしないと
+   分からなかった（ユーザー実機報告） */
+function setCurrentAnswer(idx){
+  answerBlocks.forEach((b, i) => b.input.classList.toggle("current", i === idx));
+  if(answerBlocks[idx]) lastAnswerInput = answerBlocks[idx].input;
+}
+/* ---------- 欄タップでの直接入力（編集モード） ----------
+   普段の解答欄は表示専用（readonly）のまま。直したい欄を自分で
+   タップしたときだけ、その欄の readonly を外し、スマホ標準の
+   キーボード（数字パッド）で直接打ち直せるようにする
+   （ユーザー実機の希望、ver.20261123-4）。
+   入力の整形は、キーパッド入力と同じ input イベントの処理を通る
+   （数字と小数点の扱い、「−」は set-only、ロック欄は対象外）。
+   編集モードの終了は exitEditMode に一本化する: 「決定」での前進、
+   別の欄のタップ、画面内キーパッドのタップ、提出のいずれでも、
+   欄を readonly に戻してフォーカスを外し、キーボードを閉じる。
+   自動前進の経路では絶対に編集モードへ入らない */
+function enterEditMode(inp){
+  const blk = answerBlocks.find(b => b.input === inp);
+  if(!blk || blk.locked) return;   // ロックされた欄はタップしても編集モードに入らない
+  if(editingInput === inp) return;   // 編集中の欄をもう一度タップしても何もしない（キーボードを開いたままにする）
+  exitEditMode();   // 他の欄が編集中なら先に閉じる
+  /* タップの時点で（readonly のまま）フォーカスが先に当たっていると、
+     そのまま readonly を外しても iOS ではキーボードが出ないことが
+     ある。一度フォーカスを外し、編集できる状態にしてから、
+     ユーザー操作（click）の処理の中でフォーカスし直すのが
+     スマホ標準のキーボードを開く標準的なやり方 */
+  if(document.activeElement === inp) inp.blur();
+  inp.readOnly = false;
+  inp.inputMode = (cfg && cfg.decOn) ? "decimal" : "numeric";
+  inp.focus();
+  editingInput = inp;
+  const i = answerBlocks.indexOf(blk);
+  if(i >= 0) setCurrentAnswer(i);   // 緑枠（.current）もその欄へ移す
+}
+function exitEditMode(){
+  if(!editingInput) return;
+  const inp = editingInput;
+  editingInput = null;
+  inp.readOnly = true;
+  inp.inputMode = "none";
+  if(document.activeElement === inp) inp.blur();   // フォーカスを外してキーボードを閉じる
+}
+/* 「次の欄へ進む（最後なら提出）」。現在の欄はアプリ側の状態
+   （lastAnswerInput）から決め、フォーカスは一切移さない。
+   プログラムからの .focus() 移動は、それ自体が iOS でキーボード表示を
+   開始させてしまう（readonly だとすぐ引っ込むので「一瞬出て消える」
+   になる。ユーザー実機報告）。キーパッドの「次へ」と、解答画面での
+   Enter（document側）は、この処理に一本化する */
+function advanceAnswer(){
+  exitEditMode();   // 「決定」・Enter での前進では編集モードを閉じる（次の欄ではキーボード経路＝フォーカスを作らない）
+  const inp = (lastAnswerInput && document.contains(lastAnswerInput)) ? lastAnswerInput
+    : (answerBlocks[0] && answerBlocks[0].input);
+  const idx = answerBlocks.findIndex(b => b.input === inp);
+  let nxt = idx + 1;   // 次の欄へ（ロックされた欄は飛ばす）
+  while(nxt < answerBlocks.length && answerBlocks[nxt].locked) nxt++;
+  if(idx >= 0 && nxt < answerBlocks.length) setCurrentAnswer(nxt);
+  else submitAnswer();
 }
 /* 答えは最大で「最大桁数+1桁（繰り上がり）」+マイナス+コンマ まで。
    その最長の答えに合わせて大きさを固定するので、入力中に大きさが変わらない */
@@ -2599,11 +2706,17 @@ function fitAnswerFont(){
 function showAnswer(retry){
   stopClip("flash");   // 高速表示の最後の音の尾が解答画面に流れ込むのを防ぐ
   clearTimers(); show("answerScreen");
+  /* 設定画面の入力欄など、編集できる欄にフォーカスが残ったままだと、
+     その欄が隠れてもスマホ標準のキーボードが出続ける・出入りする経路に
+     なる。解答画面に入る時点で必ず外し、解答フロー中に編集可能な欄が
+     フォーカスされる経路をゼロにする */
+  const ae = document.activeElement;
+  if(ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName) && !ae.classList.contains("ans-input")) ae.blur();
   document.querySelector(".pad-grid").classList.toggle("dec", !!(cfg && cfg.decOn));
   $("answerTitle").textContent = `第${problemIndex + 1}問　答えを入力してください`;
   buildAnswerBlocks(retry);
   fitAnswerFont();
-  setTimeout(() => { fitAnswerFont(); const first = answerBlocks.find(b => !b.locked) || answerBlocks[0]; if(first) first.input.focus(); }, 60);   // カーソルは予め最初の（ロックされていない）解答欄へ
+  setTimeout(() => { fitAnswerFont(); const fi = Math.max(0, answerBlocks.findIndex(b => !b.locked)); const first = answerBlocks[fi]; if(first){ setCurrentAnswer(fi); } }, 60);   // 目印は予め最初の（ロックされていない）解答欄へ。フォーカスは移さない（移すと iOS でキーボードが一瞬出る）
 }
 /* iPhoneではキーボードが画面に覆いかぶさり、下の入力欄が隠れたまま
    スクロールもできないことがある。キーボード表示中はアプリ全体の高さを
@@ -2633,23 +2746,28 @@ window.addEventListener("resize", () => {
    入力先は最後にフォーカスした解答欄。キーパッドは常時表示する */
 let lastAnswerInput = null;
 document.addEventListener("focusin", e => {
-  if(e.target && e.target.classList && e.target.classList.contains("ans-input")) lastAnswerInput = e.target;
+  if(e.target && e.target.classList && e.target.classList.contains("ans-input")){
+    lastAnswerInput = e.target;
+    /* 自分で欄をタップした場合も、目印（緑枠）はその欄へ移す。
+       目印の付け外しは setCurrentAnswer に一本化し、フォーカスの
+       当たり方そのものには依存しない */
+    const i = answerBlocks.findIndex(b => b.input === e.target);
+    if(i >= 0) setCurrentAnswer(i);
+  }
 });
 document.querySelectorAll("#keypad [data-key]").forEach(btn => {
   const handle = () => {
+    exitEditMode();   // 画面内キーパッドを触ったら編集モードは閉じる（入力先そのものは lastAnswerInput のまま）
     const inp = (lastAnswerInput && document.contains(lastAnswerInput)) ? lastAnswerInput
       : (answerBlocks[0] && answerBlocks[0].input);
     if(!inp) return;
     const key = btn.dataset.key;
     const idx = answerBlocks.findIndex(b => b.input === inp);
     if(key === "next"){
-      let nxt = idx + 1;   // 次の欄へ（ロックされた欄は飛ばす）
-      while(nxt < answerBlocks.length && answerBlocks[nxt].locked) nxt++;
-      if(idx >= 0 && nxt < answerBlocks.length) answerBlocks[nxt].input.focus();
-      else submitAnswer();
+      advanceAnswer();
       return;
     }
-    if(inp.readOnly) return;   // ロックされた欄はキーパッドでも変更できない
+    if(idx >= 0 && answerBlocks[idx].locked) return;   // ロックされた欄はキーパッドでも変更できない（全欄readonlyにしたため、変更可否はlockedで判定する）
     if(key === "minus"){
       /* 何度押してもマイナスが付いたままにする（トグルにしない）。
          マイナスを消す操作は「⌫」に一本化する（PC版と同じ） */
@@ -2714,6 +2832,7 @@ function parseAnswer(v){
 }
 function submitAnswer(){
   if(!$("answerScreen").classList.contains("active")) return;   // 二重実行防止（pointerdown+click）
+  exitEditMode();   // 提出（判定へ）のときも編集モードを閉じてキーボードを閉じる
   /* 組ごとに採点する */
   const results = currentSeries.map((nums, s) => {
     const rawText = answerBlocks[s] ? answerBlocks[s].input.value : "";
@@ -3149,12 +3268,16 @@ document.querySelectorAll("section.screen").forEach(sec => {
 });
 
 /* ---------- 矢印キー移動・Enterで進行 ----------
-   対象は選択・設定・解答の各画面。ステッパーは移動対象に含めない。
+   対象は選択・設定の各画面（解答画面は下記の理由で対象外）。
+   ステッパーは移動対象に含めない。
    ラジオはグループの並び方向（縦/横）の矢印はブラウザ標準の選択切替に
    任せ、端と直交方向だけ画面の並び通りに移動する。セレクトは上下で
    値を切り替え、左右で移動する。Enter はボタンにフォーカスがあるときは
    そのボタンを押し、それ以外では画面の決定ボタンとして働く */
-const ARROW_NAV_SCREENS = ["startScreen", "gradeKindScreen", "gradeListScreen", "confirmScreen", "settingsScreen", "answerScreen"];
+const ARROW_NAV_SCREENS = ["startScreen", "gradeKindScreen", "gradeListScreen", "confirmScreen", "settingsScreen"];
+/* 解答画面は矢印キー移動の対象外: 解答欄へフォーカスを移すと、その
+   移動自体が iOS でキーボード表示を開始させてしまうため。
+   解答画面の進行は Enter（advanceAnswer）と画面内キーパッドで行う */
 function navRect(el){
   /* ラジオは入力そのもの（小さな丸）ではなく、文字を含むラベルの
      範囲で位置を測る（PC版のラジオボタン＝文字込みの部品と同じ考え方） */
@@ -3165,12 +3288,6 @@ function navRect(el){
            cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2 };
 }
 function navCandidates(screen){
-  if(screen.id === "answerScreen"){
-    const list = answerBlocks.map(b => b.input);
-    const btn = document.querySelector('.pad-grid [data-key="next"]');
-    if(btn) list.push(btn);
-    return list.filter(el => !el.disabled && el.getClientRects().length);
-  }
   return [...screen.querySelectorAll("input, select, button")].filter(el =>
     !el.disabled && el.type !== "hidden" && !el.classList.contains("stepbtn")
     && el.getClientRects().length);
@@ -3213,6 +3330,7 @@ document.addEventListener("keydown", e => {
     if(t && t.closest && t.closest("button, select")) return;   // ボタン・セレクト上は本来の動作
     if(screen.id === "settingsScreen"){ e.preventDefault(); $("startBtn").click(); }
     else if(screen.id === "confirmScreen"){ e.preventDefault(); $("confirmStartBtn").click(); }
+    else if(screen.id === "answerScreen"){ e.preventDefault(); advanceAnswer(); }   // 欄にフォーカスが無い状態でも Enter で次へ進む（欄にフォーカスがある場合は欄側のハンドラが伝播を止めるので二重発火しない）
     return;
   }
   const dir = { ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right" }[e.key];
