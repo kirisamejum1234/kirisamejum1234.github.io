@@ -86,6 +86,7 @@
   button.choice { font-weight:bold; font-size:18px; }
   button.choice:active { background:#00b84f; opacity:1; }
   .btnrow-settings { display:flex; gap:12px; justify-content:center; margin-top:26px; }
+  #settingsScreen .btnrow-settings button { flex:none; width:calc(50% - 6px); max-width:250px; box-sizing:border-box; }
   #resultScreen .btnrow-settings { flex-wrap:wrap; gap:8px; margin-top:auto; padding-top:24px; }
   #resultScreen .btnrow-settings button { padding:12px 8px; font-size:13px; white-space:nowrap; }
   /* 数字表示 */
@@ -495,7 +496,6 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
     <div class="btnrow-settings">
       <button id="settingsBackBtn">戻る</button>
       <button class="primary" id="startBtn">次へ</button>
-      <button id="fsBtn">全画面</button>
     </div>
     <p class="small">iPhone: 共有ボタン →「ホーム画面に追加」でアプリのように使えます<br>音が出ない場合は、音量が上がっているか確認してください</p>
   </div>
@@ -1322,7 +1322,6 @@ $("confirmStartBtn").addEventListener("click", () => {
   if(confirmMode === "grade") startGrade(); else startCustom();
 });
 $("settingsBackBtn").addEventListener("click", () => show("startScreen"));
-$("fsBtnTop").addEventListener("click", () => $("fsBtn").click());
 
 /* 表示中の小数の桁数（0=小数なし）。セッション開始時に設定する。
    小数オンの間、画面に出る値はすべて 10^dispPlaces 倍の単位で保持する */
@@ -2048,7 +2047,7 @@ function showFsHelp(){
 }
 const fsSupported = !!(document.documentElement.requestFullscreen
                       || document.documentElement.webkitRequestFullscreen);
-$("fsBtn").addEventListener("click", () => {
+$("fsBtnTop").addEventListener("click", () => {
   try{
     if(document.fullscreenElement || document.webkitFullscreenElement){
       (document.exitFullscreen || document.webkitExitFullscreen).call(document);
