@@ -57,7 +57,6 @@ button:active{filter:brightness(1.25);}
 .tm-btn{flex:0 1 240px;background:var(--slate);color:#fff;font-weight:bold;font-size:clamp(16px,4.4vw,20px);padding:10px 0;}
 .tm-btn.selected{background:var(--yellow);color:#000;}
 .tm-btn,.order-btn,.font-btn{position:relative;}
-.tm-btn.selected::after,.order-btn.selected::after,.font-btn.selected::after{content:"✓";position:absolute;top:4px;right:8px;font-size:.6em;font-weight:bold;}
 .step-row{display:flex;flex-wrap:wrap;gap:18px;padding:10px 14px 0;align-items:center;}
 .step-group{display:flex;align-items:center;gap:4px;}
 .step-btn{background:var(--slate);color:#fff;font-weight:bold;font-size:clamp(14px,4vw,17px);padding:10px 12px;user-select:none;-webkit-user-select:none;}
@@ -294,7 +293,7 @@ if ("serviceWorker" in navigator) {
     <button class="btn-quit" id="btnQuit">おわる</button>
   </div>
   <div class="footer">
-    <span class="ver">ver. 20261110-66</span>
+    <span class="ver">ver. 20261110-69</span>
   </div>
 </div>
 
@@ -327,7 +326,7 @@ if ("serviceWorker" in navigator) {
   <div class="prompt">何のだんにしますか<span class="mode-tag" id="danModeTag"></span></div>
   <div class="dan-panel" id="danPanel"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-66</span>
+    <span class="ver">ver. 20261110-69</span>
     <span class="spacer"></span>
     <button class="btn-dark" id="btnClose">もどる</button>
   </div>
@@ -410,7 +409,7 @@ if ("serviceWorker" in navigator) {
   </div>
   <div class="time-warn" id="timeWarn"></div>
   <div class="footer">
-    <span class="ver">ver. 20261110-66</span>
+    <span class="ver">ver. 20261110-69</span>
     <span class="spacer"></span>
     <button class="btn-start" id="btnStart">スタート</button>
     <button class="btn-dark" id="btnOrderBack">もどる</button>
@@ -474,7 +473,7 @@ if ("serviceWorker" in navigator) {
 
 <script>
 "use strict";
-var APP_VERSION = "20261110-66";
+var APP_VERSION = "20261110-69";
 var S = {
   dan: null, order: null, mode: "normal",
   items: [], answers: [], idx: 0, input: "",
