@@ -79,7 +79,7 @@
   }
   button.primary { background:#00b84f; color:#fff; font-weight:bold; font-size:18px; padding:14px 40px; }
   /* 条件を満たす並び替えが作れない問題のボタン: 押せるまま見た目だけグレー */
-  button.btn-grey { background:#3d3d3d; color:#9a9a9a; }
+  button.btn-grey { background:#1a1a1a; color:#8f8f8f; }
   button:active { opacity:.75; }
   /* 並列の選択肢ボタン（モード選択・級種別）: 片方だけ緑だと、選ぶ前から
      「そちらが推奨」に見えて誘導のようになるので同色にそろえ、押した瞬間だけ緑にする */
@@ -87,8 +87,8 @@
   button.choice:active { background:#00b84f; opacity:1; }
   .btnrow-settings { display:flex; gap:12px; justify-content:center; margin-top:26px; }
   #settingsScreen .btnrow-settings button { flex:none; width:calc(50% - 6px); max-width:250px; box-sizing:border-box; }
-  #resultScreen .btnrow-settings { flex-wrap:wrap; gap:8px; margin-top:auto; padding-top:24px; }
-  #resultScreen .btnrow-settings button { padding:12px 8px; font-size:13px; white-space:nowrap; }
+  #resultScreen .btnrow-settings { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; width:100%; max-width:1180px; margin-top:auto; padding-top:24px; }
+  #resultScreen .btnrow-settings button { padding:17px 8px; font-size:19px; font-weight:bold; white-space:nowrap; }
   /* 数字表示 */
   #flashScreen, #countScreen { padding:0; }
   #countInfo { text-align:center; color:#fff; font-size:20px; margin-top:26px; }
@@ -146,16 +146,42 @@
   }
   .result-row { display:none; justify-content:flex-end; padding:10px 12px 0; }
   .bottom-buttons {
-    display:flex; gap:8px;
-    padding:12px 12px calc(12px + env(safe-area-inset-bottom)); background:#000;
+    display:grid; grid-template-columns:repeat(5,1fr); gap:10px;
+    padding:14px 14px calc(14px + env(safe-area-inset-bottom)); background:#000;
   }
-  .bottom-buttons button { flex:1; padding:12px 2px; font-size:12px; white-space:nowrap; }
+  .bottom-buttons button { padding:17px 6px; font-size:20px; font-weight:bold; white-space:nowrap; }
   #judgeSpeedRow { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
-  #judgeSpeedRow button { padding:9px 13px; font-size:14px; }
+  #judgeSpeedRow button { padding:12px 18px; font-size:17px; font-weight:bold; }
   #judgeSpeedRow button.speed-sel { background:#ffd400; color:#000; font-weight:bold; }
   #judgeSpeedRow button:disabled { opacity:.4; }
-  .judge-act-btn { min-width:230px; padding:13px 0; font-size:16px; font-weight:bold; }
+  #judgeActionArea { width:100%; }
+  .judge-act-btn { width:min(340px,100%); padding:17px 0; font-size:20px; font-weight:bold; }
   .judge-act-btn:disabled { opacity:.4; }
+  /* ヒント・答えの確認ポップアップだけ、基準アプリのモーダル並みの
+     大きさにする（本文 clamp(20px,5.6vw,26px) 太字、ボタン18px）。
+     並び替え警告・やめる確認は従来の大きさのまま */
+  #reorderModal.big-confirm > div { padding:28px 30px !important; }
+  #reorderModal.big-confirm #reorderModalText { font-size:clamp(20px,5.6vw,26px) !important; font-weight:bold; line-height:1.5; }
+  #reorderModal.big-confirm #reorderYesBtn, #reorderModal.big-confirm #reorderNoBtn { font-size:18px; padding:14px 42px !important; }
+  /* 判定・リザルトの操作ボタン: 黒背景でも輪郭と文字が立つよう少し明るい地にする */
+  .bottom-buttons button, #resultScreen .btnrow-settings button, .judge-act-btn, #judgeSpeedRow button { background:#2b2b2b; }
+  .bottom-buttons button.btn-grey, #resultScreen .btnrow-settings button.btn-grey { background:#1a1a1a; color:#8f8f8f; }
+  /* 狭い画面では判定・リザルトのボタンを2段にし、文字を小さくせずに収める */
+  @media (max-width:900px){
+    .bottom-buttons { grid-template-columns:repeat(6,1fr); }
+    .bottom-buttons button { grid-column:span 2; font-size:18px; padding:16px 4px; }
+    .bottom-buttons button:nth-child(4), .bottom-buttons button:nth-child(5) { grid-column:span 3; }
+    #judgeScreen .screen-inner { padding-bottom:230px; }
+    #resultScreen .btnrow-settings { grid-template-columns:repeat(6,1fr); }
+    #resultScreen .btnrow-settings button { grid-column:span 2; font-size:17px; padding:16px 6px; }
+    #resultScreen .btnrow-settings button:nth-child(4), #resultScreen .btnrow-settings button:nth-child(5) { grid-column:span 3; }
+  }
+  @media (max-width:480px){
+    .bottom-buttons { gap:8px; padding:12px 10px calc(12px + env(safe-area-inset-bottom)); }
+    .bottom-buttons button { font-size:17px; padding:15px 4px; }
+    #resultScreen .btnrow-settings { gap:8px; }
+    #resultScreen .btnrow-settings button { font-size:16px; padding:15px 4px; }
+  }
   /* 「答えを見る」で出す正解: 中央に、計算の数字くらいの大きさで緑色に */
   .big-answer { color:#00b84f; font-weight:bold; line-height:1.15; white-space:nowrap; }
   /* リザルト: 他の画面と同じ内側ラッパー方式にそろえる（下記コメント参照）。
@@ -2845,14 +2871,14 @@ function renderJudgeActions(){
   if(rb) rb.addEventListener("click", () => { if(!judgeAnswerShown) showAnswer(true); });   // 同じ問題のまま解答画面へ（合っていた組は〇印つきでロック）。答えを表示した後は使えない
   const hb = $("showHintBtn");
   if(hb) hb.addEventListener("click", () =>
-    showReorderConfirm("ヒントを見ますか？", () => { judgeHintShown = true; renderJudgeActions(); }));
+    showReorderConfirm("ヒントを見ますか？", () => { judgeHintShown = true; renderJudgeActions(); }, true));
   const ab = $("showAnswerBtn");
   if(ab) ab.addEventListener("click", () =>
     showReorderConfirm("答えを見ますか？", () => {
       judgeAnswerShown = true;
       renderBigAnswers(results);
       renderJudgeActions();
-    }));
+    }, true));
 }
 /* 正解を中央に大きく出す（大きさは、その問題を出したときの計算数字
    と同じを基準に、画面幅へ収まるよう調整する。ただし大きすぎると
@@ -3078,13 +3104,15 @@ function reorderWarnText(kind){
   return "この問題は順番をかえると途中マイナスになります";
 }
 let reorderYesCallback = null;
-function showReorderConfirm(message, onYes){
+function showReorderConfirm(message, onYes, big){
   $("reorderModalText").textContent = message;
   reorderYesCallback = onYes;
+  $("reorderModal").classList.toggle("big-confirm", !!big);
   $("reorderModal").style.display = "flex";
 }
 function hideReorderConfirm(){
   $("reorderModal").style.display = "none";
+  $("reorderModal").classList.remove("big-confirm");
   reorderYesCallback = null;
 }
 $("reorderYesBtn").addEventListener("click", () => {
