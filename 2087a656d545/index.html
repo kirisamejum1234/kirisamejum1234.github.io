@@ -15,10 +15,10 @@
 html,body{margin:0;padding:0;}
 html{background:#00584c;}
 /* スクロールバーは背景になじむ細くて落ち着いた色にする（白く目立たせない） */
-*{scrollbar-width:thin;scrollbar-color:#5a63c8 #00584c;}
+*{scrollbar-width:thin;scrollbar-color:#4db6a2 #00584c;}
 ::-webkit-scrollbar{width:8px;height:8px;}
 ::-webkit-scrollbar-track{background:#00584c;}
-::-webkit-scrollbar-thumb{background:#5a63c8;border-radius:4px;}
+::-webkit-scrollbar-thumb{background:#4db6a2;border-radius:4px;}
 .title-band{position:relative;}
 .fs-enter{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:14px;padding:6px 12px;border-radius:8px;border:2px solid #cfd6ff;background:#fff;color:#111;cursor:pointer;}
 #btnFsExit{position:fixed;top:8px;right:8px;z-index:999;font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.45);background:rgba(20,24,80,.55);color:#dfe4ff;cursor:pointer;display:none;}
@@ -330,7 +330,7 @@ button.kb-focus{outline:3px solid #ff9800;outline-offset:2px;}
       <button id="btnOwaru" style="font-size:15px;padding:8px 14px;border-radius:8px;border:2px solid #cfd6ff;background:#fff;color:#111;cursor:pointer;">おわる</button>
     </div>
   </div>
-  <div class="version">ver. 20261112-90</div>
+  <div class="version">ver. 20261112-91</div>
 </div>
 
 <!-- スタート（設定） -->
@@ -556,7 +556,7 @@ button.kb-focus{outline:3px solid #ff9800;outline-offset:2px;}
       <button class="btn-mid" id="btnStartBack">もどる</button>
     </div>
   </div>
-  <div class="version">ver. 20261112-90</div>
+  <div class="version">ver. 20261112-91</div>
 </div>
 
 <!-- カウントダウン -->
@@ -1044,7 +1044,7 @@ function makeShoSheet(mode, rand){
 }
 // ==== CORE-END ====
 
-const APP_VERSION = "20261112-90";
+const APP_VERSION = "20261112-91";
 const $ = id => document.getElementById(id);
 const store = {
   mem: {},
