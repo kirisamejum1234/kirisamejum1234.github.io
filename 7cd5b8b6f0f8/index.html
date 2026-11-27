@@ -209,27 +209,28 @@
   ::-webkit-scrollbar-thumb:hover { background:#6a6a6a; }
   /* 全画面のときだけ、左上の「全画面を終了」ボタンに各画面の見出しが
      重ならないよう、内容の上余白を広げる（通常表示は変えない） */
-  :fullscreen .screen-inner { padding-top:56px; }
+  :fullscreen .screen-inner { padding-top:66px; }
   /* 左上の固定ボタン（全画面／全画面を終了）と内容が重ならないよう、
      メニュー系・解答・判定・リザルトの画面では上側の余白を確保する。
      背の低い画面で内容が上詰めになったときでも、ボタンと要素が
      重ならないための余白（詰め込みはしない） */
   #startScreen .screen-inner, #gradeKindScreen .screen-inner, #gradeListScreen .screen-inner,
   #settingsScreen .screen-inner, #confirmScreen .screen-inner,
-  #answerScreen .screen-inner, #judgeScreen .screen-inner, #resultScreen .screen-inner { padding-top:52px; }
+  #answerScreen .screen-inner, #judgeScreen .screen-inner, #resultScreen .screen-inner { padding-top:66px; }
   /* 矢印キー移動のフォーカス先が目で分かるようにする */
   .screen :focus-visible { outline:2px solid #00b84f; outline-offset:2px; }
   /* マウスドラッグでスクロールしている間は文字を選択しない */
   .drag-scrolling, .drag-scrolling * { user-select:none !important; -webkit-user-select:none !important; }
-  /* 全画面のときだけ左上の隅に出す終了ボタン（小さく目立たない。
+  /* 全画面のときだけ左上の隅に出す終了ボタン（「全画面」ボタンと
+     同じ位置・同じ大きさで入れ替わる。
      判定画面の下部ボタン帯と重ならないよう下ではなく上に置く） */
-  #fsExitBtn { position:fixed; top:calc(10px + env(safe-area-inset-top)); left:calc(10px + env(safe-area-inset-left)); z-index:9999; background:rgba(28,28,28,.85); color:#bbb; border:1px solid #444; border-radius:6px; font-size:12px; padding:7px 12px; opacity:.55; }
-  #fsExitBtn:hover { opacity:.95; }
+  #fsExitBtn { position:fixed; top:calc(10px + env(safe-area-inset-top)); left:calc(10px + env(safe-area-inset-left)); z-index:9999; background:#ffffff; color:#12406e; border:2px solid #7fc8f8; border-radius:999px; font-size:16px; font-weight:bold; padding:12px 0; width:168px; text-align:center; }
+  #fsExitBtn:hover { background:#dff2fd; }
   /* 全画面でないとき、同じ左上の隅に出す「全画面」ボタン。
      どの画面からでも全画面にできるよう固定表示し、全画面中は
-     終了ボタンと入れ替わる */
-  #fsEnterBtn { position:fixed; top:calc(10px + env(safe-area-inset-top)); left:calc(10px + env(safe-area-inset-left)); z-index:9999; background:rgba(28,28,28,.85); color:#bbb; border:1px solid #444; border-radius:6px; font-size:12px; padding:7px 12px; opacity:.55; }
-  #fsEnterBtn:hover { opacity:.95; }
+     終了ボタンと入れ替わる（大きさは終了ボタンと同一） */
+  #fsEnterBtn { position:fixed; top:calc(10px + env(safe-area-inset-top)); left:calc(10px + env(safe-area-inset-left)); z-index:9999; background:#ffffff; color:#12406e; border:2px solid #7fc8f8; border-radius:999px; font-size:16px; font-weight:bold; padding:12px 0; width:168px; text-align:center; }
+  #fsEnterBtn:hover { background:#dff2fd; }
   /* 解答画面の画面内キーパッド（タブレットPC等、キーボードが出ない環境用） */
   /* キーパッドは通常 340px 幅（76px×3＋決定キー88px）。それより狭い
      画面では、列の比率（決定キーだけ少し広い）を保ったまま全体を
@@ -397,7 +398,6 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
   <div style="display:flex;flex-direction:column;gap:16px;width:min(92vw,340px)">
     <button class="choice" id="gradeModeBtn" style="padding:20px 22px;font-size:19px">級・段位で選ぶ</button>
     <button class="choice" id="customModeBtn" style="padding:20px 22px;font-size:19px">自分で設定する</button>
-    <button id="fsBtnTop">全画面</button>
     <button id="quitBtn">終了</button>
   </div>
   <p id="quitNote" class="small" style="display:none">終了するには、このタブ（またはウィンドウ）を閉じてください</p>
@@ -975,6 +975,56 @@ function hikiNeverPossible(minD, maxD, mouth, places){
   const lo = minD >= 1 ? 10n ** BigInt(minD - 1 + p) : 1n;
   return (10n ** BigInt(maxD + p) - 1n) - BigInt(mouth - 1) * lo >= 1n;
 }
+function hikiNeverPossibleNr(minD, maxD, mouth, places){
+  /* 「引き続ける・マイナスにならない」が「同じ数字の連続オフ」でも
+     作れる設定か。引く数が隣同士で同じになれない分、最小合計は
+     lo, lo+1, lo, lo+1, … と交互に積んだものになる */
+  const p = places || 0;
+  const lo = minD >= 1 ? 10n ** BigInt(minD - 1 + p) : 1n;
+  let alt = 0n;
+  for(let k = 0; k < mouth - 1; k++) alt += (k % 2 === 0 ? lo : lo + 1n);
+  return (10n ** BigInt(maxD + p) - 1n) - alt >= 1n;
+}
+function makeHikitsuzukeruNegative(minD, maxD, mouth, vary, noRepeat){
+  /* 「引き続ける・答えがマイナスになる」を構成的に作る。1口目は
+     最大桁数+1桁。引く数を先に（桁の範囲の上半分から）決め、その
+     合計より小さい1口目を選ぶので、答えは必ずマイナスになる。
+     ランダム探索だけでは、桁数の出し方が混合のときに割り当てが
+     引く数の合計を抑えてしまい、条件を満たす候補がほぼ出なかった。
+     作れない設定（口数2など）では null を返す */
+  const p = genPlaces;
+  const firstLo = 10n ** BigInt(maxD + p);
+  const firstHi = 10n ** BigInt(maxD + 1 + p) - 1n;
+  for(let t = 0; t < 300; t++){
+    const plan = vary ? digitPlan(minD, maxD, mouth - 1) : null;
+    const rest = [];
+    let ok = true;
+    for(let i = 0; i < mouth - 1; i++){
+      let d;
+      if(plan !== null) d = plan[i];
+      else if(vary) d = rand(minD, maxD);
+      else d = minD;
+      const loD = d >= 1 ? 10n ** BigInt(d - 1 + p) : 1n;
+      const hiD = d >= 1 ? 10n ** BigInt(d + p) - 1n : 10n ** BigInt(p) - 1n;
+      let val = null;
+      for(let k = 0; k < 12; k++){
+        // 合計が大きくなるよう、桁の範囲の上半分から選ぶ
+        const cand = randBigBetween(loD + (hiD - loD) / 2n, hiD);
+        if(noRepeat && rest.length && cand === rest[rest.length - 1]) continue;
+        val = cand; break;
+      }
+      if(val === null){ ok = false; break; }
+      rest.push(val);
+    }
+    if(!ok) continue;
+    let totalRest = 0n; for(const v of rest) totalRest += v;
+    if(totalRest <= firstLo) continue;
+    const hi = firstHi < totalRest - 1n ? firstHi : totalRest - 1n;
+    const first = randBigBetween(firstLo, hi);
+    return [first, ...rest.map(v => -v)];
+  }
+  return null;
+}
 function digitPlan(minD, maxD, count){
   /* 桁数の出し方がランダムなときの、各口の桁数の割り当て表。
      最小〜最大の各桁数が、口数のうちなるべく同じ割合になるようにする
@@ -1097,6 +1147,216 @@ function subPositions(mouth, count, arrange, answerMode){
   for(let t = 0; t < 50 && !midOk(pos); t++) pos = sample();
   return pos;
 }
+function absRangeP(digits, places){
+  /* 桁数 digits の数字の絶対値が取りうる範囲（拡大整数・BigInt）。
+     小数オンの時は整数部の桁数が digits で、0ちょうどは含まない */
+  if(digits >= 1)
+    return [10n ** BigInt(digits - 1 + places), 10n ** BigInt(digits + places) - 1n];
+  return [1n, 10n ** BigInt(Math.max(places, 1)) - 1n];
+}
+function subFeasible(minD, maxD, mouth, vary, answerMode, subCount, places){
+  /* ふつうの引き算（引き算の数を指定）で、答えモードの条件を満たす
+     問題が原理的に作れるかどうか（PC版 _sub_feasible と同じ）。
+     「途中だけマイナス」は引き算の数が口数-1以上のとき作れないが、
+     その組み合わせは確認画面の注記で「なるべく」と知らせる既存の
+     扱いなので、ここでは作れるとして扱う */
+  if(subCount <= 0 || answerMode === "mid") return true;
+  let lens;
+  if(vary){
+    const kinds = []; for(let d = minD; d <= maxD; d++) kinds.push(d);
+    if(!kinds.length) return true;
+    const base = Math.floor(mouth / kinds.length), extra = mouth % kinds.length;
+    lens = [];
+    for(const d of kinds) for(let k = 0; k < base; k++) lens.push(d);
+    const desc = [...kinds].sort((a, b) => b - a);
+    for(let k = 0; k < extra; k++) lens.push(desc[k]);
+    lens.sort((a, b) => a - b);
+  } else lens = Array(mouth).fill(maxD);
+  if(answerMode === "never"){
+    const negLens = lens.slice(0, subCount), posLens = lens.slice(subCount);
+    let maxFinal = 0n;
+    for(const d of posLens) maxFinal += absRangeP(d, places)[1];
+    for(const d of negLens) maxFinal -= absRangeP(d, places)[0];
+    return maxFinal >= 1n;
+  }
+  const nPos = mouth - subCount;
+  const posLens = lens.slice(0, nPos), negLens = lens.slice(nPos);
+  let minFinal = 0n;
+  for(const d of posLens) minFinal += absRangeP(d, places)[0];
+  for(const d of negLens) minFinal -= absRangeP(d, places)[1];
+  return minFinal <= -1n;
+}
+function randBigBetween(a, b){
+  const n = b - a;
+  if(n <= 0n) return a;
+  if(n < 9007199254740991n) return a + BigInt(Math.floor(Math.random() * (Number(n) + 1)));
+  const bits = n.toString(2).length;
+  for(;;){
+    let v = 0n, produced = 0;
+    while(produced < bits){ v = (v << 16n) | BigInt(Math.floor(Math.random() * 65536)); produced += 16; }
+    v &= (1n << BigInt(bits)) - 1n;
+    if(v <= n) return a + v;
+  }
+}
+/* ふつうの引き算を、答えモードの条件を満たすよう構成的に作る
+   （PC版 _build_sub_constructive と同じ考え方）。一様ランダムな抽選では
+   条件を満たす候補がほぼ出ない組み合わせがあるため、ランダム探索で
+   見つからなかったときの受け皿。作れない場合は null */
+function buildSubConstructive(minD, maxD, mouth, vary, answerMode, noRepeat, positions, subCount, subArrange){
+  const p = genPlaces;
+  const lo = d => absRangeP(d, p)[0];
+  const hi = d => absRangeP(d, p)[1];
+  const midOk = pos => { for(const i of pos){ if(i > mouth - 2) continue; for(let j = i + 1; j < mouth; j++) if(!pos.has(j)) return true; } return false; };
+  const samplePositions = count => {
+    const tail = []; for(let i = 1; i < mouth; i++) tail.push(i);
+    if(subArrange === "together"){
+      const s = rand(1, mouth - count);
+      const pos = new Set(); for(let k = s; k < s + count; k++) pos.add(k); return pos;
+    }
+    if(subArrange === "separate"){
+      let best = null, bestAdj = null;
+      for(let t = 0; t < 80; t++){
+        const a = [...tail]; for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+        const cand = new Set(a.slice(0, count));
+        let adj = 0; cand.forEach(i => { if(cand.has(i + 1)) adj++; });
+        if(bestAdj === null || adj < bestAdj){ best = cand; bestAdj = adj; }
+      }
+      return best;
+    }
+    const a = [...tail]; for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return new Set(a.slice(0, count));
+  };
+  if(positions !== null && answerMode === "mid" && !midOk(positions)) return null;
+  for(let attempt = 0; attempt < 80; attempt++){
+    let pos;
+    if(positions !== null) pos = new Set(positions);
+    else {
+      const cnt = subCount ? subCount : rand(1, mouth - 1);
+      pos = samplePositions(cnt);
+      if(answerMode === "mid"){
+        for(let t = 0; t < 80 && !midOk(pos); t++) pos = samplePositions(cnt);
+        if(!midOk(pos)) continue;
+      }
+    }
+    const sign = []; for(let i = 0; i < mouth; i++) sign.push(pos.has(i) ? -1 : 1);
+    /* 桁数の割り当て（割り当て表の個数バランスは守り、条件を
+       満たしやすい位置へ大きい桁を寄せる） */
+    let pool;
+    if(vary){
+      const kinds = []; for(let d = minD; d <= maxD; d++) kinds.push(d);
+      const base = Math.floor(mouth / kinds.length), extra = mouth % kinds.length;
+      pool = [];
+      for(const d of kinds) for(let k = 0; k < base; k++) pool.push(d);
+      const desc = [...kinds].sort((a, b) => b - a);
+      for(let k = 0; k < extra; k++) pool.push(desc[k]);
+      pool.sort((a, b) => a - b);
+    } else pool = Array(mouth).fill(maxD);
+    const posIdx = [], negIdx = [];
+    for(let i = 0; i < mouth; i++) (pos.has(i) ? negIdx : posIdx).push(i);
+    const lens = Array(mouth).fill(0);
+    const rest = [...pool];
+    let dipAt = null;
+    if(answerMode === "negative"){
+      for(const i of negIdx) lens[i] = rest.pop();
+      for(const i of posIdx) lens[i] = rest.shift();
+    } else if(answerMode === "mid"){
+      const dipCands = negIdx.filter(i => i <= mouth - 2 && posIdx.some(j => j > i));
+      if(!dipCands.length) continue;
+      /* 沈ませる位置は試行ごとに候補を回す（後ろの位置では沈ませる
+         余地が無くても、前の位置なら作れることがある） */
+      dipAt = dipCands[attempt % dipCands.length];
+      lens[dipAt] = rest.pop();
+      for(const i of posIdx.filter(j => j > dipAt)) lens[i] = rest.pop();
+      for(const i of negIdx) if(i !== dipAt) lens[i] = rest.shift();
+      for(const i of posIdx.filter(j => j < dipAt)) lens[i] = rest.shift();
+    } else {
+      for(const i of posIdx) lens[i] = rest.pop();
+      for(const i of negIdx) lens[i] = rest.shift();
+    }
+    const los = lens.map(lo), his = lens.map(hi);
+    const maxAdd = Array(mouth + 1).fill(0n), minAdd = Array(mouth + 1).fill(0n);
+    for(let i = mouth - 1; i >= 0; i--){
+      maxAdd[i] = maxAdd[i + 1] + (sign[i] > 0 ? his[i] : -los[i]);
+      minAdd[i] = minAdd[i + 1] + (sign[i] > 0 ? los[i] : -his[i]);
+    }
+    /* drop[i]: i口目以降を一番有利に選んだときでも起きる途中経過の
+       最大の落ち込み（0以下）。将来の口は自分で選べるので、達成可能性は
+       「一番有利な寄与」（プラスは最大、マイナスは最小）で見る。
+       漸化式: drop[i] = min(0, 一番有利な寄与_i + drop[i+1]) */
+    const drop = Array(mouth + 1).fill(0n);
+    for(let i = mouth - 1; i >= 0; i--){
+      const bestI = sign[i] > 0 ? his[i] : -los[i];
+      drop[i] = bestI + drop[i + 1] < 0n ? bestI + drop[i + 1] : 0n;
+    }
+    if(answerMode === "mid" && dipAt === null){
+      const dipCands = negIdx.filter(i => i <= mouth - 2 && posIdx.some(j => j > i));
+      if(!dipCands.length) continue;
+      dipAt = dipCands[attempt % dipCands.length];
+    }
+    const out = [];
+    let run = 0n, dipped = false, ok = true;
+    for(let i = 0; i < mouth; i++){
+      let a, b, preferHigh;
+      /* preferHigh: 区間のどちらの端に寄せて選ぶと後が楽か。中央から
+         一様に選ぶと余裕を使い切って終盤で値が固定され、「同じ数字の
+         連続オフ」と両立しなくなるため、楽になる端に寄せて選ぶ */
+      if(answerMode === "never"){
+        const need = -drop[i + 1] > 1n - maxAdd[i + 1] ? -drop[i + 1] : 1n - maxAdd[i + 1];
+        if(sign[i] > 0){ a = los[i] > need - run ? los[i] : need - run; b = his[i]; preferHigh = true; }
+        else { a = los[i]; b = his[i] < run - need ? his[i] : run - need; preferHigh = false; }
+      } else if(answerMode === "negative"){
+        const cap = -1n - minAdd[i + 1];
+        if(sign[i] > 0){ a = los[i]; b = his[i] < cap - run ? his[i] : cap - run; preferHigh = false; }
+        else { a = los[i] > run - cap ? los[i] : run - cap; b = his[i]; preferHigh = true; }
+      } else {
+        if(!dipped && i < dipAt){
+          preferHigh = false;
+          if(sign[i] > 0){
+            /* 沈ませる位置で沈ませられるよう経過を大きくしすぎない。
+               後ろに残っているプラスの最小合計も予約しておく */
+            let reserve = 0n;
+            for(let j = i + 1; j < dipAt; j++) if(sign[j] > 0) reserve += los[j];
+            a = los[i]; b = his[i] < his[dipAt] - 1n - run - reserve ? his[i] : his[dipAt] - 1n - run - reserve;
+          }
+          else { a = los[i]; b = his[i] < run + maxAdd[i + 1] - 1n ? his[i] : run + maxAdd[i + 1] - 1n; }
+        } else if(!dipped && i === dipAt){
+          preferHigh = false;
+          a = los[i] > run + 1n ? los[i] : run + 1n;
+          b = his[i] < run + maxAdd[i + 1] - 1n ? his[i] : run + maxAdd[i + 1] - 1n;
+        } else {
+          const floorNeed = 1n - maxAdd[i + 1];
+          if(sign[i] > 0){ a = los[i] > floorNeed - run ? los[i] : floorNeed - run; b = his[i]; preferHigh = true; }
+          else { a = los[i]; b = his[i] < run - floorNeed ? his[i] : run - floorNeed; preferHigh = false; }
+        }
+      }
+      if(a > b){ ok = false; break; }
+      let val = null;
+      for(let t = 0; t < 12; t++){
+        let candV;
+        if(a >= b) candV = a;
+        else {
+          const span = b - a;
+          let jit = span / 3n; if(jit < 2n) jit = span < 2n ? span : 2n;
+          candV = preferHigh ? randBigBetween(b - jit, b) : randBigBetween(a, a + jit);
+        }
+        if(noRepeat && out.length && candV === (out[out.length - 1] < 0n ? -out[out.length - 1] : out[out.length - 1])) continue;
+        val = candV; break;
+      }
+      if(val === null){
+        if(a === b && !(noRepeat && out.length && a === (out[out.length - 1] < 0n ? -out[out.length - 1] : out[out.length - 1]))) val = a;
+        else { ok = false; break; }
+      }
+      run += sign[i] > 0 ? val : -val;
+      if(run < 0n) dipped = true;
+      out.push(sign[i] > 0 ? val : -val);
+    }
+    if(!ok) continue;
+    if(!sequenceModeOk(out, answerMode)) continue;
+    if(noRepeat && isHardRepeat(out)) continue;
+    return out;
+  }
+  return null;
+}
 function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyle, subCount, subArrange){
   if(sub && subStyle === "hikitsuzukeru" && answerMode === "mid") answerMode = "never";
   if(sub && subStyle === "hikitsuzukeru" && answerMode === "never" && mouth >= 2){
@@ -1122,6 +1382,11 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyl
     if(best) return best;
     // 設定上作れない場合は通常の引き算に落とす（設定側で作れない
     // 組み合わせは選べないようにしてあるので、通常ここには来ない）
+  }
+  if(sub && subStyle === "hikitsuzukeru" && answerMode === "negative" && mouth >= 3){
+    // 引き続ける・答えがマイナスになる専用の作り方（1口目は最大桁数+1桁）
+    const built = makeHikitsuzukeruNegative(minD, maxD, mouth, vary, noRepeat);
+    if(built) return built;
   }
   if(sub && mouth >= 2){
     // 2つ目以降の一部をマイナスにする（例: 500, -1,234, 300）。1つ目は必ずプラスで、
@@ -1186,6 +1451,20 @@ function makeProblem(minD, maxD, mouth, vary, sub, answerMode, noRepeat, subStyl
       }
     }
     if(firstHard) return firstHard;
+    if(subStyle !== "hikitsuzukeru"){
+      /* ランダム探索で条件を満たす候補が見つからなかった場合は構成的に
+         作る（位置が固定された条件では、一様ランダムだと条件を満たす
+         候補がほぼ出ない組み合わせがあるため）。ここでも作れない
+         組み合わせだけ、従来どおり一番近い候補を返す */
+      let built = buildSubConstructive(minD, maxD, mouth, vary, answerMode, noRepeat, positions, subCount, subArrange);
+      if(!built && positions !== null){
+        /* 固定された位置では作れない場合（例: 沈ませる位置が後ろ
+           すぎて「同じ数字の連続オフ」と両立しない）は、引き算の数と
+           並び方の範囲で位置を引き直して作る */
+        built = buildSubConstructive(minD, maxD, mouth, vary, answerMode, noRepeat, null, subCount, subArrange);
+      }
+      if(built) return built;
+    }
     if(answerMode === "negative" && bestNegH) return bestNegH.cand;
     if(answerMode === "mid" && bestMidH) return bestMidH.cand;
     if(answerMode === "never" && bestNeverH) return bestNeverH.cand;
@@ -1585,7 +1864,8 @@ function refreshAnswerSignState(){
   if(hiki && checkedVal("answerSignMode", "never") === "never" && mouth >= 2){
     const minD = parseInt(zenNum($("minDigits").value), 10);
     const maxD = parseInt(zenNum($("maxDigits").value), 10);
-    if(!isNaN(minD) && !isNaN(maxD) && !hikiNeverPossible(minD, maxD, mouth))
+    if(!isNaN(minD) && !isNaN(maxD) && (!hikiNeverPossible(minD, maxD, mouth)
+        || (checkedVal("repeatMode", "off") !== "on" && !hikiNeverPossibleNr(minD, maxD, mouth))))
       warnText = "※この設定では「マイナスにならない」問題を作れないため、「次へ」を押すと最大桁数を自動で調整します";
   }
   warn.textContent = warnText;
@@ -1898,9 +2178,13 @@ function readConfig(){
     }
   }
   const hikiPlaces = c.decOn ? c.decPlaces : 0;
-  if(c.sub && c.subStyle === "hikitsuzukeru" && c.answerMode === "never" && !hikiNeverPossible(c.minD, c.maxD, c.mouth, hikiPlaces)){
+  /* 「同じ数字の連続オフ」のときは、隣同士で同じになれない分だけ
+     作れる条件が厳しくなるので、その判定もあわせて見る */
+  const hikiOk = m => hikiNeverPossible(c.minD, m, c.mouth, hikiPlaces)
+    && (c.allowRepeat || hikiNeverPossibleNr(c.minD, m, c.mouth, hikiPlaces));
+  if(c.sub && c.subStyle === "hikitsuzukeru" && c.answerMode === "never" && !hikiOk(c.maxD)){
     let nm = c.maxD;
-    while(!hikiNeverPossible(c.minD, nm, c.mouth, hikiPlaces)) nm++;
+    while(!hikiOk(nm)) nm++;
     notes.push(`最大桁数を${nm}桁に調整しました（「引き続ける・マイナスにならない」を作れるようにするためです）`);
     c.maxD = nm; $("maxDigits").value = String(nm);
   }
@@ -1925,6 +2209,29 @@ function readConfig(){
     if(!isNaN(v) && v >= 1) subCount = Math.min(v, cap);
   }
   c.subCount = subCount; c.subArrange = subArrange;
+  /* ふつうの引き算で、答えの条件を原理的に満たせない組み合わせは、
+     作れる値へ自動で調整する（引き続ける・マイナスにならないで
+     最大桁数を上げるのと同じ考え方。まず桁数、次に引き算の数） */
+  if(subCount > 0 && (c.answerMode === "never" || c.answerMode === "negative") &&
+     !subFeasible(c.minD, c.maxD, c.mouth, c.vary, c.answerMode, subCount, hikiPlaces)){
+    const modeLabel = c.answerMode === "never" ? "マイナスにならない" : "答えがマイナス";
+    let nm = c.maxD;
+    while(nm < c.maxD + 5 && !subFeasible(c.minD, nm, c.mouth, c.vary, c.answerMode, subCount, hikiPlaces)) nm++;
+    if(subFeasible(c.minD, nm, c.mouth, c.vary, c.answerMode, subCount, hikiPlaces)){
+      notes.push(`最大桁数を${nm}桁に調整しました（「${modeLabel}」を作れるようにするためです）`);
+      c.maxD = nm; $("maxDigits").value = String(nm);
+    } else if(c.answerMode === "never"){
+      let sc = subCount;
+      while(sc > 1 && !subFeasible(c.minD, c.maxD, c.mouth, c.vary, c.answerMode, sc, hikiPlaces)) sc--;
+      subCount = sc; c.subCount = sc; $("subCount").value = String(sc);
+      notes.push(`引き算の数を${sc}つに調整しました（「${modeLabel}」を作れるようにするためです）`);
+    } else {
+      let sc = subCount;
+      while(sc < c.mouth - 1 && !subFeasible(c.minD, c.maxD, c.mouth, c.vary, c.answerMode, sc, hikiPlaces)) sc++;
+      subCount = sc; c.subCount = sc; $("subCount").value = String(sc);
+      notes.push(`引き算の数を${sc}つに調整しました（「${modeLabel}」を作れるようにするためです）`);
+    }
+  }
   // 並び方や答えモードの条件を完全には満たせない組み合わせでは、止めずに
   // 「なるべくそうする」扱いにし、確認画面で知らせる
   c.subArrangeNote = "";
@@ -2112,7 +2419,6 @@ function toggleFullscreen(){
     if(r && r.catch) r.catch(() => showFsHelp());   // 拒否された場合も無反応にしない
   }catch(e){ showFsHelp(); }
 }
-$("fsBtnTop").addEventListener("click", toggleFullscreen);
 $("fsEnterBtn").addEventListener("click", toggleFullscreen);
 /* 全画面中だけ「全画面を終了」ボタンを出す。Esc やブラウザ側の操作で
    終了した場合も、fullscreenchange で追随して自動で隠れる */
