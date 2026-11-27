@@ -64,7 +64,7 @@
   #accelTimeRow .stepper { flex-wrap:nowrap; justify-content:flex-end; }
   /* 数字を入力できる枠の横位置を「全体の秒数」の行にそろえる
      （±1つだけの行は、秒数の行より枠が右に寄るぶん右余白で戻す） */
-  #settingsScreen .stepper.align-total { margin-right:50px; }
+  #settingsScreen .stepper.align-total { margin-right:34px; }
   /* 狭い画面では数字の行も秒数の行と同じく2段に折り返し、
      ステッパーを右端にそろえて枠の位置を保つ */
   #settingsScreen .row.num-row { flex-wrap:wrap; }
@@ -72,18 +72,21 @@
   /* 右の設定が複数行になる行は、項目名を1行目の設定と同じ高さに
      そろえる（項目名だけ行の真ん中に下がって見えるのを防ぐ） */
   #settingsScreen .row.top-align { align-items:flex-start; }
-  /* 加速の ±10 は下の段へ回し、符号ボタンは入力欄の直後に置く。
+  /* 注意書きは文章があるときだけ表示する。空のまま置くと1行分の
+     空白が残り、行と行の間が不自然に空いて見えるため */
+  #settingsScreen p.note:empty { display:none; }
+  /* 加速の ±10 は下の段へ回し、符号ボタンは入力欄の直前に置く。
      1段目の枠の位置が秒数の行とそろうよう右余白で微調整する */
-  #accelTimeRow .stepper.accel-step { margin-right:3px; }
+  #accelTimeRow .stepper.accel-step { margin-right:8px; }
   #accelTimeRow .stepper.accel-step2 { margin-right:111px; margin-top:6px; }
   #accelTimeRow .stepbtn { width:34px; font-size:11px; }
-  #accelTimeRow .stepper input { width:62px; }
+  /* 数字入力の枠は全行で同じ大きさにそろえる（ユーザー指示 2026-11-28） */
   /* 符号ボタン（iPhoneの数字キーボードには「−」キーが無いため） */
   .signbtn { width:34px; height:42px; flex:none; font-size:15px; font-weight:bold; line-height:1; padding:0;
     background:#263238; color:#fff; border:1px solid #455a64; border-radius:10px; cursor:pointer; }
   .signbtn.on { background:#00b84f; border-color:#00b84f; }
   .stepper.sec { gap:3px; }
-  .row .stepper.sec input { width:94px; padding-left:6px; padding-right:6px; }
+  .row .stepper.sec input { padding-left:6px; padding-right:6px; }
   .row.sec-row { flex-wrap:wrap; }
   .check { display:flex; gap:10px; align-items:flex-start; margin:14px 0; font-size:13px; line-height:1.5; }
   .check input { width:22px; height:22px; margin-top:2px; accent-color:#000000; }
@@ -265,7 +268,7 @@
     h1 { font-size:26px; }
     .row input { width:92px; }
     .row .stepper input { width:74px; }
-    #settingsScreen .stepper.align-total { margin-right:54px; }
+    #settingsScreen .stepper.align-total { margin-right:34px; }
     th, td { padding:6px 8px; }
     table { font-size:14px; }
     td.val { font-size:16px; }
@@ -516,7 +519,7 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
         <p class="note" id="subStyleNote" style="margin:0"></p>
         <p id="subStyleWarn" style="margin:0;color:#ff6961;font-size:12px;font-weight:bold"></p>
       </div></div>
-    <div class="row wrap-row" id="subCountRow"><label>引き算の数 <span class="note">ふつうの時</span></label>
+    <div class="row wrap-row" id="subCountRow"><label>引き算の口数 <span class="note">ふつうの時</span></label>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
         <div class="stepper align-total"><button type="button" class="stepbtn" data-target="subCount" data-step="-1">−</button><input id="subCount" type="number" inputmode="numeric" min="1" placeholder="おまかせ"><button type="button" class="stepbtn" data-target="subCount" data-step="1">＋</button></div>
         <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;align-items:center">
@@ -556,7 +559,7 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
         <label><input type="radio" name="accelMode" value="off" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オフ</label>
         <label><input type="radio" name="accelMode" value="on" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オン</label>
       </div></div>
-    <div class="row sec-row" id="accelTimeRow" style="display:none"><label>加速（%） <span class="note" id="accelMinusNote">マイナスは減速</span></label><div class="stepper sec accel-step"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-0.1">−0.1</button><input id="accelTime" type="text" inputmode="decimal" value="10"><button type="button" class="signbtn" id="accelSignBtn">−</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="1">＋1</button></div><div class="stepper sec accel-step2"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-10">−10</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="10">＋10</button></div></div>
+    <div class="row sec-row" id="accelTimeRow" style="display:none"><label>加速（%） <span class="note" id="accelMinusNote">マイナスは減速</span></label><div class="stepper sec accel-step"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-0.1">−0.1</button><button type="button" class="signbtn" id="accelSignBtn">−</button><input id="accelTime" type="text" inputmode="decimal" value="10"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="1">＋1</button></div><div class="stepper sec accel-step2"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-10">−10</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="10">＋10</button></div></div>
     <div class="row" id="accelChaosRow" style="display:none"><label>カオス <span class="note">加速オンの時</span></label>
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
         <label><input type="radio" name="accelChaos" value="off" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オフ</label>
@@ -2243,12 +2246,12 @@ function readConfig(){
       let sc = subCount;
       while(sc > 1 && !subFeasible(c.minD, c.maxD, c.mouth, c.vary, c.answerMode, sc, hikiPlaces)) sc--;
       subCount = sc; c.subCount = sc; $("subCount").value = String(sc);
-      notes.push(`引き算の数を${sc}つに調整しました（「${modeLabel}」を作れるようにするためです）`);
+      notes.push(`引き算の口数を${sc}つに調整しました（「${modeLabel}」を作れるようにするためです）`);
     } else {
       let sc = subCount;
       while(sc < c.mouth - 1 && !subFeasible(c.minD, c.maxD, c.mouth, c.vary, c.answerMode, sc, hikiPlaces)) sc++;
       subCount = sc; c.subCount = sc; $("subCount").value = String(sc);
-      notes.push(`引き算の数を${sc}つに調整しました（「${modeLabel}」を作れるようにするためです）`);
+      notes.push(`引き算の口数を${sc}つに調整しました（「${modeLabel}」を作れるようにするためです）`);
     }
   }
   // 並び方や答えモードの条件を完全には満たせない組み合わせでは、止めずに
