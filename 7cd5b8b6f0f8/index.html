@@ -75,11 +75,20 @@
   /* 注意書きは文章があるときだけ表示する。空のまま置くと1行分の
      空白が残り、行と行の間が不自然に空いて見えるため */
   #settingsScreen p.note:empty { display:none; }
-  /* 加速の ±10 は下の段へ回し、符号ボタンは入力欄の直前に置く。
-     1段目の枠の位置が秒数の行とそろうよう右余白で微調整する */
-  #accelTimeRow .stepper.accel-step { margin-right:8px; }
-  #accelTimeRow .stepper.accel-step2 { margin-right:111px; margin-top:6px; }
+  /* 加速の行は全ボタンを1行に並べる（ユーザー指示 2026-11-28、Web版のみ）。
+     大きさは変えず、枠の横位置は他の行とそろえなくてよいので余白は付けない。
+     符号ボタンは入力欄の直前に置く */
+  #accelTimeRow .stepper.accel-step { margin-right:0; }
   #accelTimeRow .stepbtn { width:34px; font-size:11px; }
+  /* 狭い画面では1行の幅がカードの内側に収まらないため、行全体を
+     画面の中央に置いて端のボタンが切れないようにする。
+     ごく狭い画面では間隔だけ詰める（ボタンの大きさは変えない） */
+  @media (max-width:400px){
+    #accelTimeRow .stepper.accel-step { position:relative; left:50%; transform:translateX(-50%); width:max-content; }
+  }
+  @media (max-width:340px){
+    #accelTimeRow .stepper.sec { gap:1px; }
+  }
   /* 数字入力の枠は全行で同じ大きさにそろえる（ユーザー指示 2026-11-28） */
   /* 符号ボタン（iPhoneの数字キーボードには「−」キーが無いため） */
   .signbtn { width:34px; height:42px; flex:none; font-size:15px; font-weight:bold; line-height:1; padding:0;
@@ -559,7 +568,7 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
         <label><input type="radio" name="accelMode" value="off" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オフ</label>
         <label><input type="radio" name="accelMode" value="on" style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オン</label>
       </div></div>
-    <div class="row sec-row" id="accelTimeRow" style="display:none"><label>加速（%） <span class="note" id="accelMinusNote">マイナスは減速</span></label><div class="stepper sec accel-step"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-0.1">−0.1</button><button type="button" class="signbtn" id="accelSignBtn">−</button><input id="accelTime" type="text" inputmode="decimal" value="10"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="1">＋1</button></div><div class="stepper sec accel-step2"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-10">−10</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="10">＋10</button></div></div>
+    <div class="row sec-row" id="accelTimeRow" style="display:none"><label>加速（%） <span class="note" id="accelMinusNote">マイナスは減速</span></label><div class="stepper sec accel-step"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-10">−10</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-1">−1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="-0.1">−0.1</button><button type="button" class="signbtn" id="accelSignBtn">−</button><input id="accelTime" type="text" inputmode="decimal" value="10"><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="0.1">＋0.1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="1">＋1</button><button type="button" class="stepbtn lbl" data-target="accelTime" data-step="10">＋10</button></div></div>
     <div class="row" id="accelChaosRow" style="display:none"><label>カオス <span class="note">加速オンの時</span></label>
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px">
         <label><input type="radio" name="accelChaos" value="off" checked style="width:20px;height:20px;accent-color:#000000;vertical-align:middle"> オフ</label>
