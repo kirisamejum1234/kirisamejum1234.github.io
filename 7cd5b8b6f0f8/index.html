@@ -212,7 +212,7 @@
   /* 中央寄せを上下 auto マージンで行うと、内容がはみ出したときに
      はみ出し分がスクロール範囲の外へ出て、下の行に届かなくなる（実機で確認）。
      内側ラッパー（min-height:100%）で「収まれば中央寄せ、はみ出せば上からスクロール」にする */
-  #startScreen.active, #gradeKindScreen.active, #gradeListScreen.active, #confirmScreen.active, #settingsScreen.active, #answerScreen.active, #judgeScreen.active, #resultScreen.active, #manualScreen.active { display:block; overflow-y:auto; padding:0; }
+  #startScreen.active, #gradeKindScreen.active, #gradeListScreen.active, #confirmScreen.active, #settingsScreen.active, #answerScreen.active, #judgeScreen.active, #resultScreen.active { display:block; overflow-y:auto; padding:0; }
   .screen-inner { min-height:100%; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
   #judgeScreen .screen-inner { padding-bottom:150px; }  /* 下部の固定ボタンに最後の行が隠れないように */
   /* 解答画面: 「解答」ボタンは入力欄のすぐ下に置く。キーボードを開いたままでも、
@@ -232,7 +232,7 @@
      背の低い画面で内容が上詰めになったときでも、ボタンと要素が
      重ならないための余白（詰め込みはしない） */
   #startScreen .screen-inner, #gradeKindScreen .screen-inner, #gradeListScreen .screen-inner,
-  #settingsScreen .screen-inner, #confirmScreen .screen-inner, #manualScreen .screen-inner,
+  #settingsScreen .screen-inner, #confirmScreen .screen-inner,
   #answerScreen .screen-inner, #judgeScreen .screen-inner, #resultScreen .screen-inner { padding-top:66px; }
   /* 矢印キー移動のフォーカス先が目で分かるようにする */
   .screen :focus-visible { outline:2px solid #00b84f; outline-offset:2px; }
@@ -299,25 +299,12 @@
 }
 #startScreen .note,#gradeKindScreen .note,#gradeListScreen .note,#settingsScreen .note,#confirmScreen .note{ opacity:.75; }
 
-#startScreen,#gradeKindScreen,#gradeListScreen,#settingsScreen,#confirmScreen,#manualScreen{
+#startScreen,#gradeKindScreen,#gradeListScreen,#settingsScreen,#confirmScreen{
   background: linear-gradient(180deg,#8fd4ff 0%, #cdefff 55%, #eafcff 100%);
   color:#1d3a54;
 }
-#startScreen h1,#gradeKindScreen h1,#gradeListScreen h1,#settingsScreen h1,#confirmScreen h1,#manualScreen h1{ color:#12406e; }
+#startScreen h1,#gradeKindScreen h1,#gradeListScreen h1,#settingsScreen h1,#confirmScreen h1{ color:#12406e; }
 #startScreen h2,#gradeKindScreen h2,#gradeListScreen h2,#settingsScreen h2,#confirmScreen h2{ color:#12406e; }
-#manualScreen button{
-  border-radius:999px !important; box-shadow:0 3px 0 rgba(0,0,0,.18);
-}
-#manualScreen .manual-card{
-  background:#ffffff; color:#1d3a54; border-radius:16px; text-align:left;
-  width:min(92vw,720px); padding:22px 24px; line-height:1.75; font-size:15px;
-  box-shadow:0 4px 14px rgba(18,64,110,.15);
-}
-#manualScreen .manual-card h2{ font-size:19px; color:#12406e; margin:24px 0 8px; }
-#manualScreen .manual-card h2:first-child{ margin-top:0; }
-#manualScreen .manual-card h3{ font-size:16px; color:#12406e; margin:16px 0 4px; }
-#manualScreen .manual-card p{ margin:4px 0; }
-#manualScreen .manual-card p.li{ padding-left:1em; text-indent:-1em; }
 #startScreen button.choice,#gradeKindScreen button.choice,#gradeListScreen button.choice{
   background:#ffffff; color:#12406e; border:3px solid #ffb703;
 }
@@ -429,157 +416,9 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
   <div style="display:flex;flex-direction:column;gap:16px;width:min(92vw,340px)">
     <button class="choice" id="gradeModeBtn" style="padding:20px 22px;font-size:19px">級・段位で選ぶ</button>
     <button class="choice" id="customModeBtn" style="padding:20px 22px;font-size:19px">自分で設定する</button>
-    <button id="manualBtn">使い方</button>
     <button id="quitBtn">終了</button>
   </div>
   <p id="quitNote" class="small" style="display:none">終了するには、このタブ（またはウィンドウ）を閉じてください</p>
-  </div>
-</section>
-
-<!-- 取扱説明書 -->
-<section id="manualScreen" class="screen">
-  <div class="screen-inner" style="justify-content:flex-start">
-  <h1 style="margin-bottom:20px">使い方（取扱説明書）</h1>
-  <div class="manual-card">
-<p>このアプリは、画面に出ては消える数字を次々に足していく「フラッシュ暗算」の練習アプリです。</p>
-<p>そろばん教室の授業や、ご家庭での練習にご利用ください。</p>
-<h2>1. 基本の使い方（あそび方の流れ）</h2>
-<p>1) 最初の画面で、練習のしかたを選びます。</p>
-<p>　・「級・段位で選ぶ」…10級〜1級、初段〜十段の中から選びます。桁数・口数・速さは級と段位ごとに決まっています。</p>
-<p>　・「自分で設定する」…桁数や口数、速さなどを自由に決められます。</p>
-<p>2) スタート画面で、問題の内容を確認します。</p>
-<p>　この画面では、数字の形（フォント）と数字の大きさも変えられます。</p>
-<p>　「スタート」を押すと始まります。</p>
-<p>3) 「3・2・1」の合図のあと、数字が1つずつ画面に出ては消えます。</p>
-<p>　消えた数字を覚えながら、頭の中でどんどん足していきます。</p>
-<p>4) 数字が全部出終わったら、答えを入力します。</p>
-<p>　画面のキーパッド、またはキーボード・テンキーで入力し、「決定」を押します。</p>
-<p>　並列計算のときは、組の数だけ答えを入力します。</p>
-<p>5) 答え合わせの画面で、正解・不正解が分かります。</p>
-<p>　答えは自動では表示されません。答えを知りたいときは「答えを見る」ボタンを押してください（確認が出ます）。</p>
-<p>6) 続けるときは、画面の下のボタンを選びます。</p>
-<p>　・「同じ問題」………同じ問題をもう一度</p>
-<p>　・「逆順でやる」……数字の出る順番を逆にして、同じ問題をもう一度</p>
-<p>　・「順番を変える」…数字の順番を入れ替えて、同じ問題をもう一度</p>
-<p>　・「新しい問題」……新しい問題を作る（スタート画面に戻ります）</p>
-<p>　・「もう一度入力する」…答えの入力だけをやり直す</p>
-<h2>2. 級・段位について</h2>
-<p>級と段位では、桁数・口数（出てくる数字の個数）・全体の秒数が決まっています。引き算は出ません。</p>
-<p>（級）</p>
-<p class="li">・10級：1桁・4口・4秒</p>
-<p class="li">・9級：1桁・5口・5秒</p>
-<p class="li">・8級：1桁・6口・6秒</p>
-<p class="li">・7級：2桁・3口・3秒（0のつく数 → その他の数 → 0のつく数 の順に出ます）</p>
-<p class="li">・6級：2桁・3口・3秒（0のつく数がどこかに1つだけ出ます）</p>
-<p class="li">・5級：2桁・4口・4秒（0のつく数は出ません）</p>
-<p class="li">・4級：2桁・5口・4秒（0のつく数は出ません）</p>
-<p class="li">・3級：2桁・6口・5秒（0のつく数は出ません）</p>
-<p class="li">・2級：2桁・8口・7秒（0のつく数は出ません）</p>
-<p class="li">・1級：2桁・10口・8秒（0のつく数は出ません）</p>
-<p>（段位）すべて3桁です。0が2つある数（300など）は出ません。</p>
-<p class="li">・初段：4口・4秒</p>
-<p class="li">・弐段：5口・4秒</p>
-<p class="li">・参段：6口・4秒</p>
-<p class="li">・四段：7口・4秒</p>
-<p class="li">・五段：8口・4秒</p>
-<p class="li">・六段：9口・4秒</p>
-<p class="li">・七段：10口・4秒</p>
-<p class="li">・八段：12口・4秒</p>
-<p class="li">・九段：15口・4秒</p>
-<p class="li">・十段：15口・3秒</p>
-<h2>3. 「自分で設定する」の設定の意味</h2>
-<h3>最小桁数・最大桁数</h3>
-<p>出てくる数字の桁数です。たとえば最小2桁・最大3桁なら、2桁と3桁の数字が出ます。</p>
-<h3>桁数の出し方</h3>
-<p class="li">・「最小桁数」…ぜんぶ最小桁数の数字が出ます。</p>
-<p class="li">・「最大桁数」…ぜんぶ最大桁数の数字が出ます。</p>
-<p class="li">・「混合」………最小桁数から最大桁数までの数字が混ざって出ます（それぞれの桁数の個数は、なるべく同じくらいになります）。</p>
-<h3>小数</h3>
-<p>小数の問題にするかどうかです。オンにすると、「小数第何位まで」かを選べます（第3位まで）。</p>
-<p>オンの間は、最小桁数は0で固定になります。</p>
-<h3>口数</h3>
-<p>出てくる数字の個数です。</p>
-<h3>引き算</h3>
-<p class="li">・「オフ」…足し算だけの問題になります。</p>
-<p class="li">・「オン」…引き算が混ざります。下の「引き算の出し方」「引き算の口数」が使えるようになります。</p>
-<h3>引き算の出し方（引き算が「オン」のときだけ）</h3>
-<p class="li">・「ふつう」………足し算と引き算が混ざります。</p>
-<p class="li">・「引き続ける」…最初の1つだけ足し算で、そのあとは全部引き算になります。</p>
-<h3>引き算の口数（引き算が「オン」で、出し方が「ふつう」のときだけ）</h3>
-<p>引き算の個数です。空欄のままにすると「おまかせ」になり、ちょうどよい個数を自動で決めます。</p>
-<p>右側では、引き算の並び方も選べます。</p>
-<p class="li">・「ランダム」……どこに出るかは自動で決まります。</p>
-<p class="li">・「連続する」……引き算が続けて固まって出ます。</p>
-<p class="li">・「連続しない」…引き算どうしが離れて出ます。</p>
-<p>（「なるべく」と付いているときは、できる範囲でその並び方に近づけます）</p>
-<h3>答え</h3>
-<p>計算の途中と答えが、プラスとマイナスのどちらになるかです。</p>
-<p class="li">・「マイナスにならない」…途中も答えも、0以上になります。</p>
-<p class="li">・「途中だけマイナス」……途中はマイナスになってもよいですが、答えは0以上になります。</p>
-<p class="li">・「答えがマイナスになる」…答えがマイナスになる問題を作ります。</p>
-<h3>同じ数字の連続</h3>
-<p>オンにすると、同じ数字が続けて出ることがあります。</p>
-<p>オフにすると、同じ数字は続けて出ません（前の数字で使った数字も、なるべく出ません）。</p>
-<h3>全体の秒数</h3>
-<p>数字が全部出終わるまでの、全体の時間です。0.1秒ずつ細かく変えられます。</p>
-<p>数字1つの表示時間は「全体の秒数 ÷ 口数」で決まります。</p>
-<h3>加速</h3>
-<p>数字が出る間隔が、だんだん速く（または遅く）なっていきます。単位は％です。</p>
-<p>プラスの値で速くなり、マイナスの値で遅くなります。</p>
-<p>たとえば加速10％なら、1つ出るごとに間隔が10％ずつ短くなります。</p>
-<p>※加速を付けると、表示時間の合計は「全体の秒数」とは一致しなくなります（そういう仕組みです）。</p>
-<h3>カオス（加速がオンのときだけ）</h3>
-<p>オンにすると、速さの変わり方が問題ごとにランダムになります。どれくらい大きく変わるかは「加速」の％で決まります。</p>
-<h3>並列計算</h3>
-<p>オンにすると、問題を何組も同時に出せます（2〜12組）。</p>
-<p class="li">・「組数」…同時に出す問題の数です。</p>
-<p class="li">・「出し方」…「同時に全部出す」は全組の数字が同時に出ます。「左右と交互に出す」は組を左右交互に出します。「順番に1組ずつ出す」は1組ずつ順番に出ます。</p>
-<p class="li">・「配置」…「横並び」は組を横に並べます。「縦並び」は縦に並べます（横並びは10組まで）。</p>
-<p>オフにすると、組数は自動で1組に戻ります。</p>
-<h3>ヒント（スタート画面で切り替えます）</h3>
-<p>「あり」にすると、答え合わせの画面に「ヒントを見る」ボタンが出ます。</p>
-<p>ヒントでは、自分の答えと正解を位ごとに比べて、合っている位が分かります。</p>
-<h2>4. スタート画面で変えられること</h2>
-<h3>数字の形（フォント）　数字だけの形が変わります。</h3>
-<p class="li">・「そろばん」………そろばんの珠の形を模した数字</p>
-<p class="li">・「きょうかしょ」…教科書体の数字</p>
-<p class="li">・「きょうかしょ（太字）」…教科書体の太字の数字</p>
-<h3>数字の大きさ</h3>
-<p>「極小・小・中・大・特大」の5段階です。数字が画面からはみ出しそうなときは、自動で少し小さくなります。</p>
-<h2>5. 答え合わせの画面のボタン</h2>
-<h3>速さのボタン　次の問題の速さを変えます。押せるのは1回だけです（別のボタンを押すと、そちらに置き換わります）。</h3>
-<p class="li">・「少し早く／早く」…全体の秒数が 0.5秒／1秒 短くなります。</p>
-<p class="li">・「そのまま」………速さは変わりません。</p>
-<p class="li">・「少し遅く／遅く」…全体の秒数が 0.5秒／1秒 長くなります。</p>
-<p class="li">・「おまかせ」………正解すると少し速く、不正解だと少し遅く、自動で調整されます。</p>
-<p>選んだ速さは、そのあとの問題にも引き継がれます。設定から新しく始め直すと、元の速さに戻ります。</p>
-<h3>もう一度入力する</h3>
-<p>答えの入力だけをやり直します。前回の入力が残っているので、間違えた組だけ直せます。正解だった組は、そのまま固定されます。</p>
-<h3>ヒントを見る（ヒントが「あり」のときだけ）</h3>
-<p>位ごとに、合っているかどうかが分かります。</p>
-<h3>答えを見る</h3>
-<p>正解が表示されます（押すと確認が出ます）。</p>
-<h2>6. 知っておくと便利なこと</h2>
-<p class="li">・このアプリに、隠しモードや裏ワザはありません。設定にある項目がすべてです。</p>
-<p class="li">・設定は自動で保存されます。次に開いたときも、前回の設定の続きから使えます（「引き続ける」かどうかだけは、毎回「ふつう」に戻ります）。</p>
-<p class="li">・左上の「全画面」ボタンで、画面いっぱいに表示できます。全画面のときは、同じ場所の「全画面を終了」で戻ります。</p>
-<p class="li">・（パソコン版）キーボードやテンキーをつないでいると、答えの欄に直接打ち込めます。つないでいないタブレットでは、画面のキーパッドを使ってください。</p>
-<p class="li">・（パソコン版・タブレット）設定画面で数字の欄をタップすると、画面の下にキーパッドが出ます。</p>
-<p class="li">・（スマホ版）答えを直したいときは、直したい答えの欄をタップすると、その欄だけ直接打ち直せます（ふだんはスマホのキーボードは出ません）。</p>
-<p class="li">・音は、数字が出るときの合図の音だけです。音量は本体の音量で調整してください。</p>
-<h2>7. 困ったとき</h2>
-<p class="li">・数字が速すぎる／遅すぎる</p>
-<p>　→「全体の秒数」を変えるか、答え合わせの画面の速さのボタンで調整してください。</p>
-<p class="li">・設定した通りの問題にならない</p>
-<p>　→ 組み合わせによっては作れない問題があります。その場合は、作れる内容に自動で調整され、スタート画面にその旨が表示されます。</p>
-<p class="li">・引き算の設定が変えられない</p>
-<p>　→「引き算」が「オン」になっているか確認してください。「引き算の口数」は、出し方が「ふつう」のときだけ使えます。</p>
-<p class="li">・画面が小さい／ボタンが見えない</p>
-<p>　→ 左上の「全画面」ボタンを押すと、画面いっぱいに広がります。</p>
-<p class="li">・答えが表示されない</p>
-<p>　→ 答えは自動では出ない仕組みです。「答えを見る」ボタンを押してください。</p>
-  </div>
-  <button id="manualBackBtn" style="margin-top:18px;padding:12px 34px;font-size:16px">もどる</button>
   </div>
 </section>
 
@@ -814,7 +653,7 @@ html:has(#confirmScreen.active) body{ background:#d9f2fd; }
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const screens = ["startScreen","gradeKindScreen","gradeListScreen","confirmScreen","settingsScreen","countScreen","flashScreen","answerScreen","judgeScreen","resultScreen","manualScreen"];
+const screens = ["startScreen","gradeKindScreen","gradeListScreen","confirmScreen","settingsScreen","countScreen","flashScreen","answerScreen","judgeScreen","resultScreen"];
 function show(id){ if(id === "confirmScreen" && typeof syncConfirmControls === "function") syncConfirmControls(); screens.forEach(s => $(s).classList.toggle("active", s === id)); }
 /* ラジオの選択値（未選択の環境でも例外にせず既定値で返す） */
 function checkedVal(name, fallback){
@@ -1814,8 +1653,6 @@ function startGrade(){
 }
 $("gradeModeBtn").addEventListener("click", () => show("gradeKindScreen"));
 $("customModeBtn").addEventListener("click", () => show("settingsScreen"));
-$("manualBtn").addEventListener("click", () => show("manualScreen"));
-$("manualBackBtn").addEventListener("click", () => show("startScreen"));
 $("quitBtn").addEventListener("click", () => {
   /* ブラウザ版はページ自身を閉じられるとは限らない。全画面を解除して
      window.close() を試し、閉じなかった場合はタブを閉じる案内を出す */
